@@ -192,7 +192,7 @@ if (defined($main::opt{'restore'})) {
     &line();
     # Only do this if we're going to grab current tape index
     if ($main::opt{'toc'} eq '') {
-        &mt("generic-blocksize $main::mt_blksize");
+	&mt("generic-blocksize $main::mt_blksize");
     }
     &toc_routine();
 
@@ -1943,6 +1943,8 @@ sub optioncheck {
     my $realdev;
     my $buffer_blk_flag;
     my $buffer_pad_flag;
+    my %remotehosts;
+    my @remoteprogs;
 
     # Archive type on commandline
     if (defined($main::opt{'type'})) {
@@ -2023,6 +2025,8 @@ sub optioncheck {
     $main::path{'dd'} = &checkinpath('dd');
     $main::path{'printf'} = &checkinpath('printf');
 
+    push(@remoteprogs,($main::path{'touch'},$main::path{'rm'},$main::path{'find'},$main::path{'printf'}));
+
     # Chase links
     $realdev = $cfg::device;
     while (-l $realdev) {
@@ -2057,6 +2061,7 @@ sub optioncheck {
     } elsif ($cfg::device =~ m%(\S+):(/dev/.*)%) {
 
 	$main::remotetapehost = $1;
+	$remotehosts{$1} = 1;
 	$cfg::device = $2;
 	$main::tapedevice = 1;
 
@@ -2179,6 +2184,7 @@ sub optioncheck {
     # Generic compression (afio archives will do their own flags)
     if ($cfg::compress eq "gzip") {
 	$main::path{'gzip'} = &checkinpath($cfg::compress);
+	push(@remoteprogs, $main::path{$cfg::compress});
 	if ($cfg::compr_level !~ m/^[123456789]$/) {
 	    push(@main::errors,"\$compr_level must be set to 1-9");
 	} else {
@@ -2188,6 +2194,7 @@ sub optioncheck {
 
     } elsif ($cfg::compress eq "bzip2") {
 	$main::path{'bzip2'} = &checkinpath($cfg::compress);
+	push(@remoteprogs, $main::path{$cfg::compress});
 	if ($cfg::compr_level !~ m/^[123456789]$/) {
 	    push(@main::errors,"\$compr_level must be set to 1-9");
 	} else {
@@ -2197,11 +2204,13 @@ sub optioncheck {
 
     } elsif ($cfg::compress eq "compress") {
 	$main::path{'compress'} = &checkinpath($cfg::compress);
+	push(@remoteprogs, $main::path{$cfg::compress});
 	$main::z = " | $main::path{$cfg::compress} -c";
 	$main::unz = "$main::path{$cfg::compress} -dc | ";
 
     } elsif ($cfg::compress eq "zip") {
 	$main::path{'zip'} = &checkinpath('zip');
+	push(@remoteprogs, $main::path{'zip'});
 	$main::path{'funzip'} = &checkinpath('funzip');
 	if ($cfg::compr_level !~ m/^[123456789]$/) {
 	    push(@main::errors,"\$compr_level must be set to 1-9");
@@ -2227,6 +2236,7 @@ sub optioncheck {
     if ($cfg::buffer eq "buffer") {
 
 	$main::path{'buffer'} = &checkinpath('buffer');
+	push(@remoteprogs, $main::path{'buffer'});
 	if ($cfg::buffer_megs =~ m/^\d+$/) {
 	    my $write_flags;
 	    my $read_flags;
@@ -2234,19 +2244,8 @@ sub optioncheck {
 	    my $out;
 	    my $megs = $cfg::buffer_megs . "m";
 
-	    ($buftest, $out) = &test_shared_mem_for_buffer($main::path{'buffer'}, $megs);
-	    if ($buftest != 0) {
-		push(@main::errors, "Problems encountered testing 'buffer' command:");
-		push(@main::errors, " --> " . $out);
-		if ($buftest == 255) {
-		    push(@main::errors, "You don't have enough SysV shared memory to run 'buffer', or");
-		    push(@main::errors, "have exceeded buffering limits. Try lowering the amount specified in");
-		    push(@main::errors, "\$buffer_megs in your flexbackup.conf file, or reconfigure your");
-		    push(@main::errors, "kernel to include more SysV shared memory pages.");
-		} else {
-		    push(@main::errors, "Unknown problem trying to run 'buffer' (exit code $buftest). Try disabling it.");
-		}
-	    }
+	    print "Checking 'buffer' on this host...\n";
+	    &test_shared_mem_for_buffer($main::path{'buffer'}, $cfg::buffer_megs, 'localhost');
 
 	    if (defined($main::tapedevice)) {
 		$write_flags = "-u 100 -t -p 75 $buffer_pad_flag -o ";
@@ -2282,12 +2281,29 @@ sub optioncheck {
 
 
     # Filesystems
-    $main::num_tapes = -1;
-    foreach (@cfg::filesystems) {
-	$main::num_tapes++;
-    }
-    if ($main::num_tapes == -1) {
-	push(@main::errors,"no filesystem spec for \"all\" backups (\$filesystem[0] not defined)");
+    if (defined($main::opt{'fs'})) {
+	if ($main::opt{'fs'} ne 'all') {
+
+	    # Single fs
+	    if ($main::opt{'fs'} =~ /^(\S+):/) {
+		$remotehosts{$1} = 1;
+	    }
+
+	} else {
+
+	    # All
+	    $main::num_tapes = -1;
+	    foreach my $list (@cfg::filesystems) {
+		$main::num_tapes++;
+		if ($list =~ /^(\S+):/) {
+		    $remotehosts{$1} = 1;
+		}
+	    }
+	    if ($main::num_tapes == -1) {
+		push(@main::errors,"no filesystem spec for \"all\" backups (\$filesystem[0] not defined)");
+	    }
+
+	}
     }
 
     # Verbose flag
@@ -2327,6 +2343,7 @@ sub optioncheck {
 
 	$main::path{'dump'} = &checkinpath('dump');
 	$main::path{'restore'} = &checkinpath('restore');
+	push(@remoteprogs, $main::path{'dump'});
 
 	# Length of tape
 	if ($cfg::dump_length !~ m/^\d+$/) {
@@ -2343,6 +2360,7 @@ sub optioncheck {
     } elsif ($cfg::type eq 'afio') {
 
 	$main::path{'afio'} = &checkinpath('afio');
+	push(@remoteprogs, $main::path{'afio'});
 
 	&check(\$cfg::afio_nocompress_types,'afio_nocompress_types','exist');
 
@@ -2402,10 +2420,12 @@ sub optioncheck {
     } elsif ($cfg::type eq 'cpio') {
 
 	$main::path{'cpio'} = &checkinpath('cpio');
+	push(@remoteprogs, $main::path{'cpio'});
 
     } elsif ($cfg::type eq 'tar') {
 
 	$main::path{'tar'} = &checkinpath('tar');
+	push(@remoteprogs, $main::path{'tar'});
 
 	# Echo record number
 	$main::tar_recnum_flag = "";
@@ -2425,6 +2445,7 @@ sub optioncheck {
     } elsif ($cfg::type eq 'star') {
 
 	$main::path{'star'} = &checkinpath('star');
+	push(@remoteprogs, $main::path{'star'});
 
 	# Echo block number
 	$main::star_blocknum_flag = "";
@@ -2461,10 +2482,12 @@ sub optioncheck {
     } elsif ($cfg::type eq 'pax') {
 
 	$main::path{'pax'} = &checkinpath('pax');
+	push(@remoteprogs, $main::path{'pax'});
 
     } elsif ($cfg::type eq 'zip') {
 
 	$main::path{'zip'} = &checkinpath('zip');
+	push(@remoteprogs, $main::path{'zip'});
 	$main::path{'unzip'} = &checkinpath('unzip');
 
 	$main::zip_compr_flag = "-$cfg::compr_level";
@@ -2622,6 +2645,36 @@ sub optioncheck {
 	    }
 	} else {
 	    push(@main::errors,"-files can only be used with -extract");
+	}
+    }
+
+    # Last step - check any remote hosts for required programs
+    foreach (@remoteprogs) {
+	$_ = "type $_ 2>&1";
+    }
+    my $string = join ('; ',@remoteprogs);
+    foreach my $host (keys %remotehosts) {
+	print "Checking for required programs on host $host...\n";
+	my $cmd = "$cfg::remoteshell $host sh -c '$string'";
+	if (defined($main::opt{'n'})) {
+	    print "(debug) $cmd\n";
+	    next;
+	}
+	if (!(open(PIPE,"$cmd |"))) {
+	    push (@main::errors, "Could not open pipe to remote shell - $!");
+	    last;
+	}
+
+	while (<PIPE>) {
+	    if (m/(\S+): not found/) {
+		push(@main::errors, "Could not find program '$1' on remote machine '$host'");
+	    }
+	}
+	close (PIPE);
+
+	if ($cfg::buffer ne 'false') {
+	    print "Checking 'buffer' on host $host...\n";
+	    &test_shared_mem_for_buffer($main::path{'buffer'} ,$cfg::buffer_megs, $host);
 	}
     }
 
@@ -3664,36 +3717,56 @@ sub file_list_cmd {
 
 #############################################################################
 # Actually test to see if we can run buffer. In situations where SysV shared
-# memory is low, buffer can fail causing catastrophic failures in the dump
-# process....
+# memory is low, or buffer can't run, buffer can fail
 #############################################################################
 sub test_shared_mem_for_buffer {
 
     my $buffer_prog = shift(@_);
-    my $mem = shift(@_);
+    my $mem = shift(@_) . 'm';
+    my $host = shift(@_);
     my $tmp_name = "$cfg::tmpdir/testbuff$$.txt";
     my $retval = 0;
     my $out;
 
-    if (!open(TMP, ">$tmp_name")) {
-	printf (STDERR "Could not open tmp file '$tmp_name' for writing - $!\n");
-	exit (2);
-    }
-    # Spew some bytes into the tmp file for buffer to buffer
-    foreach my $f (0..1000) {
-	printf (TMP "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz\n");
-    }
-    close (TMP);
-    if (!defined($main::opt{'n'})) {
-	chomp($out = `$buffer_prog -m $mem -o /dev/null < $tmp_name 2>&1`);
-	if ($CHILD_ERROR) {
-	    $retval = $? >> 8;
+    if ($host eq 'localhost') {
+	if (!open(TMP, ">$tmp_name")) {
+	    printf (STDERR "Could not open tmp file '$tmp_name' for writing - $!\n");
+	    exit (2);
 	}
-    } else {
-	print "(debug) $buffer_prog -m $mem -o /dev/null < $tmp_name 2>&1\n";
-	$retval = 0;
-    }
-    unlink("$tmp_name");
+	# Spew some bytes into the tmp file for buffer to buffer
+	foreach my $f (0..1000) {
+	    printf (TMP "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz\n");
+	}
+	close (TMP);
+	if (!defined($main::opt{'n'})) {
+	    chomp($out = `$buffer_prog -m $mem -o /dev/null < $tmp_name 2>&1`);
+	    if ($CHILD_ERROR) {
+		$retval = $? >> 8;
+	    }
+	} else {
+	    print "(debug) $buffer_prog -m $mem -o /dev/null < $tmp_name 2>&1\n";
+	    $retval = 0;
+	}
+	unlink("$tmp_name");
 
-    return ($retval, $out);
+	if ($retval != 0) {
+	    push(@main::errors, "Problems encountered testing 'buffer' command:");
+	    push(@main::errors, " --> " . $out);
+	    if ($retval == 255) {
+		push(@main::errors, "You don't have enough shared memory to run 'buffer' on this host, or");
+		push(@main::errors, "have exceeded buffering limits. Try lowering the amount specified in");
+		push(@main::errors, "\$buffer_megs in your flexbackup.conf file, or reconfigure your");
+		push(@main::errors, "kernel to include more SysV shared memory pages if using *BSD.");
+	    } else {
+		push(@main::errors, "Unknown problem trying to run 'buffer' (exit code $retval). Try disabling it.");
+	    }
+	}
+
+    } else {
+
+	### FIXME checking buffer on remote hosts
+
+    }
+
+
 }
