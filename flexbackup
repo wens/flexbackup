@@ -1322,17 +1322,19 @@ sub mt {
         }
 
         # mt flavors for erase
+        # (some mt's have no "erase", just skip, we rewind before
+        # starting a backup...)
         if ($operation eq 'generic-erase') {
             if ($main::uname =~ /Linux/) {
                 $operation = 'erase';
             } elsif ($main::uname =~ /BSD/) {
                 $operation = 'erase';
             } elsif ($main::uname =~ /OSF1/) {
-                $operation = 'weof 2';
+                next;
             } elsif ($main::uname =~ /AIX/) {
-                $operation = 'weof 2';
+                next;
             } elsif ($main::uname =~ /HP-UX/) {
-                $operation = 'weof 2';
+                next;
             } elsif ($main::uname =~ /SunOS/) {
                 $operation = 'erase';
             } elsif ($main::uname =~ /IRIX/) {
@@ -1438,6 +1440,7 @@ sub optioncheck {
     &check(\$cfg::indexes,'indexes');
     &check(\$cfg::buffer,'buffer');
     &check(\$cfg::buffer_megs,'buffer_megs','exist');
+    &check(\$cfg::pad_blocks,'pad_blocks');
     &check(\$cfg::device,'device','exist');
     &check(\$cfg::blksize,'blksize','exist');
     &check(\$cfg::mt_var_blksize,'mt_var_blksize');
@@ -1622,6 +1625,16 @@ sub optioncheck {
         $main::unz = "";
     }
 
+    # Block padding
+    if ($cfg::pad_blocks eq "true") {
+        $main::dd_pad_flag = "conv=noerror,sync";
+        $main::buffer_pad_flag = "-B";
+    } else {
+        $main::dd_pad_flag = '';
+        $main::buffer_pad_flag = '';
+    }
+
+
     # Buffer stuff
     # Just use dd if buffer is disabled
     if ($cfg::buffer eq "true") {
@@ -1630,11 +1643,11 @@ sub optioncheck {
             $main::buffer_megs = $cfg::buffer_megs . "m";
             $main::buffer_cmd = " | buffer -m $main::buffer_megs $main::buffer_blk_flag";
             if (!defined($main::use_file)) {
-                $main::buffer_write_flags = "-u 100 -t -p 75 -B -o ";
-                $main::buffer_read_flags = "-u 100 -t -p 75 -B -i ";
+                $main::buffer_write_flags = "-u 100 -t -p 75 $main::buffer_pad_flag -o ";
+                $main::buffer_read_flags = "-u 100 -t -p 75 $main::buffer_pad_flag -i ";
             } else {
-                $main::buffer_write_flags = "-t -p 75 -B -o ";
-                $main::buffer_read_flags = "-t -p 75 -B -i ";
+                $main::buffer_write_flags = "-t -p 75 $main::buffer_pad_flag -o ";
+                $main::buffer_read_flags = "-t -p 75 $main::buffer_pad_flag -i ";
             }
             $main::read_cmd = "buffer -m $main::buffer_megs $main::buffer_blk_flag $main::buffer_read_flags";
         } else {
@@ -1642,9 +1655,9 @@ sub optioncheck {
         }
     } else {
         &checkinpath('dd');
-        $main::buffer_cmd = " | dd $main::dd_blk_flag conv=sync";
+        $main::buffer_cmd = " | dd $main::dd_blk_flag $main::dd_pad_flag";
         $main::buffer_write_flags = "of=";
-        $main::read_cmd = "dd $main::dd_blk_flag conv=sync if=";
+        $main::read_cmd = "dd $main::dd_blk_flag $main::dd_pad_flag if=";
     }
 
     # Check for type of touch flag
@@ -2413,7 +2426,7 @@ sub new_tape_key {
 
     &log("| Creating index key $key");
 
-    open(DEV,"| dd $main::dd_blk_flag conv=sync of=$dev 2> /dev/null") or die("Can't dd to $dev: $OS_ERROR");
+    open(DEV,"| dd $main::dd_blk_flag $main::dd_pad_flag of=$dev 2> /dev/null") or die("Can't dd to $dev: $OS_ERROR");
     print DEV "$key\nThis is a flexbackup index key\n";
     close(DEV);
 
@@ -2453,7 +2466,7 @@ sub get_tape_key {
 
     } else {
 
-        open(KEY,"dd $main::dd_blk_flag conv=sync count=1 if=$main::device 2> /dev/null |") or die("Can't open tape device: $OS_ERROR");
+        open(KEY,"dd $main::dd_blk_flag $main::dd_pad_flag count=1 if=$main::device 2> /dev/null |") or die("Can't open tape device: $OS_ERROR");
         $key = <KEY>;
         close(KEY);
         if (defined($key)) {

@@ -1,11 +1,13 @@
 $Id$
 $Name$
 
-Version 0.9.7.1 (19991025)
+Version 0.9.7.2 (19991025)
 
 New Features:
  - tried to add intelligence for various mt flavors on different Unix variants
  - add -newtape option to initialize index, but no backup
+ - made block padding a config file option ($pad_blocks).  conv=sync was
+   causing problems on OSF1.
 
 Bug fixes:
  - sort the toc output correctly

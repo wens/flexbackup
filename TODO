@@ -4,10 +4,17 @@ $Name$
 Flexbackup to-do list
 Some of these might not happen, but figured I should jot them down
 
+ - test dd stuff, restore w/ pad on/off
+ - add -filenum x for list/extract/etc that goes to that file first.
+   (make it grab the file name if a dir as well?)
+ - prettify list/extract/compare output
+ - make -n not mess with indexes   
+   
 
 Features to add:
  - interactive restore-like shell for types besides dump
      see notes below
+ - make a manual page!
  - support multiple tapes for a single archive
      - dump already does this? afio has hooks too. tar does(-M). would
        the pipeline mechanism screw it all up?
@@ -23,8 +30,6 @@ Features to add:
      I have a "picture" of what I want this to look like
      use glade + libglade
      will be a seperate program that just manipulates flexbackup
- - make a manual page
-     embed in script, use pod2man
  - extract options to not overwrite existing files
  - remote extract/compare/restore
      just install s/w on client w/remote tape device. need config file
@@ -38,7 +43,6 @@ Features to add:
 
 Cleanup/fix:
  - zip/unzip backend, use fifos rather than temp files
- - prettify list/extract/compare output
  - indexes and using files can soemtimes mess up if the filenames
    clobber each other.  use full time?
  - when using files, maybe I want "erase" to clean out a dir?
