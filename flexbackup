@@ -336,12 +336,14 @@ sub backup_routine {
     # once per machine if multiple fs's are being run
     if (defined($main::pkgdelta)) {
 	if (defined($main::local)) {
+	    &list_packages('localhost');
 	    &find_packaged_files('localhost');
-	    &find_changed_files('localhost');
+#	    &find_changed_files('localhost');
 	}
 	foreach my $host (keys %main::remotehosts) {
+	    &list_packages($host);
 	    &find_packaged_files($host);
-	    &find_changed_files($host);
+#	    &find_changed_files($host);
 	}
 	$main::pkgdelta_filelist = "$cfg::tmpdir/pkgdelta.$PROCESS_ID";
 	&line();
@@ -566,6 +568,7 @@ sub backup {
     my $catchexit;
     my $exitscript = "$cfg::tmpdir/collectexit.$PROCESS_ID.sh";
     my $result = "$cfg::tmpdir/exitstatus.$PROCESS_ID";
+    my $pkglist = "flexbackup.packagelist.$main::pkgdelta";
 
     &line();
 
@@ -669,19 +672,41 @@ sub backup {
 	    $_ = pop(@_);
 	    $indexkey = "$tape_key|$_";
 	    if (defined($main::opt{'n'})) {
-		&log("| (debug) \$main::index{$indexkey} = $title_without_type");
+		&log("(debug) \$main::index{$indexkey} = $title_without_type");
 	    } else {
 		$main::index{$indexkey} = "$title_without_type";
 	    }
 	} else {
 	    $indexkey = "$tape_key|$main::nextfile";
 	    if (defined($main::opt{'n'})) {
-		&log("| (debug) \$main::index{$indexkey} = $title");
+		&log("(debug) \$main::index{$indexkey} = $title");
 	    } else {
 		$main::index{$indexkey} = $title;
 	    }
 	    &log("| File number $main::nextfile, tape index $tape_key");
 	}
+    }
+
+    # Write list of packages
+    # FIXME config
+    # FIXME not if -n
+    if (defined($main::pkgdelta)) {
+	$pkglist = "$localdir/$pkglist";
+	my $write = "> $pkglist";
+	my $h;
+
+	if(defined($remote)) {
+	    $write = &maybe_remote_cmd("$main::path{cat} $write", $remote);
+	    $write = "| $write";
+	    $h = $remote;
+	} else {
+	    $h = 'localhost';
+	}
+	open(LIST,"$write") || die;
+	foreach my $pkg (sort keys %{$main::package_list{$h}}) {
+	    print LIST "$pkg\n";
+	}
+	close(LIST);
     }
 
     &log("| Backup of: $dir");
@@ -715,9 +740,9 @@ sub backup {
 	push(@cmds, &maybe_remote_cmd("$main::path{rm} -f $remove", $remote));
     }
 
-    # Nuke tmp file list if we did local package delta
+    # Create/nuke tmp file list if we did local package delta
     if (defined($main::pkgdelta)) {
-	push(@cmds, &maybe_remote_cmd("$main::path{rm} -f $main::pkgdelta_filelist", $remote));
+	push(@cmds, &maybe_remote_cmd("$main::path{rm} -f $main::pkgdelta_filelist $pkglist", $remote));
     }
 
     # Strip multiple spaces
@@ -2344,7 +2369,7 @@ sub mt {
 		if (defined($main::log)) { close(LOG); }
 
 	    } else {
-		&log("| (debug) $command");
+		&log("(debug) $command");
 	    }
 
 	} # not a file
@@ -3813,7 +3838,7 @@ sub new_tape_key {
     $string .=  "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=$dev";
 
     if (defined($main::opt{'n'})) {
-	&log("| (debug) $string");
+	&log("(debug) $string");
     } else {
 	`$string 2> /dev/null`;
     }
@@ -3823,14 +3848,14 @@ sub new_tape_key {
     if (defined($main::use_file)) {
 	my $label = "<index keyfile, dir=$cfg::device>";
 	if (defined($main::opt{'n'})) {
-	    &log("| (debug) \$main::index{$key|$cfg::keyfile} = $label");
+	    &log("(debug) \$main::index{$key|$cfg::keyfile} = $label");
 	} else {
 	    $main::index{"$key|$cfg::keyfile"} = $label;
 	}
     } else {
 	my $label = "<tape index key>";
 	if (defined($main::opt{'n'})) {
-	    &log("| (debug) \$main::index{$key|0} = $label");
+	    &log("(debug) \$main::index{$key|0} = $label");
 	} else {
 	    $main::index{"$key|0"} = $label;
 	}
@@ -3870,7 +3895,7 @@ sub get_tape_key {
 	}
 
 	if (defined($main::opt{'n'})) {
-	    &log("| (debug) $string");
+	    &log("(debug) $string");
 	    $key = '';
 	} else {
 	    $key = `$string 2> /dev/null`;
@@ -4057,7 +4082,7 @@ sub rmindex {
 		    ($filenum eq $file)) {
 		    &log("| Deleting record for tape $tape file $filenum");
 		    if (defined($main::opt{'n'})) {
-			&log("| (debug) delete \$main::index{$tape|$filenum}");
+			&log("(debug) delete \$main::index{$tape|$filenum}");
 		    } else {
 			delete $main::index{"$tape|$filenum"};
 		    }
@@ -4069,7 +4094,7 @@ sub rmindex {
 		if ($tape eq $key) {
 		    &log("| Deleting record for tape $tape file $filenum");
 		    if (defined($main::opt{'n'})) {
-			&log("| (debug) delete \$main::index{$tape|$filenum}");
+			&log("(debug) delete \$main::index{$tape|$filenum}");
 		    } else {
 			delete $main::index{"$tape|$filenum"};
 		    }
@@ -4251,6 +4276,7 @@ sub file_list_cmd {
 
 	# Use the normal level & timestamp mechanism to get a list of files
 	# Then only keep unowned or owned+changed files
+	# FIXME no cile create if -n
 	my $find = &maybe_remote_cmd("cd \"$dir\"; $cmd -print", $remote);
 	my $write = "> $main::pkgdelta_filelist";
 	if(defined($remote)) {
@@ -4297,13 +4323,43 @@ sub file_list_cmd {
 
 	&line();
 
-	$cmd = "$main::path{cat} $main::pkgdelta_filelist "
+	$cmd = "$main::path{cat} $main::pkgdelta_filelist ";
     }
 
     return($cmd);
 
 }
 
+######################################################################
+# List installed packages, fills %package_list hash
+######################################################################
+sub list_packages {
+
+    my $host = shift (@_);
+
+    if ($main::pkgdelta eq 'rpm') {
+
+	my $cmd = "$main::path{rpm} -q -a --queryformat '%{name}-%{version}-%{release}.%{arch}.rpm\\n'";
+
+	if ($host ne 'localhost') {
+	    &log("| Listing all RPM packages on host $host...");
+	    $cmd = &maybe_remote_cmd($cmd, $host);
+	} else {
+	    &log("| Listing all RPM packages...");
+	}
+	if (defined($main::opt{'n'})) {
+	    &log("(debug) $cmd");
+	} else {
+	    open(LIST,"$cmd |") || die;
+	    while(<LIST>) {
+		if (m:^(.*)$:) {
+		    $main::package_list{$host}{$1} = 1;
+		}
+	    }
+	    close(LIST);
+	}
+    }
+}
 
 ######################################################################
 # Fill %packaged with a list of files on host owned by packages
@@ -4529,7 +4585,7 @@ sub check_shell {
     $main::shelltype{$host} = 'unknown';
 
     if (defined($main::opt{'n'})) {
-	print "| (debug) $pipecmd\n";
+	print "(debug) $pipecmd\n";
     }
 
     if (!(open(PIPE,"$pipecmd 2>&1 |"))) {
