@@ -1,6 +1,9 @@
 $Id$
 $Name$
 
+----------------------------------------------------------------------
+Version 1.1.6 (20030313)
+
 Changes beyond stable release:
 
   - Different way to spec the filesystems. This lets us have arbitrarily
@@ -70,6 +73,16 @@ Cleanup:
   - Don't check for writeable stampdir for non-backup
   - Don't check for writeable logdir for non-backup
   - Don't tie to db for non-backup
+
+----------------------------------------------------------------------
+Version 1.0.3 (20030313)
+
+Bug fixes:
+ - Only look for mt if we are using tape device
+ - If using files, "-fs all", and and multiple array entries for $filesystems,
+   index was getting hosed up.
+ - newtape/erase when using dirs was deleting keyfile entry from index db
+ - remove bogus OS_ERROR string from failed tie
 
 ----------------------------------------------------------------------
 Version 1.0.2 (20030219)
