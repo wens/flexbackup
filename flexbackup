@@ -36,9 +36,9 @@
 #  flexbackup [opt] -type <x>      : override $type from config file
 #  flexbackup [opt] -compress <x>  : override $compress from config file
 #  flexbackup [operation] -reten   : force a retension before any operation
-#  flexbackup -fs <x> -erase       : force a rewind/erase before backup
 #  flexbackup -fs all -noreten     : don't retension for level 0 "all" backups
 #  flexbackup -fs all -noerase     : don't rewind/erase for level 0 "all" backups
+#  flexbackup -fs <x> -erase       : force a rewind/erase before backup
 #  flexbackup -fs <x> -norewind    : don't rewind tape after a single backup
 #  flexbackup [opt] -n             : don't run actual dump or mt commands
 #  flexbackup [opt] -d 'var=val'   : override config file setting of $var
@@ -536,11 +536,14 @@ sub backup {
 	@cmds = &backup_zip($label,$localdir,$title);
     }
 
+    # Strip multiple spaces
+    foreach (@cmds) {
+        s/\s+/ /g;
+    }
+
     # Format commands for nice printing
     @echo_cmds = @cmds;
     foreach (@echo_cmds) {
-        s/\s+/ /g;              # replace multiple spaces
-
         # Split long lines.  This looks convolved but it auto-wraps the
         # command lines down to a nice width for printing...
         my @chunks = split(" ",$_);
@@ -683,8 +686,8 @@ sub backup_afio {
     $cmd .= "touch $main::touch_flag \"$_\" $tmpstamp ; ";
 
     # list of file exenstions to not compress
-    if (($cfg::compress !~ /^(false|hardware)$/) and ($cfg::afio_nocompress_types ne "")) {
-        $cmd .= "echo \"$cfg::afio_nocompress_types\" > $tmpnocompress ; ";
+    if (($cfg::compress !~ /^(false|hardware)$/) and ($cfg::nocompress_types ne "")) {
+        $cmd .= "echo \"$cfg::nocompress_types\" > $tmpnocompress ; ";
         $no_compress = "-E $tmpnocompress";
     }
 
@@ -1406,6 +1409,7 @@ sub optioncheck {
     &check(\$cfg::device,'device','exist');
     &check(\$cfg::blksize,'blksize','exist');
     &check(\$cfg::mt_var_blksize,'mt_var_blksize');
+    &check(\$cfg::nocompress_types,'nocompress_types','exist');
     &check(\$cfg::remoteshell,'remoteshell','ssh ssh2 ssh1 rsh');
     &check(\$cfg::logdir,'logdir','exist');
     &check(\$cfg::tmpdir,'tmpdir','exist');
@@ -1414,7 +1418,6 @@ sub optioncheck {
     &check(\$cfg::prefix,'prefix','exist');
     &check(\$cfg::sprefix,'sprefix','exist');
     &check(\$cfg::afio_echo_block,'afio_echo_block');
-    &check(\$cfg::afio_nocompress_types,'afio_nocompress_types','exist');
     &check(\$cfg::afio_compress_cache_size,'afio_compress_cache_size','exist');
     &check(\$cfg::afio_compress_threshold,'afio_compress_threshold','exist');
     &check(\$cfg::tar_echo_record_num,'tar_echo_record_num');
@@ -1422,7 +1425,6 @@ sub optioncheck {
     &check(\$cfg::dump_length,'dump_length','exist');
     &check(\$cfg::dump_use_dumpdates,'dump_use_dumpdates');
     &check(\$cfg::cpio_format,'cpio_format','bin odc newc crc tar ustar hpbin hpodc');
-    &check(\$cfg::zip_nocompress_types,'zip_nocompress_types','exist');
     &check(\$cfg::ftape,'ftape');
     &check(\$cfg::rawdevice,'rawdevice','exist');
     if (@main::errors) {
@@ -1719,6 +1721,7 @@ sub optioncheck {
 
         &checkinpath('zip');
         &checkinpath('unzip');
+        &checkinpath('sed');
 
         $main::zip_compr_flag = "-$cfg::compr_level";
 
@@ -1731,9 +1734,9 @@ sub optioncheck {
         }
 
         $main::zip_noz_flag = "";
-        if ($cfg::zip_nocompress_types ne "") {
-            # Add dots to file sextensions, make -n flag
-            @_ =  split(" ",$cfg::zip_nocompress_types);
+        if ($cfg::nocompress_types ne "") {
+            # Add dots to file extensions, make -n flag
+            @_ =  split(" ",$cfg::nocompress_types);
             foreach (@_) {
                 $_ = "." . $_;
             }
