@@ -18,13 +18,12 @@ Cleanup/fix:
     - Use lowest common denominator flags? Sort of what's tried now w/ cpio
 
 Misc:
+ - Do .debs?
  - Add faq on files changing underneath? explain sql db dump?
- - Create mbuffer rpm (if I can make it work reliably for myself)
  - Man page (create from -help perhaps)
  - Try against torture-test list:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
  - Update mt manpages collection I keep in cvs
- - Get someone to do .debs?
  - Pondering moving everything to savannah.  Sourceforge is annoying me.
    mail list archives hardly work, and I hate the file release system thing
    being totally un-automatable.
@@ -49,7 +48,7 @@ Features to add:
       just act like to-file archives, and take those files & write to CD?
       "iso" type with a dirtree copy?  wasted space this way.
       be able to split archives?
-      lots of questions 
+      lots of questions
 
  - If we detect an error and are using tapes, do something intelligent
      to reposition tape, add another filemark, etc to get tape to known state
