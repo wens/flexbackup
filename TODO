@@ -14,6 +14,7 @@ Cleanup/fix:
  - Try to use dump combined flags (for older dumps that want abc not -a -b -c)
  - When level > 9 and using files, -toc sorts it wrong (cosmetic nit)
  - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
+ - Not all finds have the -fstype flag
 
 Misc:
  - Make a manual page (or other enchanced doc)! too many options now :)
@@ -28,6 +29,13 @@ Misc:
 
 
 Features to add:
+ - smbtar?
+     doable - overload type 'tar' only a fs spec of something like
+               smb:user:pass@host/share:dir
+     smbtar has "files newer than" option, test
+     don't want password echoed
+ - star? (tar but w/ acl support, built in fifo buffering)
+ - Check for existence of remote executables (John had something)
  - Non-root use (remote too)
     document sudo workaround from Alex
     maybe works using the path overrides I put in?
@@ -35,8 +43,7 @@ Features to add:
       Defaults:backup !authenticate
       Cmnd_Alias BACKUP = /usr/bin/afio, /usr/bin/find
       backup  ALL = NOPASSWD: BACKUP
- - Make remote machine path overrides possible, that supercede others
- - Check for existence of remote executables (John had something)
+ - Make remote machine path overrides possible, that supercede others?
  - Make -extract -files for afio/cpio/zip recurse dirs
       dump/tar already to this.
  - Try restore -D for comparing subdirs w/ restore
@@ -53,8 +60,6 @@ Features to add:
  - CD-ROM burning (or just .iso type?) for full backups? any?
  - Put .zip back in if I can make it behave
  - Zip as compression not archive type at least?  (can't unzip stdin)
- - star? (tar but w/ acl support)
- - smbtar/smbclient?
  - pax (just wraps tar/cpio)?
  - When using files
       Make lower numbered level nuke higher ones & rm index?
