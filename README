@@ -81,6 +81,9 @@ Notes:
  tape retension and erasure.  Other backups move tape to
  current end of data and start the backup there
 
+ Backups rewind the tape when done.  Other operations leave it where
+ it is.
+
  rsh or ssh is used for remote backups.  Backups of remote machines
  are to be run from the machine with the tape drive!
 

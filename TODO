@@ -10,8 +10,6 @@ Some of these might not happen, but I write them down anyway
 
 
  - resurrect my old drive and test ftape stuff again
- - why is tar mode hosed?  backups seem to go ok.
-     compare,extract etc not right.
  - config option for dump to use timestamps or /etc/dumpdates
  - what if you try to do incrementals and no level 0 exists?
  - nocompress list for afio

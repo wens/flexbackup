@@ -47,6 +47,7 @@
 use Getopt::Long;
 use English;
 use strict;
+require 'ctime.pl';
 
 # No output buffering
 $OUTPUT_AUTOFLUSH = 1;
@@ -87,6 +88,8 @@ if (defined($global::opt{'version'})) {
     exit(0);
 }
 
+
+
 # Get/read config file
 &readconfigfile();
 
@@ -94,7 +97,10 @@ if (defined($global::opt{'version'})) {
 &optioncheck();
 
 # Get date string
-chomp($global::date=`date +%Y%m%d`);
+@_ = localtime(time);
+$_[5] += 1900;
+$_[4] += 1;
+$global::date = $_[5] . sprintf("%02d",$_[4]) . sprintf("%02d",$_[3]);
 
 # Set blocksize
 $_ = $cfg::blksize * 1024;
@@ -102,7 +108,6 @@ system("$global::mt -f $cfg::device setblk $_");
 if ($?) {
     die("Error from $global::mt setblk $_\n");
 }
-
 
 if (defined($global::opt{'restore'})) {
     &restore_routine();
@@ -162,8 +167,9 @@ sub backup_routine {
     close(LOG);
 
     # Spew some info
+    chomp($_ = &main::ctime(time));
     &log("flexbackup version " . &versionstring());
-    &log('$Id$ ');
+    &log("Current time is $_");
     &log("Doing level $global::level backup of $global::opt{fs} using $cfg::type");
 
     # Remove old incremental log files
@@ -293,7 +299,7 @@ sub backup_routine {
     # gzip log file
     if ($cfg::gzip_log eq 'true') {
         print "Compressing log file...\n";
-        system("gzip $global::log");
+        system("gzip -f $global::log");
         if ($?) {
             warn("Error when compressing log file\n");
         }
@@ -389,8 +395,8 @@ sub backup {
 
     # Just get the date for now; dont' write the timestamp
     # Until after the backup has run
-    my $date_at_start;
-    chomp($date_at_start = `date`);
+    my $date_at_start = &main::ctime(time);
+    chomp($date_at_start);
 
     # Enough fooling around... run it
     &line();
@@ -408,10 +414,10 @@ sub backup {
     # Create timestamp file, but use date from before the backup started
     # so next time we will catch files that might have been toucehd during the run
     &line();
-    chomp($_=`date`);
-    &log("Current time is $_\n");
+    chomp($_ = &main::ctime(time));
+    &log("Current time is $_");
     my $stamp = &get_label($dir);
-    &log("Timestamp $cfg::stampdir/$cfg::sprefix$stamp.$global::level ($date_at_start)");
+    &log("Timestamp $cfg::stampdir/$cfg::sprefix$stamp.$global::level \@ $date_at_start");
     system("touch -d \"$date_at_start\" $cfg::stampdir/$cfg::sprefix$stamp.$global::level");
 
     # Show where we are on the tape
@@ -541,7 +547,7 @@ sub backup_tar {
     }
 
 
-    $string .= "tar -C $dir -c $cfg::tar_compress $cfg::tar_verbose -b $cfg::tar_blksize -l";
+    $string .= "tar -C $dir -c -p $cfg::tar_compress $cfg::tar_verbose -b $cfg::tar_blksize -l";
 
     if ($global::level ne "0") {
         # With this one we don't have to put a stampfile on the remote system
@@ -564,45 +570,37 @@ sub backup_tar {
 ######################################################################
 sub list_routine {
 
+    &log("flexbackup version " . &versionstring());
+    &line();
+    &mt('query');
+    &line();
+
     if ($cfg::type eq 'dump') {
-        &mt('query');
-        &line();
 	system("restore -t -b $cfg::blksize -f $cfg::device");
-        &line();
-        &mt('query');
-        exit;
 
     } elsif ($cfg::type eq 'afio') {
-        &mt('query');
-        &line();
         system("afio -t $cfg::afio_verbose -b $cfg::afio_blksize -B $cfg::device");
-        &line();
-        &mt('query');
-        exit;
 
     } elsif ($cfg::type eq 'tar') {
-        &mt('query');
-        &line();
         system("tar -t $cfg::tar_verbose $cfg::tar_compress -b $cfg::tar_blksize -f $cfg::device");
-        &line();
-        &mt('query');
-        exit;
 
     } elsif ($cfg::type eq 'cpio') {
-        &mt('query');
-        &line();
         system("cpio -t $cfg::cpio_verbose -H $cfg::cpio_format -C $cfg::cpio_blksize -F $cfg::device");
-        &line();
-        &mt('query');
-        exit;
 
     }
+
+    &line();
+    &mt('query');
+    exit;
+
 }
 
 ######################################################################
 # Extract an archive to current directory
 ######################################################################
 sub extract_routine {
+
+    &log("flexbackup version " . &versionstring());
 
     if ($cfg::type eq 'dump') {
         &mt('query');
@@ -644,6 +642,7 @@ sub extract_routine {
 ######################################################################
 sub compare_routine {
 
+    &log("flexbackup version " . &versionstring());
     &line();
 
     if ($cfg::type eq 'dump') {
@@ -682,6 +681,8 @@ sub compare_routine {
 sub restore_routine {
 
     if ($cfg::type eq 'dump') {
+        &log("flexbackup version " . &versionstring());
+        &line();
         &mt('query');
         &line();
 	system("restore -i -v -b $cfg::blksize -f $cfg::device");
@@ -820,7 +821,7 @@ sub mt {
         system("$global::mt -f $cfg::device $operation 2>&1");
     }
     if ($?) {
-	&log("Error from $global::mt $operation, exiting....\n");
+	&log("Error from $global::mt $operation\n");
         exit(1);
     }
 }
