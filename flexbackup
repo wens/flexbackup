@@ -4335,8 +4335,8 @@ sub byfilename {
 
 	    if ($alabel eq $blabel) {
 		return($alevel <=> $blevel);
-            }
-        }
+	    }
+	}
     }
 
     return($a cmp $b);
