@@ -1,0 +1,26 @@
+Begin3
+Title:          flexbackup
+Version:        $Name$
+Entered-date:   $Date$
+Description:
+Flexible backup script.
+Features:
+   o Easy to configure (at least I think so)
+   o Uses dump, afio, tar, or cpio with the flick of a switch
+   o Backup, extract, compare, list modes
+   o Full (0) and 1-9 levels of incremental backup
+   o Filesystem-oriented (won't traverse devices)
+   o Does remote filesystems (over rsh/ssh; no special service)
+   o Works with IDE/SCSI tapes on Linux/FreeBSD
+     or Linux ftape (allows table of contents support)
+   o Nice log files
+Keywords:       backup dump restore afio tar cpio ftape
+Author:         edwinh@computer.org (Edwin Huffstutler)
+Maintained-by:  edwinh@computer.org (Edwin Huffstutler)
+Primary-site:   members.home.net /edwinh/flexbackup/
+Alternate-site:
+Original-site:
+Platforms:      IDE/SCSI tapes under Linux/FreeBSD
+                Linux ftape devices
+Copying-policy: GPL
+End

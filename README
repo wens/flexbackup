@@ -4,29 +4,23 @@
   |  _| | |  __/>  <| |_) | (_| | (__|   <| |_| | |_) |
   |_|   |_|\___/_/\_\_.__/ \__,_|\___|_|\_\\__,_| .__/
                                                 |_|
+ http://members.home.com/edwinh/flexbackup/
+
 ----------------------------------------------------------------------
 README for version $Name$
 
 Flexible backup script.
-I did this to to help automate my life.
 
-Looked at many other packages/scripts and didn't really find anything
-that worked the way I wanted it to. For my needs I felt the existing
-packages I looked at at were any combination of:
-   o Too complex to setup/use
-   o Lacked documentation
-   o Too simplistic
-   o Didn't have features I wanted
-
-Flexbackup's features:
+Features:
    o Easy to configure (at least I think so)
    o Uses dump, afio, tar, or cpio with the flick of a switch
-   o It's just perl
+   o Backup, extract, compare, list modes
    o Full (0) and 1-9 levels of incremental backup
    o Filesystem-oriented (won't traverse devices)
-   o Does remote backups too
-   o Works with IDE/SCSI tapes or Linux ftape
-       ftape allows table of contents support
+   o Does remote filesystems (over rsh/ssh; no special service)
+   o Works with IDE/SCSI tapes on Linux/FreeBSD
+     or Linux ftape (allows table of contents support)
+   o Nice log files
 
 Software needed:
    o perl
@@ -37,25 +31,50 @@ Software needed:
 
 Install:
    o Copy flexbackup.conf to /etc
-   o Put the flexbackup program someplace in your PATH
-   o Edit flexbackup.conf as desired. See the comments
+   o Copy the flexbackup program to someplace in your PATH
+     You only need to do this on the machine with the tape drive -
+     remote machines don't need anything installed
+   o Edit /etc/flexbackup.conf as desired. See the comments
+
+I looked at many other packages and didn't really find anything that
+worked the way I wanted it to.  For my needs I felt the existing
+packages were any combination of:
+   o Too complex to setup/use
+   o Lacked documentation
+   o Nonstandard archiving formats
+   o Overkill for a small network of 2 or 3 machines
+   o Too simplistic, or hard-coded assumptions
+   o Didn't have features I wanted
 
 ----------------------------------------------------------------------
 
-Use:  See "flexbackup -help". Examples below
+USE:
+See "flexbackup -help". Examples below.
 
 To do a full backup of /home:
+
    flexbackup -fs /home
 
-To do an level 5 incremental dump of all filesystems:
-   flexbackup -fs all -level 5
+For nightly incremental backups, run this via cron:
 
-For nightly incremental dumps, run this via cron:
    flexbackup -fs all -level 9
 
-Restore all files from archive into current directory:
-   (position tape w/mt - use logs to find filenum or block)
+To do a full backup of /usr from machine "otherhost", forcing cpio type:
+
+   flexbackup -fs otherhost:/usr -type cpio
+
+To do an level 5 incremental backup of all filesystems:
+
+   flexbackup -fs all -level 5
+
+Extract all files from current tape position into current directory:
+
    flexbackup -extract
+
+Compare afio archive at current tape position with the /home
+filesystem on machine "otherhost":
+
+   flexbackup -compare otherhost:/home -type afio
 
 Notes:
  Level 0 backups of "all" assume a new tape - will trigger
@@ -65,16 +84,24 @@ Notes:
  rsh or ssh is used for remote backups.  Backups of remote machines
  are to be run from the machine with the tape drive!
 
- Log files are of the format <prefix><fs>.<level>.<yyyymmdd>
- Lower-level dumps will wipe out all higher-level log files in
+ Log files are of the format <prefix>.<fs>.<level>.<yyyymmdd>
+ Lower-level backups will wipe out all higher-level log files in
  the log directory for that filesystem.
+
+ I suggest using either the "dump" or "afio" types.  Dump would be
+ perfect if it did compression... afio is a good bet if you want
+ compression - one error will not corrupt your entire archive like
+ with a compressed tar scheme.
 
 ----------------------------------------------------------------------
 
-Comments/problems to edwinh@computer.org
+I did this to to help automate my life.
+See the TODO list for what I might be planning to do next
+
+Comments/problems/suggestions to edwinh@computer.org
 
 Thanks,
-  Edwin Huffstutler
+  Edwin Huffstutler <edwinh@computer.org>
 
 
 DISCLAIMER: This program is distributed in the hope that it will be
