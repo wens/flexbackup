@@ -10,16 +10,16 @@
 #
 # USAGE:
 #
-#  ftbackup help     : this message
-#  ftbackup list     : list tape contents
-#  ftbackup restore  : restore from current tape position
+#  ftbackup -help     : this message
+#  ftbackup -list     : list tape contents
+#  ftbackup -restore  : restore from current tape position
 #                      into your current working directory
-#  ftbackup compare  : compare archive at current tape position
+#  ftbackup -compare  : compare archive at current tape position
 #                      with the files on the system
-#  ftbackup all      : dump all filesystems, level 0
-#  ftbackup <fs>     : dump filesystem <fs>, level 0
-#  ftbackup all <n>  : dump all filesystems, level n
-#  ftbackup <fs> <n> : dump filesystem <fs>, level n
+#  ftbackup -fs all      : dump all filesystems, level 0
+#  ftbackup -fs <x>     : dump filesystem <fs>, level 0
+#  ftbackup -fs all -level <n>  : dump all filesystems, level n
+#  ftbackup -fs <x> -level  <n> : dump filesystem <fs>, level n
 #
 # NOTE: Level 0 backups assume a new tape - will trigger
 # tape retension and erasure.  Other level dumps move tape to
@@ -39,19 +39,19 @@
 # Edit this section
 #
 
-$archivetype = "dump";
+$archivetype = "afio";
 
 # List the filesystems you wish to dump for "all"
 # Just a simple space-separated list
 # remote filesystems should denoted as "host:dir"
 # $filesystems = "/ /usr /home";
-$filesystems = "/ /var /usr/local";
-$filesystems .= " goliath:/ goliath:/accounts goliath:/opt goliath:/var";
-$filesystems .= " leopard:/ leopard:/accounts";
+$filesystems = "/etc goliath:/etc";
 
 # Log files
 $prefix = "";                # log files will start with this prefix
 $logdir = "/var/log/backup"; # directory where log files will be stored
+
+$stampdir = "/var/log/backup/timestamps";
 
 # Tape parameters
 $device    = "/dev/nqft0";  # device to dump to (non-rewinding)
@@ -70,20 +70,27 @@ $length    = "3100000";     # estimated tape size (k). This number doesn't reall
 #
 ######################################################################
 
+use Getopt::Long;
+use English;
+
 # No output buffering
-$| = 1;
+$OUTPUT_AUTOFLUSH = 1;
+
+%opt = ();
+if (! &GetOptions(\%opt,"help","mode=s","dir=s","level=i")) {
+    &usage();
+    exit(0);
+}
 
 # Give usage message
-if (!$ARGV[0]
-    or ($ARGV[0] eq "help")
-    or ($ARGV[0] eq "-h")) {
+if (defined($opt{'help'})) {
     &usage();
     exit(0);
 }
 
 
 # Get date
-chomp($date=`date +%m%d%y`);
+chomp($date=`date +%Y%m%d`);
 
 # Set blocksize if not default
 if ($blksize != 10) {
@@ -96,19 +103,19 @@ if ($blksize != 10) {
 
 $what = $ARGV[0];
 
-if ("$what" eq "restore") {
+if (defined($opt{'restore'})) {
 
-   # If the 1st arg is "restore", just run restore and exit
-   exec("restore -v -i -b $blksize -f $device");
-   die "Failed exec of restore";
+    # If the 1st arg is "restore", just run restore and exit
+    exec("restore -v -i -b $blksize -f $device");
+    die "Failed exec of restore";
 
-} elsif ("$what" eq "compare") {
+} elsif (defined($opt{'compare'})) {
 
-   # If the 1st arg is "compare", check dump vs. filesystem
-   exec("restore -C -b $blksize -f $device");
-   die "Failed exec of restore";
+    # If the 1st arg is "compare", check dump vs. filesystem
+    exec("restore -C -b $blksize -f $device");
+    die "Failed exec of restore";
 
-} elsif ("$what" eq "list") {
+} elsif (defined($opt{'list'))) {
 
     # Just list contents
     system("ftmt -f $device rewind");
@@ -120,14 +127,20 @@ if ("$what" eq "restore") {
 
 }
 
-
 # Get dump level...
-$level = $ARGV[1];
-$level = 0 if (!$ARGV[1]);
+if (!defined($opt{'level'})) {
+    $opt{'level'} = 0;
+}
+
+# Die if no fs specified
+if (!defined($opt{'fs'})) {
+    &usage();
+    exit(0);
+}
 
 # Figure out log file name
-$tag = $what;
-if ($what ne 'all') {
+$tag = $opt{'fs'};
+if ($opt{'fs'} ne 'all') {
     $tag =~ s:^/::;
     $tag =~ s:/:-:g;
     if ($tag eq '') {
@@ -135,27 +148,19 @@ if ($what ne 'all') {
     } elsif ($tag =~ m/^(.+):-$/) {
 	$tag = "$1:root";
     }
-    if (! -d "$what" && ($what !~ m/^.+:.+/)) {
-	print "Can't dump $what, no such directory\n";
+    if (! -d "$opt{'fs'}" && ($opt{'fs'} !~ m/^.+:.+/)) {
+	print "Can't dump $opt{'fs'}, no such directory\n";
 	exit(1);
     }
 }
 
 
-REDOLOG:
 # Empty log file
 $log = "$logdir/$prefix" . $tag . "." . $level . "." . $date;
 if (! open(LOG,">$log")) {
   die "Can't write to $log: $!\n";
 }
 close(LOG);
-
-
-if (($level != 0) and ($archivetype =~ /(afio|tar)/)) {
-    &log("$archivetype can't do incremental - using level 0");
-    $level = 0;
-    goto REDOLOG;
-}
 
 
 # Remove old incremental log files
@@ -165,7 +170,7 @@ opendir(DIR,"$logdir") or die("Can't open logdir: $!\n");
 foreach (@files) {
     next if (! m/^$prefix$tag\.([0-9])\.([0-9]+)$/);
     if ($1 > $level) {
-	print "Removing old level $1 log of $what ($date)\n";
+	print "Removing old level $1 log of $opt{'fs'} ($date)\n";
 	unlink("$logdir/$_") or warn("Can't remove $_: $!\n");
     }
 }
@@ -178,8 +183,8 @@ close(DIR);
 #
 ##########################
 &log('Script version: $Id$ ');
-&log("Doing level $level backup of $what using $archivetype");
-if ($what eq 'all') {
+&log("Doing level $level backup of $opt{'fs'} using $archivetype");
+if ($opt{'fs'} eq 'all') {
 
     # All filesystems
     if ($level eq "0") {
@@ -217,11 +222,11 @@ if ($what eq 'all') {
     $nextfile = &contents();
     &log('Making sure tape is at end of data...');
     &mt('eom');
-    &backup($archivetype,$what,$nextfile);
+    &backup($archivetype,$opt{'fs'},$nextfile);
     &line();
     &log('Updating table of contents...');
     &mt('rewind');
-    &tag($nextfile,"$archivetype $what ($level)");
+    &tag($nextfile,"$archivetype $opt{fs} ($level)");
 }
 
 # Print out new contents
@@ -292,6 +297,7 @@ sub backup {
 	exit(1);
     }
     &line();
+    system("touch $stampdir/$dir.$level")
     &mt('getsize');
 }
 
