@@ -5,7 +5,7 @@
 # $Id$
 # $Name$
 #
-#      >>>> Also see the config file, README file, & FAQ <<<<
+#   >>>> Also see the config file, README, manpages, & FAQ <<<<
 #
 # USAGE:
 #  flexbackup -help                : this message
@@ -24,7 +24,6 @@
 #  flexbackup [...] -pipe          : write to stdout rather than file/device
 #  flexbackup [...] -ignore-errors : continue backups even if commands return error
 #                                    status
-#
 # READING ARCHIVES:
 #  flexbackup -list                : list files in archive
 #  flexbackup -extract             : extract all files from archive into your
@@ -41,6 +40,7 @@
 #  flexbackup [...] <file>         : if archiving to files rather than a device,
 #                                    list/extract/compare/restore options take
 #  flexbackup [...] -pipe          : read archive from stdin
+#  flexbackup [...] -volumes <n>   : # of volumes (EXPERIMENTAL mbuffer multivolume support)
 #
 # INDEX RELATED:
 #  flexbackup -toc                 : list current device's table of contents
@@ -169,6 +169,7 @@ if (! &::GetOptions(\%::opt,
 			"toc:s",
 			"type=s",
 			"version",
+			"volumes:i",
 			"wday=i"
 			)) {
     exit(0);
@@ -275,11 +276,6 @@ exit(0);
 ######################################################################
 sub backup_routine {
 
-    # FIXME better on exit if error....
-    # (clean the log, finish the fs loop, etc)
-    # Find any die/exit from whatever this calls past logfile open,
-    # and percolate it up...
-
     my @files;
     my $label;
     my $tapecounter = 0;
@@ -291,7 +287,7 @@ sub backup_routine {
     my $comp_cmd;
     my $tape_key;
     my $logsuffix = '';
-
+    my $error = 0;
 
     # Figure out log file name & empty log file
     if (defined($::opt{'set'})) {
@@ -453,7 +449,9 @@ sub backup_routine {
 		    $level = &get_incremental_level($dir);
 		}
 
-		&backup($dir, $tape_key, $level);
+		$error = &backup($dir, $tape_key, $level);
+		last if ($error != 0);
+
 		if ($cfg::indexes eq "true") {
 		    $::nextfile++;
 		}
@@ -523,7 +521,7 @@ sub backup_routine {
 	    &mt('generic-query');
 	}
 
-	&backup($::opt{'dir'}, $tape_key, $::level);
+	$error = &backup($::opt{'dir'}, $tape_key, $::level);
 
     } # end set or single fs
 
@@ -538,20 +536,22 @@ sub backup_routine {
     }
 
     # Remove old log files now that we are done
-    my $rmlogs = 0;
-    foreach my $lf (sort keys %oldlogs) {
-	$rmlogs++;
-	my ($lev,$d) = split(/\|/,$oldlogs{$lf});
-	if (defined($d)) {
-	    &log("| Removing old level $lev log of $label (dated $d)");
-	} else{
-	    &log("| Removing old level $lev log of $label");
+    if ($error == 0) {
+	my $rmlogs = 0;
+	foreach my $lf (sort keys %oldlogs) {
+	    $rmlogs++;
+	    my ($lev,$d) = split(/\|/,$oldlogs{$lf});
+	    if (defined($d)) {
+		&log("| Removing old level $lev log of $label (dated $d)");
+	    } else{
+		&log("| Removing old level $lev log of $label");
+	    }
+	    if (!defined($::debug)) {
+		unlink("$lf") or warn("Can't remove $lf: $OS_ERROR\n");
+	    }
 	}
-	if (!defined($::debug)) {
-	    unlink("$lf") or warn("Can't remove $lf: $OS_ERROR\n");
-	}
+	&line('log') if ($rmlogs > 0);
     }
-    &line('log') if ($rmlogs > 0);
 
     # Compress log file
     if ($cfg::comp_log ne 'false') {
@@ -586,9 +586,11 @@ sub backup_routine {
 
     &line('screen');
 
-    &toc_routine($tape_key);
+    if ($error == 0) {
+	&toc_routine($tape_key);
+    }
 
-    exit(0);
+    exit($error);
 
 }
 
@@ -617,6 +619,7 @@ sub backup {
     my $exitscript = "$cfg::tmpdir/collectexit.$PROCESS_ID.sh";
     my $result = "$cfg::tmpdir/exitstatus.$PROCESS_ID";
     my $pkglist;
+    my $error = 0;
 
     &line();
 
@@ -738,6 +741,8 @@ sub backup {
 	    } else {
 		$::index{$indexkey} = "$title_without_type";
 	    }
+	} elsif (defined($::use_blockdevice)) {
+	    # no indexes anyway
 	} else {
 	    $indexkey = "$tape_key|$::nextfile";
 	    if (defined($::debug)) {
@@ -905,34 +910,44 @@ sub backup {
 		    print $::msg $_;
 		    print LOG $_;
 		}
+		close(LOG);
 		close(CMD);
 	    }
 
 	    if ($CHILD_ERROR) {
 		&log('');
 
+		# If using exit trick, cat the result file; otherwise use normal output
+		if (defined($catchexit)) {
+		    my $out = `cat $result`;
+		    &log("ERROR: non-zero exit from:\n$out");
+		} else {
+		    &log("ERROR: non-zero exit from:\n$cmd");
+		}
+
 		if (defined($::opt{'ignore-errors'})) {
-		    &log("returned ERROR from backup; will continue anyway");
+
+		    $error = 0;
+		    &log('');
+		    &log("ERROR: will continue anyway");
+
 		} else {
 
-		    &log("ERROR from backup, exiting");
-
-		    # If using exit trick, cat the result file; otherwise use normal output
-		    if (defined($catchexit)) {
-			my $out = `cat $result`;
-			&log("offending command(s):\n$out");
-		    } else {
-			&log("offending command(s):\n$cmd");
-		    }
+		    $error++;
+		    &log('');
+		    &log("ERROR: exiting");
 
 		    # Put ERROR in the index if tapedevice, or nuke index if file
 		    if (defined($indexkey)) {
 			if (defined($::use_file)) {
 			    delete $::index{$indexkey};
+			} elsif (defined($::use_blockdevice)) {
+			    # no indexes anyway
 			} else {
-			    $::index{$indexkey} .= "\n\t---> ERROR occurred during write, above may not be valid";
+			    $::index{$indexkey} .= "\n\t---> ERROR during write, above may not be valid";
 			}
 		    }
+
 		    # If file, rm botched file regardless of index
 		    if (defined($::use_file)) {
 			if ($cfg::type =~ m/^(copy|rsync)$/) {
@@ -941,30 +956,25 @@ sub backup {
 			    unlink($::device);
 			}
 		    }
-		}
 
-		if(defined($catchexit)) {
-		    unlink($result);
-		    unlink($exitscript);
-		}
+		} # ignore error defined
 
-		if (!defined($::opt{'ignore-errors'})) {
-		    exit(1);
-		}
-	    }
-	    close(LOG);
+	    } # CHILD_ERROR
 
-	}
+	} # foreach cmd
+
     } else {
 	&log("(debug) command output would be here");
     }
     &line();
 
     # Actually remove the old stamp files now that we are done
-    foreach my $ts (sort keys %oldstamps) {
-	print $::msg "| Removing out of date level $oldstamps{$ts} timestamp for $dir\n";
-	if (!defined($::debug)) {
-	    unlink("$ts") or warn("Can't remove $ts: $OS_ERROR\n");
+    if ($error == 0) {
+	foreach my $ts (sort keys %oldstamps) {
+	    print $::msg "| Removing out of date level $oldstamps{$ts} timestamp for $dir\n";
+	    if (!defined($::debug)) {
+		unlink("$ts") or warn("Can't remove $ts: $OS_ERROR\n");
+	    }
 	}
     }
 
@@ -973,7 +983,7 @@ sub backup {
     my $t = &current_time('ctime');
     &log("| Backup start: $::date_at_start");
     &log("| Backup end:   $t");
-    if (!defined($::debug)) {
+    if (($error == 0) and !defined($::debug)) {
 	system("$::path{touch} -t \"$::stamp_at_start\" \"$cfg::stampdir/$cfg::sprefix$label.$level\"");
     }
 
@@ -992,6 +1002,7 @@ sub backup {
 	unlink($exitscript);
     }
 
+    return($error);
 }
 
 ######################################################################
@@ -2150,9 +2161,6 @@ sub compare_routine {
 	$cmd .= "$::afio_blk_flag ";
 	$cmd .= "-";
 
-    } elsif ($cfg::type eq 'cpio') {
-	die("cpio not capable of comparing files");
-
     } elsif ($cfg::type eq 'tar') {
 	$cmd .= "$::path{tar} --diff ";
 	$cmd .= "--totals ";
@@ -2551,13 +2559,9 @@ sub mt {
 	}
 
 	if (defined($::use_file)) {
-
 	    # mt ops skipped for files
-
-	} elsif (defined($::blockdevice)) {
-
+	} elsif (defined($::use_blockdevice)) {
 	    # mt ops skipped for block device
-
 	} else {
 
 	    my $command;
@@ -2800,7 +2804,7 @@ sub optioncheck {
 
 	    # In case of floppy or similar.
 	    # Can't do multiple files this way; turn indexing off
-	    $::blockdevice = 1;
+	    $::use_blockdevice = 1;
 	    $cfg::indexes = 'false';
 
 	} elsif (-d "$cfg::device") {
@@ -3063,20 +3067,12 @@ sub optioncheck {
 	    my $bufcmd = "$::path{mbuffer} -q -m $megs -p $cfg::buffer_fill_pct $mbuffer_blk_flag ";
 
 	    $::buffer_cmd = " | $bufcmd";
-	    $::write_cmd = "$bufcmd | $::path{dd} $::dd_blk_flag $::dd_write_pad_flag of=";
-	    $::read_cmd = "$::path{dd} $::dd_blk_flag $::dd_read_pad_flag if=";
-
-	} elsif ($cfg::buffer eq "bfr") {
-
-	    $::path{'bfr'} = &checkinpath('bfr');
-	    push(@::remoteprogs, $::path{'bfr'});
-
-	    my $megs = $cfg::buffer_megs . "m";
-	    my $bufcmd = "$::path{bfr} -b $megs";
-
-	    $::buffer_cmd = " | $bufcmd";
-	    $::write_cmd = "$bufcmd | $::path{dd} $::dd_blk_flag $::dd_write_pad_flag of=";
-	    $::read_cmd = "$::path{dd} $::dd_blk_flag $::dd_read_pad_flag if=";
+	    $::write_cmd = "$bufcmd -f -o ";
+	    if (defined($::opt{'volumes'})) {
+		$::read_cmd = "$bufcmd -f -n $::opt{volumes} -i ";
+	    } else {
+		$::read_cmd = "$bufcmd -f -i ";
+	    }
 	}
     } else {
 
@@ -3511,21 +3507,6 @@ sub optioncheck {
 	    $::path{'rpm'} = &checkinpath('rpm');
 
 	} elsif ($::opt{'pkgdelta'} =~ /freebsd/i) {
-	    #
-	    # pkg_info(1) doesn't have the '-g' flag before 4.3-RELEASE so we need to look
-	    # at the uname value and complain if pkgdelta is used on a FreeBSD box with a
-	    # release before that.
-	    #
-	    my ($os_version, $major, $minor);
-	    chomp($os_version = `uname -r`);
-
-	    if ($os_version =~ /(\d+)\.(\d+)/) {
-		$major = $1;
-		$minor = $2;
-		if (($major == 4 && $minor <= 2) || $major < 4) {
-		    push (@::errors, "Required support in pkg_info(1) for pkgdelta mode not found in FreeBSD $os_version");
-		}
-	    }
 	    $::pkgdelta = 'freebsd';
 	    $::path{'pkg_info'} = &checkinpath('pkg_info');
 
@@ -3586,7 +3567,7 @@ sub optioncheck {
     if (($::mode =~ m/^(set|dir|newtape)$/) and defined($::opt{'num'})) {
 	push(@::errors,"-num Can't be used in -$::mode mode");
     }
-    if (defined($::use_file)) {
+    if (defined($::use_file) or defined($::use_blockdevice)) {
 	if (defined($::opt{'num'})) {
 	    push(@::errors,"Can't use -num unless reading from tape");
 	}
@@ -3619,6 +3600,8 @@ sub optioncheck {
     if (defined($::opt{'test-tape-drive'})) {
 	if (defined($::use_file)) {
 	    push(@::errors,"No use trying tape drive tests on directories!");
+	} elsif (defined($::use_blockdevice)) {
+	    push(@::errors,"No use trying tape drive tests on block devices!");
 	}
 	$::path{'diff'} = &checkinpath('diff');
 	$::path{'tr'} = &checkinpath('tr');
@@ -4147,7 +4130,7 @@ sub setup_before_read {
 	    &log("| Reading from stdin (type=$cfg::type compress=$cfg::compress)");
 	} elsif (defined($::use_file)) {
 	    &log("| Reading from on-disk file $::device");
-	} elsif (defined($::blockdevice)) {
+	} elsif (defined($::use_blockdevice)) {
 	    &log("| Reading from block device $::device");
 	} else {
 	    &log("| Reading from CURRENT TAPE POSITION");
@@ -4198,12 +4181,8 @@ sub read_function {
 
     } else {
 
-	# bfr/mbuffer need a blocking dd read ahead of them
-	if ($cfg::buffer =~ m/^(bfr|mbuffer)$/) {
-	    $cmd = $::read_cmd . '"' . $file . '"' . $::buffer_cmd;
-	} else {
-	    $cmd = $::read_cmd . '"' . $file . '"';
-	}
+	$cmd = $::read_cmd . '"' . $file . '"';
+
     }
 
     return($cmd);
@@ -4953,9 +4932,9 @@ sub file_list_cmd {
 
 		if ($dir eq '/') {
 		    $key = "/$file";
-		} else {
+		    } else {
 		    $key = "$dir/$file";
-		}
+			}
 
 		if (($cfg::pkgdelta_archive_unowned eq 'true') and
 		    !defined($::packaged{$host}{$key})) {
@@ -5002,10 +4981,10 @@ sub list_packages {
 	my $cmd = "$::path{rpm} -q -a --queryformat '%{name}-%{version}-%{release}.%{arch}.rpm\\n'";
 
 	if ($host ne 'localhost') {
-	    &log("| Listing all RPM packages on host $host...");
+	    &log("| Identifying all RPM packages on host $host...");
 	    $cmd = &maybe_remote_cmd($cmd, $host);
 	} else {
-	    &log("| Listing all RPM packages...");
+	    &log("| Identifying all RPM packages...");
 	}
 	if (defined($::debug)) {
 	    &log("(debug) $cmd");
@@ -5105,7 +5084,7 @@ sub find_packaged_files {
 	} else {
 	    open(LIST,"$cmd 2> /dev/null |") || die;
 	    while(<LIST>) {
-		# If it starts with '@' then it's a pkg directive, 
+		# If it starts with '@' then it's a pkg directive,
 		# else it's a (relative) path
 		#
 		if (/^\@/) {
@@ -5116,7 +5095,7 @@ sub find_packaged_files {
 			$alt_localbase = '';
 			($name,$path,$suffix) = fileparse($localbase,'\.\S+');
 			$path =~ s/\/$//;
-			# In some (default) situations there are some packages which are 
+			# In some (default) situations there are some packages which are
 			# installed relative to a PREFIX which is actually a link in the /
 			# filesystem. The following hack gets around that and creates an
 			# entry in $packaged twice--once for the full path that would be seen via
@@ -5152,9 +5131,9 @@ sub find_packaged_files {
 			chomp ($fullpath);
 			$::packaged{$host}{$fullpath} = 1;
 		    }
-		    if (&POSIX::isatty($::msg)) {
-			print $::msg &spinner(++$cnt) . "\r";
-		    }
+		if (&POSIX::isatty($::msg)) {
+		    print $::msg &spinner(++$cnt) . "\r";
+		}
 		}
 	    }
 	    close(LIST);
@@ -5225,7 +5204,7 @@ sub find_changed_files {
 	    &log("(debug) $cmd");
 	} else {
 	    open(LIST,"$cmd 2> /dev/null |") || die;
-	    while (<LIST>) {
+	    while(<LIST>) {
 		if (&POSIX::isatty($::msg)) {
 		    print $::msg &spinner(++$cnt) . "\r";
 		}
