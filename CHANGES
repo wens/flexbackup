@@ -7,6 +7,10 @@ In CVS pending next release
 Changes:
  - Add 'rsync' type that acts like 'copy' but using rsync instead of piped
    cpio's.  You need rsync 2.5.6 for this to work!
+ - Recognize .deb files as ar archives
+
+Bug fixes/cleanup:
+ - Fix quoting in check_remote_progs
 
 ----------------------------------------------------------------------
 Version 1.2.0 (20030707)
