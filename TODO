@@ -21,6 +21,8 @@ Cleanup/fix:
      logic in some spots..
  - Split main program; use separate libs for archiver types that are stored
    in different files?  install then requires more than just program + conf file.
+ - Figure out a way to detect pipeline command failures for machines where
+     local /bin/sh is bourne/ash/ksh/etc.  All other combos work.
 
 Misc:
  - Make a manual page (AND other enchanced documentation, more than a README)
