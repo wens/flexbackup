@@ -6,8 +6,7 @@ Some of these might not happen
 
 Cleanup/fix:
 
- - fix filelist with -pipe
- - Check -regex with '\(a\|b\)' with freebsd find
+ - Check -regex '.*\(a\|b\)' with FreeBSD find
 
  Blocked pending me having a work tape drive again:
   - Need to pad for reads?  test all types.
@@ -19,36 +18,28 @@ Cleanup/fix:
  - If comp_log is changed, we don't nuke old logs that normally would be
    overwritten with ourselves if comp_log stayed the same. (cosmetic nit)
  - Fix afio w/null (FreeBSD printf can't spit out null char)
- - Whole class of problems like:
+ - Whole class of cross-platform stuff:
     - Use dump combined flags (for older dumps that want abc not -a -b -c)
     - Not all finds have the -fstype flag (from $traverse_fs)
     - How to handle (use lowest common denominator flags?  sorta what's tried now)
 
 Misc:
- - Add faq on files changing underneath tar? sql db dump?
- - re-word faq re trying by hand.
- - Add faq on max size
  - Add faq on -erase -newtape taking forever / erase_rewind_only
      could be mt erase, could be dd index hang (-test-tape-drive)
- - Add faq on extract filelist
-     also .z at end if afio
- - add faq -wday use
- - add faq -pipe use
- - update faq re: spanning
- - add faq re: spaces in dirs/prune setup
  - add faq re: pkg delta how it works
- - add faq re; onefile/flist spec
- - add faq re: updating 1.0.x -> 1.2.0 ; howto fix conf file, flag changes
-     mt_blksize change
-     -fs -> set/dir
-     -files -> -flist/-onefile
- - Update README/faq/spec/lsm descriptions for new features since 1.0.3
+ - add faq -wday use
+
+ - Add faq on files changing underneath tar? sql db dump?
+
+ - Update README/faq/spec/lsm description text for new features since 1.0.3
      sets
      pruning
      pkgdelta
      filelist
      copy
+
  - fix description text in sf project, freshmeat
+
  - Create mbuffer rpm (if I can make it work)
  - Man page (create from -help perhaps)
  - Try against torture-test list:
@@ -73,15 +64,21 @@ Features to add:
 
  - Make package delta work with debian pkgs
 
+ - CD-ROM burning (or just .iso type?) for full backups? any?
+      just act like to-file archives, and take those files & write to CD?
+
  - If we detect an error and are using tapes, do something intelligent
      to reposition tape, add another filemark, etc to get tape to known state
      and avoid the maybe-error in the index & what 'nextfile' is on the tape
 
  - Log tape sizes (output of buffer or dd or mt tell can be used?)
 
+ - Use AppConfig module or something for config file, so it doesn't have to
+   be in perl syntax (I don't mind perl syntax at all, not sure how joe
+   user feels)
+
  - smbtar?
-     doable - overload type 'tar'. smbtar triggers with a fs spec of something like
-               smb:user:pass@host/share:dir
+     doable - use fs spec of something like user:pass@host/share:dir
      smbtar has "files newer than" option, test
      don't want password echoed
      no exclude from find
@@ -108,7 +105,7 @@ Features to add:
      keeping it simply built out of standard commandline utils is a big plus
      as well...
 
- - Make remote machine path overrides possible, that supercede others?
+ - Make per-host path overrides possible, that supercede others?
 
  - Stor lists of files backed up in a on-disk db (to help find what to
      restore from?). Actually now you can just 'zgrep filename
@@ -120,9 +117,6 @@ Features to add:
       But we don't know the size ahead of time unless hard-limited resperved size.
       Updating db at the beginning of the tape will add tape-travel overhead for every backup.
       rewind->write loses the rest of the contents past the first file?
-
- - CD-ROM burning (or just .iso type?) for full backups? any?
-      just act like to-file archives, and take those files & write to CD?
 
  - gnuplot graphs of backup size/duration vs time (parse logfiles)
 

@@ -5,10 +5,12 @@ $Name$
 Version 1.2.0 ()
 
 Changes:
-  - Added -pipe option to archive single dir to stdout, or read archive
-    from stdin
+  - Added -pipe option to archive single directory to stdout,
+    or list/extract/compre archive from stdin
   - Added -nodefaults option for debug
+  - Allow compression for filelist type
   - Merge devel -> stable
+
 
 Bugfixes/cleanup:
   - Truncate tar label to 99 chars
