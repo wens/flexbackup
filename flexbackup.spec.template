@@ -21,12 +21,12 @@ A flexible backup tool
 Features:
    o Easy to configure
    o Uses dump, afio, tar, zip, star, pax, or cpio with the flick of a switch
+   o Full (0) and numbered levels of incremental backup (acts like "dump")
    o Backup, extract, compare, list modes
    o Compression and buffering for all backup types
-   o Full (0) and numbered levels of incremental backup
    o Keeps a table of contents so you know whats on each tape
    o Does remote filesystems (over rsh/ssh; no special service)
-   o Works with IDE/SCSI tapes on Linux/FreeBSD, Linux ftape, or disk files
+   o Works with tape drives or on-disk files
    o Nice log files
 
 

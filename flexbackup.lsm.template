@@ -7,15 +7,15 @@ A flexible backup tool
 Features:
    o Easy to configure
    o Uses dump, afio, tar, cpio, star, zip, or pax
+   o Full and numbered levels of incremental backup (acts like "dump")
    o Compression and buffering for all backup types
    o Handles multivolume backups
    o Backup, extract, compare, list modes
-   o Full and numbered levels of incremental backup
    o Simple table of contents so you know what archives are on each tape
    o Does remote filesystems (over rsh/ssh; no special service)
-   o Works with IDE/SCSI tapes on Linux/FreeBSD, or on disk archives
+   o Works with tape drives or on-disk files
    o Nice log files
-Keywords: backup dump restore afio tar cpio ftape
+Keywords: backup dump restore afio tar cpio pax ftape
 Author: edwinh+flexbackup@edwinh.org (Edwin Huffstutler)
 Maintained-by: edwinh+flexbackup@edwinh.org (Edwin Huffstutler)
 Primary-site: http://flexbackup.sourceforge.net /tarball
