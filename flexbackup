@@ -2411,7 +2411,7 @@ sub optioncheck {
 	}
 
 	$main::zip_noz_flag = "";
-	if ($cfg::zip_nocompress_types ne "") {
+	if (defined($cfg::zip_nocompress_types) and $cfg::zip_nocompress_types ne "") {
 	    # Add dots to file extensions, make -n flag
 	    @_ =  split(" ",$cfg::zip_nocompress_types);
 	    foreach (@_) {
