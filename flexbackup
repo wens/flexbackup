@@ -1477,17 +1477,17 @@ sub mt {
 
 	    # If using files, an mt erase (from -newtape) rm's all files in the dir
 	    # FIXME this is a dumb spot for it.  Do I really even want this behavior?
-	    if (defined($main::use_file)) {
-		opendir(DIR,$cfg::device) or die ("Can't open dir $cfg::device: $OS_ERROR");
-		foreach(readdir(DIR)) {
-		    next if (m:^\.\.?$:);
-		    next if (m%^$cfg::keyfile$%);
-		    &log("| Erasing old archive $_");
-		    unlink("$cfg::device/$_") or die ("Can't rm $cfg::device/$_: $OS_ERROR");
-		}
-		closedir(DIR);
-
-	    }
+	    #if (defined($main::use_file)) {
+	    #    opendir(DIR,$cfg::device) or die ("Can't open dir $cfg::device: $OS_ERROR");
+	    #    foreach(readdir(DIR)) {
+	    #        next if (m:^\.\.?$:);
+	    #        next if (m%^$cfg::keyfile$%);
+	    #        &log("| Erasing old archive $_");
+	    #        unlink("$cfg::device/$_") or die ("Can't rm $cfg::device/$_: $OS_ERROR");
+	    #    }
+	    #    closedir(DIR);
+            #
+	    #}
 
 	    if ($cfg::erase_rewind_only eq "true") {
 		next;
