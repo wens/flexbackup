@@ -17,7 +17,7 @@ Features:
    o Compression and buffering options for all backup types
    o Keeps a table of contents so you know archives are on each tape
    o Does remote filesystems (over rsh/ssh; no special service)
-   o Works with tape drives or on-disk files
+   o Writes to tape drives, or on-disk archive files / directory trees
    o Nice log files
 
 Software needed:
@@ -46,11 +46,10 @@ I also wanted to take the standard backup tools and make a generic
 interface to them.
 
 ----------------------------------------------------------------------
-USE
+USAGE EXAMPLES
 
-  --> Please see "flexbackup -help" <--
- 
-Some examples below.
+--> Please see "flexbackup -help" and the config file comments
+There are many useful options that aren't appropriate to describe here.
 
 To do a full backup of /home:
 
@@ -88,37 +87,22 @@ List what backups are on this tape:
 ----------------------------------------------------------------------
 NOTES
 
- The first file on a tape is the "index key" (see "flexbackup -toc").
- Therefore, do an "mt fsf 1" first, if you want to read the first backup
- archive on a tape.
+ Remote: rsh or ssh is used for remote backups.  Backups of remote machines
+ are to be run from the machine with the tape drive or archive disk space.
 
- Level 0 backups of "all" assume a new tape - will trigger
- tape retension and erasure.  Other backups move tape to
- current end of data and start the backup there
+ Archiving to files - just set $device to a directory. Backups will be
+ called <filesystem>.<level>.<yyyymmdd>.<type>.  If you use type "copy",
+ instead of an archive file you'll get a directory tree with the files
+ mirrored in it.
 
- Backups rewind the tape when done.  Other operations leave it where
- it is.
-
- If you split the "all" level 0 backup into multiple tapes,
- tape numbers start at 0.
-
- Log files are of the format <prefix><fs>.<level>.<yyyymmdd>
- Lower-level backups will wipe out all higher-level log files in
- the log directory for that filesystem.  A symlink is made to the
- "latest" log for a certain filesystem.
-
- Archiving to files - just set $device to a directory. Backups
- will be called <filesystem>.<level>.<yyyymmdd>.<type>
+ Log files are of the format <fs>.<level>.<yyyymmdd> Lower-level backups
+ will wipe out all higher-level log files in the log directory for that
+ filesystem.  A symlink is made to the "latest" log for a certain
+ filesystem.
 
  Extracting only lists of files: dump/restore and tar will recurse
  into subdirectories if they are in the list.  afio and cpio will not
  (you must list all the files you want to extract them in that case)
-
- Remote: rsh or ssh is used for remote backups.  Backups of remote machines
- are to be run from the machine with the tape drive!
-
- If you set device to "host:/dev/tapedevice", you can use remote tape
- drives as well (via rsh/ssh as well)
 
  When comparing "dump" archives, and if you only backed up a
  subdirectory of a filesystem, you will get errors for the "other"
@@ -127,10 +111,101 @@ NOTES
  archive is not necessarily the directory you told it to dump, but
  rather the mount point of the filesystem
 
+----------------------------------------------------------------------
+NOTES - WHEN USING TAPES
+
+ The first file on a tape is the "index key" (see "flexbackup -toc").
+ Therefore, use the -num switch to read specific archives.  e.g, to read the
+ first backup archive on a tape: "flexbackup -list -num 1".  Otherwise you
+ can position it yourself with "mt fsf 1 ; flexbackup -list ... "
+
+ Level 0 backups of "all" assume a new tape - will trigger
+ tape retension and erasure.  Other backups move tape to
+ current end of data and start the backup there.
+
+ Backups rewind the tape when done.  Other operations leave it where it is.
+
+ If you split the "all" level 0 backup into sets, tape numbers start at 0.
+
+ If you set device to "host:/dev/tapedevice", you can use remote tape
+ drives (via rsh/ssh)
+
  I suggest using "afio" for tapes, especially if you want compression.  It
  compresses one file at a time, so an error will not corrupt your entire
  archive like with other types.  If you are using on-disk backups, the
  archive type doesn't matter as much.
+
+----------------------------------------------------------------------
+SAMPLE FILESYSTEM SETUP
+
+Here's a snippet of a config file that I'm using, so you can see how the
+filesystem "sets" and pruning options work.
+
+# Configure backup "sets".
+# Not needed if you use "-dir <dir>" to backup one tree at a time.
+# Each set is a simple space-separated list of filesystems
+# Remote filesystems should denoted as 'host:dir'
+# You can use anything (other than 'all') as set names
+#
+# Example:
+#  $set{'set1'} = "/home /usr";
+#  $set{'set2'} = "/dir3 machine2:/dir4 machine3:/dir5";
+#
+# "-set all" will back up all defined sets. If you are doing a full backup
+# using tapes, each "set" will go onto a different tape and you will be
+# prompted for tape change in between.
+#
+$set{'homes'} = "/home/user1 /home/user2 /home/user3";
+$set{'alletc'} = "/etc hercules:/etc thor:/etc gazelle:/etc";
+$set{'other'} = "/var/named /net/local /net/www";
+$set{'os'} = "/ hercules:/ thor:/ gazelle:/";
+$set{'laptop'} = "ehuff-mobl:/etc ehuff-mobl:/home/edwinh";
+                          
+# Subtree pruning
+# A space-separated list of directories to prune from each backup.
+# Key is a filesystem or host:dir spec as outlined above
+# regular expressions allowed (not shell-type wildcards!)
+$prune{'/'}          = "tmp proc var/spool/news var/spool/squid disk. mnt.? misc net";
+$prune{'hercules:/'} = "tmp proc disk. mnt.? misc net";
+$prune{'thor:/'}     = "tmp proc disk. mnt.? misc net";
+$prune{'gazelle:/'}  = "tmp proc disk. mnt.? misc net";
+$prune{'/net/local'} = "games";
+                                                    
+----------------------------------------------------------------------
+SAMPLE CRONTAB
+
+This goes with the above.  Shows how the sets are arranged and how the
+-wday flag could be used.  (You will not want the "root" field for a normal
+user crontab... this is in /etc/crontab type format.)
+
+# Home directories at 3:31am
+# Daily incremental backups weekdays (catch day-to-day changes)
+# Weekly differential backups Saturday (catch all changes since full)
+# Full backup - once a month on Sunday only
+31   3    *     *  1-5 root flexbackup -set homes -incremental
+31   3    *     *    6 root flexbackup -set homes -differential
+31   3  1-7     *    * root flexbackup -wday 7 -set homes -full -type afio
+ 
+# All /etc dirs at 3:01
+# Daily incremental backups weekdays (catch day-to-day changes)
+# Weekly differential backups Saturday (catch all changes since full)
+# Full backup - once a month on Sunday only
+1    3    *     *  1-5 root flexbackup -set alletc -incremental
+1    3    *     *    6 root flexbackup -set alletc -differential
+1    3  1-7     *    * root flexbackup -wday 7 -set alletc -full -type afio
+ 
+# Other filesystems at 2:31am
+# Daily incremental backups weekdays (catch day-to-day changes)
+# Weekly differential backups Saturday (catch all changes since full)
+# Full backup - once a month on Sunday only
+31   2    *     *  1-5 root flexbackup -set other -incremental
+31   2    *     *    6 root flexbackup -set other -differential
+31   2  1-7     *    * root flexbackup -wday 7 -set other -full -type afio
+ 
+# Unowned/changed package stuff on each machine at 1:01am
+# Only once a month
+1    1  1-7     *    * root flexbackup -wday 7 -set os -pkgdelta rpm -full
+ 
 
 ----------------------------------------------------------------------
 MISCELLANEOUS
