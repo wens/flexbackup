@@ -28,7 +28,7 @@
 #  flexbackup -restore             : as above, but interactive restore
 #                                    (dump type only for now)
 #
-#  flexbackup -<operation> file    : if archiving to files rather than a device,
+#  flexbackup [operation] file     : if archiving to files rather than a device,
 #                                    list/extract/compare/restore options take
 #                                    a filename argument
 #
@@ -40,6 +40,7 @@
 #
 #  flexbackup [opt] -type <x>      : override $type from config file
 #
+#  flexbackup [operation] -reten   : force a retension before any operation
 #  flexbackup -fs <x> -erase       : force a rewind/erase before backup
 #  flexbackup -fs all -noreten     : don't retension for level 0 "all" backups
 #  flexbackup -fs all -noerase     : don't rewind/erase for level 0 "all" backups
@@ -74,6 +75,7 @@ if (! &main::GetOptions(\%main::opt,
                         "noreten",
                         "noerase",
                         "erase",
+                        "reten",
                         "version",
                         "n",
                         "d=s%"
@@ -117,15 +119,19 @@ $_ = $cfg::blksize * 1024;
 
 # Decide what to do
 if (defined($main::opt{'restore'})) {
+    &mt("retension") if (defined($main::opt{'reten'}));
     &restore_routine();
 
 } elsif (defined($main::opt{'extract'})) {
+    &mt("retension") if (defined($main::opt{'reten'}));
     &extract_routine();
 
 } elsif (defined($main::opt{'compare'})) {
+    &mt("retension") if (defined($main::opt{'reten'}));
     &compare_routine();
 
 } elsif (defined($main::opt{'list'})) {
+    &mt("retension") if (defined($main::opt{'reten'}));
     &list_routine();
 
 } elsif (defined($main::opt{'fs'})) {
@@ -133,6 +139,7 @@ if (defined($main::opt{'restore'})) {
 
 } elsif (defined($main::opt{'toc'})) {
 
+    &mt("retension") if (defined($main::opt{'reten'}));
     if ($cfg::ftape eq 'true') {
 	&mt('rewind');
 	exec("vtblc -p -f $cfg::rawdevice");
@@ -296,15 +303,20 @@ sub backup_routine {
 
         # Just one filesystem
 	&line();
-        if (!defined($main::opt{'erase'})) {
-            $main::nextfile = &contents();
-            &log('Making sure tape is at end of data...');
-            &mt('generic-eod');
-        } else {
+
+        if (defined($main::opt{'reten'})) {
+            &log('Retensioning tape...');
+            &mt("retension");
+        }
+        if (defined($main::opt{'erase'})) {
             $main::nextfile = 0;
             &log('Rewinding & erasing tape...');
             &mt('rewind');
             &mt('erase');
+        } else {
+            $main::nextfile = &contents();
+            &log('Making sure tape is at end of data...');
+            &mt('generic-eod');
         }
         &line();
         &mt('generic-query');
@@ -396,6 +408,8 @@ sub backup {
     my $localdir = $dir;
     my $label = &get_label($dir);
 
+    &line();
+
     if ($localdir =~ s/^(.+):(.+)$/$2/) {
 	$remote = $1;
 	chomp($tapehost = `hostname`);
@@ -445,7 +459,6 @@ sub backup {
     $date_at_start = &current_time();
 
     # Enough fooling around... run it
-    &line();
     &log("$cmd");
     &line();
     if (!defined($main::opt{'n'})) {
@@ -596,7 +609,7 @@ sub backup_cpio {
         if ($cfg::remoteshell =~ /ssh/) {
             $cmd .= " | $cfg::remoteshell $tapehost \"dd of=$cfg::device bs=$main::dd_blksize\"";
             if ($cfg::cpio_verbose eq "true") {
-                &log("NOTE - \$cpio_verbose ignored: remote host + ssh");
+                &log("Note \$cpio_verbose flag is ignored when using remote host over ssh");
             }
         } else {
             $cmd .= " -F $tapehost:$cfg::device";
@@ -1353,7 +1366,7 @@ sub check {
 
     my $ref = shift(@_);
     my $varname = shift(@_);
-    my $ok = shift(@_);
+    my $ok = shift(@_);  # list of ok values, or empty for t/f, or "exists"
     my @ok;
     my $found = 0;
     my $realvarname;

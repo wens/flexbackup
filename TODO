@@ -9,10 +9,13 @@ Some of these might not happen, but figured I should jot them down
  - check that dump dir exists
  - compression for dump, cpio
      do this with the dd pipeline like I did for ssh + cpio
+ - require the "buffer" utility
+     use with a pipeline again
+     that way we can set a global buffer size for types not just afio
+     dump + ssh or dump + compress would stream better this way
  - autodetect ftape and raw device to eliminate configuration
  - nocompress file extension list for afio
  - arbitrary "list of files" extract
- - add reten switch
  - figure out why I can't get dump -T to work
  - get restore to compare subdirectories of mountpoints correctly
      the mountpoint is the top of the dump archive, even if you dump a
@@ -33,7 +36,8 @@ Some of these might not happen, but figured I should jot them down
      Fix duplicated code in afio,cpio,tar
  - log files for extract/compare/etc?
  - remote extract/compare/restore
-      possible at all?
+     possible at all?
+     just install s/w on client w/remote tape device. need config file option
  - GUI driver/configurator utility
      "linux backup" util looked like the right kind of interface
      http://mirrors.darkelf.net. contact author.
