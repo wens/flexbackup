@@ -276,10 +276,10 @@ sub backup_routine {
 	foreach (reverse sort @files) {
 
 	    # Skip our own log
-	    next if (m/^$logfile(\.gz|\.bz2|\.Z)?$/);
+	    next if (m/^$logfile(\.gz|\.bz2|\.Z|\.zip)?$/);
 
 	    # Find normal old logs
-	    if (m/^$cfg::prefix$label\.(\d+)(\.(\d+))?(\.gz|\.bz2|\.Z)?$/) {
+	    if (m/^$cfg::prefix$label\.(\d+)(\.(\d+))?(\.gz|\.bz2|\.Z|\.zip)?$/) {
 		if ($1 >= $main::level) {
 		    # Might be from $staticlogs=true or false
 		    if (defined($3)) {
@@ -291,7 +291,7 @@ sub backup_routine {
 	    }
 
 	    # If this is a level 0, we can nuke incremental logs
-	    if (($main::level == 0) and (m/^$cfg::prefix$label\.(incremental)(\.(\d+))?(\.gz|\.bz2|\.Z)?$/)) {
+	    if (($main::level == 0) and (m/^$cfg::prefix$label\.(incremental)(\.(\d+))?(\.gz|\.bz2|\.Z|\.zip)?$/)) {
 		# Might be from $staticlogs=true or false
 		if (defined($3)) {
 		    $oldlogs{"$cfg::logdir/$_"} = $1 . "|" . $3;
@@ -485,6 +485,9 @@ sub backup_routine {
 	} elsif ($cfg::comp_log eq "bzip2") {
 	    $logext = ".bz2";
 	    $comp_cmd = "$main::path{bzip2} -f $main::log";
+	} elsif ($cfg::comp_log eq "zip") {
+	    $logext = ".zip";
+	    $comp_cmd = "$main::path{cat} $main::log | $main::path{zip} -q - - > $main::log" . $logext . "; $main::path{rm} -f $main::log";
 	} elsif ($cfg::comp_log eq "compress") {
 	    $logext = ".Z";
 	    $comp_cmd = "$main::path{compress} -f $main::log";
@@ -579,6 +582,8 @@ sub backup {
 		$filename .= ".gz";
 	    } elsif ($cfg::compress eq "bzip2") {
 		$filename .= ".bz2";
+	    } elsif ($cfg::compress eq "zip") {
+		$filename .= ".zip";
 	    } elsif ($cfg::compress eq "compress") {
 		$filename .= ".Z";
 	    }
@@ -589,6 +594,8 @@ sub backup {
 		$filename .= "-gz";
 	    } elsif ($cfg::compress eq "bzip2") {
 		$filename .= "-bz2";
+	    } elsif ($cfg::compress eq "zip") {
+		$filename .= "-zip";
 	    } elsif ($cfg::compress eq "compress") {
 		$filename .= "-Z";
 	    }
@@ -769,8 +776,8 @@ sub backup_dump {
     $cmd .= "$dir $main::z";
 
     # Buffer both sides if remote
-    if (defined($remote) and ($cfg::buffer eq "buffer")) {
-	$cmd .= "$main::buffer_cmd";
+    if (defined($remote)) {
+	$cmd .= $main::buffer_cmd;
     }
 
     # Wrap all that together
@@ -838,8 +845,8 @@ sub backup_afio {
     $cmd .= "-";
 
     # Buffer both sides if remote
-    if (defined($remote) and ($cfg::buffer eq "buffer")) {
-	$cmd .= "$main::buffer_cmd";
+    if (defined($remote)) {
+	$cmd .= $main::buffer_cmd;
     }
 
     # Wrap all that together
@@ -907,8 +914,8 @@ sub backup_cpio {
     $cmd .= "$main::z";
 
     # Buffer both sides if remote
-    if (defined($remote) and ($cfg::buffer eq "buffer")) {
-	$cmd .= "$main::buffer_cmd";
+    if (defined($remote)) {
+	$cmd .= $main::buffer_cmd;
     }
 
     # Wrap all that together
@@ -974,8 +981,8 @@ sub backup_tar {
     $cmd .= "$main::z";
 
     # Buffer both sides if remote
-    if (defined($remote) and ($cfg::buffer eq "buffer")) {
-	$cmd .= "$main::buffer_cmd";
+    if (defined($remote)) {
+	$cmd .= $main::buffer_cmd;
     }
 
     # Wrap all that together
@@ -1040,8 +1047,8 @@ sub backup_star {
     $cmd .= "$main::z";
 
     # Buffer both sides if remote
-    if (defined($remote) and ($cfg::buffer eq "buffer")) {
-	$cmd .= "$main::buffer_cmd";
+    if (defined($remote)) {
+	$cmd .= $main::buffer_cmd;
     }
 
     # Wrap all that together
@@ -1104,8 +1111,8 @@ sub backup_pax {
     $cmd .= "$main::z";
 
     # Buffer both sides if remote
-    if (defined($remote) and ($cfg::buffer eq "buffer")) {
-	$cmd .= "$main::buffer_cmd";
+    if (defined($remote)) {
+	$cmd .= $main::buffer_cmd;
     }
 
     # Wrap all that together
@@ -1177,8 +1184,8 @@ sub backup_zip {
 
     $cmd = "$main::path{cat} $tmpzip ";
     # Buffer both sides if remote
-    if (defined($remote) and ($cfg::buffer eq "buffer")) {
-	$cmd .= "$main::buffer_cmd";
+    if (defined($remote)) {
+	$cmd .= $main::buffer_cmd;
     }
     $cmd = &maybe_remote_cmd($cmd, $remote);
 
@@ -1922,6 +1929,8 @@ sub mt {
 sub optioncheck {
 
     my $realdev;
+    my $buffer_blk_flag;
+    my $buffer_pad_flag;
 
     # Archive type on commandline
     if (defined($main::opt{'type'})) {
@@ -1936,7 +1945,7 @@ sub optioncheck {
     # First check if things are defined in the config file
     # Checks exist, true/false, or one of options
     &check(\$cfg::type,'type','dump afio cpio tar star pax zip');
-    &check(\$cfg::compress,'compress','gzip bzip2 compress false hardware');
+    &check(\$cfg::compress,'compress','gzip bzip2 compress zip false hardware');
     &check(\$cfg::compr_level,'compr_level','exist');
     &check(\$cfg::verbose,'verbose');
     &check(\$cfg::sparse,'sparse');
@@ -1954,7 +1963,7 @@ sub optioncheck {
     &check(\$cfg::erase_rewind_only,'erase_rewind_only');
     &check(\$cfg::logdir,'logdir','exist');
     &check(\$cfg::tmpdir,'tmpdir','exist');
-    &check(\$cfg::comp_log,'comp_log','gzip bzip2 compress false');
+    &check(\$cfg::comp_log,'comp_log','gzip bzip2 compress zip false');
     &check(\$cfg::stampdir,'stampdir','exist');
     &check(\$cfg::index,'index','exist');
     &check(\$cfg::staticlogs,'staticlogs');
@@ -1988,6 +1997,19 @@ sub optioncheck {
 	}
 	exit(1);
     }
+
+    # Check we can find rsh or ssh
+    $main::path{$cfg::remoteshell} = &checkinpath($cfg::remoteshell);
+
+    # Check we can find common stuff
+    $main::path{'touch'} = &checkinpath('touch');
+    $main::path{'hostname'} = &checkinpath('hostname');
+    $main::path{'cat'} = &checkinpath('cat');
+    $main::path{'rm'} = &checkinpath('rm');
+    $main::path{'tee'} = &checkinpath('tee');
+    $main::path{'find'} = &checkinpath('find');
+    $main::path{'dd'} = &checkinpath('dd');
+    $main::path{'printf'} = &checkinpath('printf');
 
     # Chase links
     $realdev = $cfg::device;
@@ -2025,12 +2047,6 @@ sub optioncheck {
 	$main::remotetapehost = $1;
 	$cfg::device = $2;
 	$main::tapedevice = 1;
-	chomp($_ = `hostname`);
-	if (($_ eq $main::remotetapehost)
-	    or
-	    ($main::remotetapehost =~ /^localhost/)) {
-	    push(@main::errors, "Remote tape host and this host are the same");
-	}
 
     } else {
 	push(@main::errors,"\$device must be set to a directory, a local device, or a remote device");
@@ -2114,27 +2130,39 @@ sub optioncheck {
     } else {
 	$main::mt_blksize = $cfg::blksize * 1024;
     }
-    # buffer blocksize needs k appended
-    my $buffer_blk_flag = "-s " . $cfg::blksize . "k";
-    # dd blocksize needs k appended
-    $main::dd_blk_flag = "ibs=" . $cfg::blksize . "k obs=" . $cfg::blksize . "k";
-    # dump blocksize just in k like the config file
-    $main::dump_blk_flag = "-b $cfg::blksize";
-    # afio blocksize needs k appended
-    $main::afio_blk_flag = "-b " . $cfg::blksize . "k";
-    # cpio blocks are in bytes
-    $main::cpio_blk_flag = $cfg::blksize * 1024;
-    $main::cpio_blk_flag = "-C $main::cpio_blk_flag";
-    # tar blocks are in 512-byte units
-    # long name is really --blocking-factor but changed from --block-size
-    # only in recent versions.  just use the short flag.
-    $main::tar_blk_flag =  $cfg::blksize * 2;
-    $main::tar_blk_flag = "-b $main::tar_blk_flag";
-    # star blocks are in 512-byte units
-    $main::star_blk_flag =  $cfg::blksize * 2;
-    $main::star_blk_flag = "blocks=$main::star_blk_flag";
-    # pax blocksize needs k appended
-    $main::pax_blk_flag = "-b " . $cfg::blksize . "k";
+
+    if ($cfg::blksize ne '0') {
+	# buffer blocksize needs k appended
+	$buffer_blk_flag = "-s " . $cfg::blksize . "k";
+	# dd blocksize needs k appended
+	$main::dd_blk_flag = "ibs=" . $cfg::blksize . "k obs=" . $cfg::blksize . "k";
+	# dump blocksize just in k like the config file
+	$main::dump_blk_flag = "-b $cfg::blksize";
+	# afio blocksize needs k appended
+	$main::afio_blk_flag = "-b " . $cfg::blksize . "k";
+	# cpio blocks are in bytes
+	$main::cpio_blk_flag = $cfg::blksize * 1024;
+	$main::cpio_blk_flag = "-C $main::cpio_blk_flag";
+	# tar blocks are in 512-byte units
+	# long name is really --blocking-factor but changed from --block-size
+	# only in recent versions.  just use the short flag.
+	$main::tar_blk_flag =  $cfg::blksize * 2;
+	$main::tar_blk_flag = "-b $main::tar_blk_flag";
+	# star blocks are in 512-byte units
+	$main::star_blk_flag =  $cfg::blksize * 2;
+	$main::star_blk_flag = "blocks=$main::star_blk_flag";
+	# pax blocksize needs k appended
+	$main::pax_blk_flag = "-b " . $cfg::blksize . "k";
+    } else {
+	$buffer_blk_flag = "";
+	$main::dd_blk_flag = "";
+	$main::dump_blk_flag = "";
+	$main::afio_blk_flag = "";
+	$main::cpio_blk_flag = "";
+	$main::tar_blk_flag =  "";
+	$main::star_blk_flag =  "";
+	$main::pax_blk_flag = "";
+    }
 
     # Generic compression (afio archives will do their own flags)
     if ($cfg::compress eq "gzip") {
@@ -2160,38 +2188,48 @@ sub optioncheck {
 	$main::z = " | $main::path{$cfg::compress} -c";
 	$main::unz = "$main::path{$cfg::compress} -dc | ";
 
+    } elsif ($cfg::compress eq "zip") {
+	$main::path{'zip'} = &checkinpath('zip');
+	$main::path{'funzip'} = &checkinpath('funzip');
+	if ($cfg::compr_level !~ m/^[123456789]$/) {
+	    push(@main::errors,"\$compr_level must be set to 1-9");
+	} else {
+	    $main::z = " | $main::path{zip} -$cfg::compr_level - -";
+	    $main::unz = "$main::path{funzip} | ";
+	}
     } else {
 	$main::z = "";
 	$main::unz = "";
     }
 
     # Block padding
-    my $buffer_pad_flag;
     if (($cfg::pad_blocks eq "true") and defined($main::tapedevice)) {
 	$main::dd_pad_flag = "conv=noerror,sync";
 	$buffer_pad_flag = "-B";
     } else {
-	$main::dd_pad_flag = 'conv=noerror';
-	$buffer_pad_flag = '';
+	$main::dd_pad_flag = "conv=noerror";
+	$buffer_pad_flag = "";
     }
 
-
-    # Buffer stuff
-    # Use dd if buffer is disabled
+    # Buffer setup
     if ($cfg::buffer eq "buffer") {
 
 	$main::path{'buffer'} = &checkinpath('buffer');
 	if ($cfg::buffer_megs =~ m/^\d+$/) {
+	    my $write_flags;
 	    my $read_flags;
 	    my $megs = $cfg::buffer_megs . "m";
-	    $main::buffer_nopipe_cmd = "$main::path{buffer} -m $megs $buffer_blk_flag";
+
 	    if (defined($main::tapedevice)) {
-		$main::buffer_write_flags = "-u 100 -t -p 75 $buffer_pad_flag -o ";
+		$write_flags = "-u 100 -t -p 75 $buffer_pad_flag -o ";
 		$read_flags = "-u 100 -t -p 75 $buffer_pad_flag -i ";
 	    } else {
-		$main::buffer_write_flags = "-t -p 75 $buffer_pad_flag -o ";
+		$write_flags = "-t -p 75 $buffer_pad_flag -o ";
 		$read_flags = "-t -p 75 $buffer_pad_flag -i ";
 	    }
+	    $main::buffer_cmd = " | $main::path{buffer} -m $megs $buffer_blk_flag";
+	    $main::write_catchpipe_cmd = "$main::path{buffer} -m $megs $buffer_blk_flag $write_flags";
+	    $main::write_cmd = " | " . $main::write_catchpipe_cmd;
 	    $main::read_cmd = "$main::path{buffer} -m $megs $buffer_blk_flag $read_flags";
 	} else {
 	    push(@main::errors,"\$buffer_megs must be set to integer number of megabytes");
@@ -2199,26 +2237,21 @@ sub optioncheck {
 
     } else {
 
-	$main::path{'dd'} = &checkinpath('dd');
-	$main::buffer_nopipe_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag";
-	$main::buffer_write_flags = "of=";
-	$main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag if=";
+	# If buffer is disabled, use dd/cat (depending on if blocking turned off)
+	if ($cfg::blksize eq '0') {
+	    $main::buffer_cmd = "";
+	    $main::write_catchpipe_cmd = "$main::path{cat} > ";
+	    $main::write_cmd = " > ";
+	    $main::read_cmd = "$main::path{cat} ";
+	} else {
+	    $main::buffer_cmd = "";
+	    $main::write_catchpipe_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=";
+	    $main::write_cmd = " | " . $main::write_catchpipe_cmd;
+	    $main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag if=";
+	}
 
     }
 
-    $main::buffer_cmd = " | " . $main::buffer_nopipe_cmd;
-
-    # Check we can find rsh or ssh
-    $main::path{$cfg::remoteshell} = &checkinpath($cfg::remoteshell);
-
-    # Check we can find common stuff
-    $main::path{'touch'} = &checkinpath('touch');
-    $main::path{'hostname'} = &checkinpath('hostname');
-    $main::path{'rm'} = &checkinpath('rm');
-    $main::path{'tee'} = &checkinpath('tee');
-    $main::path{'find'} = &checkinpath('find');
-    $main::path{'dd'} = &checkinpath('dd');
-    $main::path{'printf'} = &checkinpath('printf');
 
     # Filesystems
     $main::num_tapes = -1;
@@ -2286,7 +2319,7 @@ sub optioncheck {
 	&check(\$cfg::afio_nocompress_types,'afio_nocompress_types','exist');
 
 	# Compress flag for afio must be handled differently
-	if ($cfg::compress =~ m/^(gzip|bzip2|compress)$/) {
+	if ($cfg::compress =~ m/^(gzip|bzip2|compress|zip)$/) {
 
 	    if ($cfg::compress eq "gzip") {
 		$main::afio_z_flag = "-P $main::path{$cfg::compress} -Q -$cfg::compr_level -Z";
@@ -2295,6 +2328,10 @@ sub optioncheck {
 	    } elsif ($cfg::compress eq "bzip2") {
 		$main::afio_z_flag = "-P $main::path{$cfg::compress} -Q -$cfg::compr_level -Z";
 		$main::afio_unz_flag = "-P $main::path{$cfg::compress} -Q -d -Z";
+
+	    } elsif ($cfg::compress eq "zip") {
+		$main::afio_z_flag = "-P $main::path{zip} -Q -$cfg::compr_level -Q - -Q - -Z";
+		$main::afio_unz_flag = "-P $main::path{funzip} -Q \"\" -Z";
 
 	    } elsif ($cfg::compress eq "compress") {
 		$main::afio_z_flag = "-P $main::path{$cfg::compress} -Q -c -Z";
@@ -2401,11 +2438,10 @@ sub optioncheck {
 
 	$main::path{'zip'} = &checkinpath('zip');
 	$main::path{'unzip'} = &checkinpath('unzip');
-	$main::path{'cat'} = &checkinpath('cat');
 
 	$main::zip_compr_flag = "-$cfg::compr_level";
 
-       if ($cfg::compress =~ /^(gzip|bzip2|compress)$/) {
+       if ($cfg::compress =~ /^(gzip|bzip2|compress|zip)$/) {
 	    warn("Using type \"zip\" with compress=$cfg::compress makes no sense");
 	    warn("Setting compression to false");
 	    $main::unz = "";
@@ -2683,7 +2719,7 @@ sub maybe_get_filename {
 
     # Try and guess file types and commpression scheme
     # might as well since we are reading from a file in this case
-    if ($file =~ m/\.(dump|cpio|tar|star|pax)\.(gz|bz2|Z)$/) {
+    if ($file =~ m/\.(dump|cpio|tar|star|pax)\.(gz|bz2|Z|zip)$/) {
 	$cfg::type = $1;
 	$cfg::compress = $2;
 	$cfg::compress =~ s/gz/gzip/;
@@ -2692,7 +2728,7 @@ sub maybe_get_filename {
 	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
 	&optioncheck();                  # redo to set a few variables over
 
-    } elsif ($file =~ m/\.afio-(gz|bz2|Z)$/) {
+    } elsif ($file =~ m/\.afio-(gz|bz2|Z|zip)$/) {
 	$cfg::type = "afio";
 	$cfg::compress = $1;
 	$cfg::compress =~ s/gz/gzip/;
@@ -2895,16 +2931,12 @@ sub append_writer_cmd {
 
     if (!defined($main::remotetapehost)) {
 
-	$cmd .= "$main::buffer_cmd $main::buffer_write_flags" . "$main::device";
+	$cmd .= $main::write_cmd . $main::device;
 
     } else {
 
-	if ($cfg::buffer eq "buffer") {
-	    $cmd .= "$main::buffer_cmd";
-	}
-	$cmd .= ' | ';
-	$cmd .= &maybe_remote_cmd("$main::buffer_nopipe_cmd $main::buffer_write_flags" . "$main::device",
-				  $main::remotetapehost);
+	$cmd .= "$main::buffer_cmd | ";
+	$cmd .= &maybe_remote_cmd($main::write_catchpipe_cmd . $main::device, $main::remotetapehost);
     }
 
     return($cmd);
@@ -2961,9 +2993,7 @@ sub setup_before_read {
     if (defined($main::remotetapehost)) {
 	$cmd = &maybe_remote_cmd($cmd, $main::remotetapehost);
 	# Buffer both sides if remote
-	if ($cfg::buffer eq "buffer") {
-	    $cmd .= "$main::buffer_cmd";
-	}
+	$cmd .= $main::buffer_cmd;
     }
 
     $cmd .= " | $main::unz ";
