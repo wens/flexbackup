@@ -7,8 +7,9 @@ Changes:
   - Allow non-root execution along with "sudo". Set
       path{'command'} = "sudo command" or "sudo -u username command" in
       the config file.  Idea from Alex Aiminoff's patch to 0.9.8
+  - Added $remoteuser to config for rsh/ssh
   - Check that 'buffer' can run with set $megs.
-      From John Reynolds, brought forward from 0.9.8
+      From John Reynolds, brought forward from 0.9.8.  Remote as well.
   - Check for existence of remote executables before doing remote backups
       Based on John Reynolds' modifications
   - A "no blocking at all" option. Set $blksize=0 in the config file.
@@ -30,6 +31,7 @@ Cleanup:
   - Interactive restore creates log file (was in e-smith stuff)
   - Extract/list/compare/restore use date-stamped logfiles (e-smith)
   - Simplified rmfile() to call existing rmindex() routine
+  - Symlink latest log even if staticlogs = true
 
 ----------------------------------------------------------------------
 Version 0.9.9.7 (20030115)

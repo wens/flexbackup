@@ -5,7 +5,6 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
- - Finish buffer mem test function for remote hosts
  - Check for things to put in @remoteprogs for remote tape drives
 
  - Clean up more $main:: vars, split into types or refactor code
