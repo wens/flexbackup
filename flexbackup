@@ -264,7 +264,7 @@ sub backup_routine {
             foreach $fs (split(/\s+/,$list)) {
 
                 # Get rid of trailing /
-                $fs = &nuke_tailing_slash($fs);
+                $fs = &nuke_trailing_slash($fs);
 
                 &backup($fs);
                 $main::nextfile++;
