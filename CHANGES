@@ -1,3 +1,8 @@
 Version 0.9
+  - initial release to the public
 
-   - initial release
+Version 0.8 
+  - incremental for non-dump types almost done
+  - automated pacakging
+  - clean some duplicated code
+  - rpm build, lsm file

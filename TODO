@@ -7,14 +7,12 @@ Some of these might not happen, but I write them down anyway
      tar : -N "`date -r <file>`"
      deal w/timestamps for remote files
  - finish testing list, extract, compare for non-dump types
- - test ftape stuff again
- - package up nicely
  - FreeBSD checks out ok (hi john)
- - RPM spec file & LSM file
- - web page
  - announce
      freshmeat, linux-tape, comp.os.linux.announce
      submit to metalab & redhat-contrib
+
+ - resuurect my old drive and test ftape stuff again
  - log files for extract?
  - does restore compare subdirectories of mountpoints correctly?
  - exclude regexp's
@@ -27,4 +25,4 @@ Some of these might not happen, but I write them down anyway
  - support multiple tapes for "all"
  - support multiple tapes for a single archive
  - GUI driver/configurator utility
- - cd-rom burning for full backups
+ - handle cd-rom burning for full backups

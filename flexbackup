@@ -34,7 +34,7 @@
 #  flexbackup [opt] -c <file>      : use <file> instead of /etc/flexbackup.conf
 #                                    for configuration
 #
-#  flexbackup [opt] -type <x>      : override $backuptype from config file
+#  flexbackup [opt] -type <x>      : override $type from config file
 #
 #  flexbackup -fs <x> -erase       : force a rewind/erase before backup
 #  flexbackup -fs <x> -noreten     : don't retension for level 0 "all" backups
@@ -43,15 +43,20 @@
 
 use Getopt::Long;
 use English;
-
-# To make -w shuttup for variables I only reference once
-use vars qw($filesystems);
+use strict;
+use diagnostics;
 
 # No output buffering
 $OUTPUT_AUTOFLUSH = 1;
 
-%opt = ();
-if (! &GetOptions(\%opt,
+# There are only referenced once; this makes warnings go away
+package cfg;
+use vars qw($dump_length $afio_buffer);
+
+package global;
+
+%global::opt = ();
+if (! &main::GetOptions(\%global::opt,
 		  "help",
 		  "c=s",
 		  "level=i",
@@ -70,7 +75,7 @@ if (! &GetOptions(\%opt,
 }
 
 # Give usage message
-if (defined($opt{'help'})) {
+if (defined($global::opt{'help'})) {
     &usage();
     exit(0);
 }
@@ -82,36 +87,36 @@ if (defined($opt{'help'})) {
 &optioncheck();
 
 # Get date string
-chomp($date=`date +%Y%m%d`);
+chomp($global::date=`date +%Y%m%d`);
 
 # Set blocksize
-$_ = $blksize * 1024;
-system("$mt -f $device setblk $_");
+$_ = $cfg::blksize * 1024;
+system("$global::mt -f $cfg::device setblk $_");
 if ($?) {
-    die("Error from $mt setblk $_, exiting...\n");
+    die("Error from $global::mt setblk $_, exiting...\n");
 }
 
 
-if (defined($opt{'restore'})) {
+if (defined($global::opt{'restore'})) {
     &restore_routine();
 
-} elsif (defined($opt{'extract'})) {
+} elsif (defined($global::opt{'extract'})) {
     &extract_routine();
 
-} elsif (defined($opt{'compare'})) {
+} elsif (defined($global::opt{'compare'})) {
     &compare_routine();
 
-} elsif (defined($opt{'list'})) {
+} elsif (defined($global::opt{'list'})) {
     &list_routine();
 
-} elsif (defined($opt{'fs'})) {
+} elsif (defined($global::opt{'fs'})) {
     &backup_routine();
 
-} elsif (defined($opt{'toc'})) {
+} elsif (defined($global::opt{'toc'})) {
 
-    if ($ftape eq 'true') {
-	system("$mt -f $device rewind");
-	exec("vtblc -p -f $rawdevice");
+    if ($cfg::ftape eq 'true') {
+	system("$global::mt -f $cfg::device rewind");
+	exec("vtblc -p -f $cfg::rawdevice");
 	die("Failed exec of vtblc\n");
     } else {
 	die("-toc only implemented for ftape under Linux\n");
@@ -129,53 +134,55 @@ exit(0);
 ######################################################################
 sub backup_routine {
 
+    my @files;
+
     # Get backup level...
-    if (defined($opt{'level'})) {
-        $level = $opt{'level'};
+    if (defined($global::opt{'level'})) {
+        $global::level = $global::opt{'level'};
     } else {
-        $level = 0;
+        $global::level = 0;
     }
 
     # Die if no fs specified
-    if (!defined($opt{'fs'})) {
+    if (!defined($global::opt{'fs'})) {
         &usage();
         exit(0);
     }
 
     &log('$Name$ $Id$ ');
-    &log("Doing level $level backup of $opt{fs} using $backuptype");
+    &log("Doing level $global::level backup of $global::opt{fs} using $cfg::type");
 
     # Figure out log file name & empty log file
-    $label = &get_label($opt{'fs'});
-    $log = "$logdir/$prefix$label.$level.$date";
-    if (! open(LOG,">$log")) {
-        die "Can't write to $log: $!\n";
+    my $label = &get_label($global::opt{'fs'});
+    $global::log = "$cfg::logdir/$cfg::prefix$label.$global::level.$global::date";
+    if (! open(LOG,">$global::log")) {
+        die "Can't write to $global::log: $!\n";
     }
     close(LOG);
 
     # Remove old incremental log files
     # ("old" = any higher-numbered logs for this label)
-    opendir(DIR,"$logdir") or die("Can't open logdir: $!\n");
+    opendir(DIR,"$cfg::logdir") or die("Can't open logdir: $!\n");
     @files = readdir(DIR);
     foreach (@files) {
-        next if (! m/^$prefix$label\.([0-9])\.([0-9]+)$/);
+        next if (! m/^$cfg::prefix$label\.([0-9])\.([0-9]+)$/);
         my $olddate = $2;
-        if ($1 > $level) {
-            print "Removing old level $1 log of $opt{fs} ($olddate)\n";
-            unlink("$logdir/$_") or warn("Can't remove $_: $!\n");
+        if ($1 > $global::level) {
+            print "Removing old level $1 log of $global::opt{fs} ($olddate)\n";
+            unlink("$cfg::logdir/$_") or warn("Can't remove $_: $!\n");
         }
     }
     close(DIR);
 
     # Remove old incremental stamp files
     # ("old" = any higher-numbered logs for this label)
-    opendir(DIR,"$stampdir") or die("Can't open stampdir: $!\n");
+    opendir(DIR,"$cfg::stampdir") or die("Can't open stampdir: $!\n");
     @files = readdir(DIR);
     foreach (@files) {
-        next if (! m/^$sprefix\.$label\.([0-9])$/);
-        if ($1 > $level) {
-            print "Removing old level $1 timestamp of $opt{fs}\n";
-            unlink("$stampdir/$_") or warn("Can't remove $_: $!\n");
+        next if (! m/^$cfg::sprefix\.$label\.([0-9])$/);
+        if ($1 > $global::level) {
+            print "Removing old level $1 timestamp of $global::opt{fs}\n";
+            unlink("$cfg::stampdir/$_") or warn("Can't remove $_: $!\n");
         }
     }
     close(DIR);
@@ -188,33 +195,33 @@ sub backup_routine {
     ##########################
     &line();
 
-    if ($opt{'fs'} eq 'all') {
+    if ($global::opt{'fs'} eq 'all') {
 
-        &log("(all = $filesystems)");
+        &log("(all = $cfg::filesystems)");
 
         # All filesystems
-        if ($level eq "0") {
+        if ($global::level eq "0") {
 
             # All
             # Level zero - rewind and erase a new tape
-            if (!defined($opt{'noreten'})) {
+            if (!defined($global::opt{'noreten'})) {
                 &log('Retensioning tape...');
                 &mt('retension');
             }
             &log('Erasing tape...');
             &mt('erase');
-            $nextfile = 0;
+            $global::nextfile = 0;
 
         } else {
 
             # All
             # Incremental backup - list what's on it, then go to end of tape
-            if (!defined($opt{'erase'})) {
-                $nextfile = &contents();
+            if (!defined($global::opt{'erase'})) {
+                $global::nextfile = &contents();
                 &log('Making sure tape is at end of data...');
                 &mt('endofdata');
             } else {
-                $nextfile = 0;
+                $global::nextfile = 0;
                 &log('Rewinding & erasing tape...');
                 &mt('rewind');
                 &mt('erase');
@@ -226,10 +233,10 @@ sub backup_routine {
         &mt('query');
 
         # Iterate over the filesystems and back 'em up
-        foreach (split(/\s+/,$filesystems)) {
-            &backup($backuptype,$_,$nextfile);
-            $tag{$nextfile} = "$backuptype $_ ($level)";
-            $nextfile++;
+        foreach (split(/\s+/,$cfg::filesystems)) {
+            &backup($cfg::type,$_);
+            $global::contents{$global::nextfile} = "$cfg::type $_ ($global::level)";
+            $global::nextfile++;
         }
 
         # Rewind
@@ -238,35 +245,35 @@ sub backup_routine {
         &mt('rewind');
 
         # Only ftape has the toc capability
-        if ($ftape eq 'true') {
+        if ($cfg::ftape eq 'true') {
             &log('Updating table of contents...');
-            foreach (keys %tag) {
-                &tag($_,$tag{$_});
+            foreach (keys %global::contents) {
+                &tag($_,$global::contents{$_});
             }
         }
 
     } else {
 
         # Just one filesystem
-        if (!defined($opt{'erase'})) {
-            $nextfile = &contents();
+        if (!defined($global::opt{'erase'})) {
+            $global::nextfile = &contents();
             &log('Making sure tape is at end of data...');
             &mt('endofdata');
         } else {
-            $nextfile = 0;
+            $global::nextfile = 0;
             &log('Rewinding & erasing tape...');
             &mt('rewind');
             &mt('erase');
         }
         &line();
         &mt('query');
-        &backup($backuptype,$opt{'fs'},$nextfile);
+        &backup($cfg::type,$global::opt{'fs'});
         &line();
         &log("Rewinding...");
         &mt('rewind');
-        if ($ftape eq 'true') {
+        if ($cfg::ftape eq 'true') {
             &log('Updating table of contents...');
-            &tag($nextfile,"$backuptype $opt{'fs'} ($level)");
+            &tag($global::nextfile,"$cfg::type $global::opt{'fs'} ($global::level)");
         }
     }
 
@@ -283,10 +290,10 @@ sub backup_routine {
 sub contents {
     my($output,$filenumber);
 
-    if ($ftape eq "true") {
+    if ($cfg::ftape eq "true") {
         &mt('rewind');
         &log('');
-        $output=`vtblc -p -f $rawdevice 2>&1`;
+        $output=`vtblc -p -f $cfg::rawdevice 2>&1`;
         &log($output);
         &log('');
         $filenumber = -1;
@@ -315,7 +322,7 @@ sub contents {
 ######################################################################
 sub tag {
     my($filenum,$title) = @_;
-    system("vtblc -f $rawdevice -# $filenum -m date -m label=\'$title\'");
+    system("vtblc -f $cfg::rawdevice -# $filenum -m date -m label=\'$title\'");
 }
 
 ######################################################################
@@ -323,10 +330,10 @@ sub tag {
 ######################################################################
 sub backup {
 
-    my($type,$dir,$filenum) = @_;
-    my($localdir,$string,$tapehost,$remote);
+    my($type,$dir) = @_;
+    my($string,$tapehost,$remote);
 
-    $localdir = $dir;
+    my $localdir = $dir;
     if ($localdir =~ s/^(.+):(.+)$/$2/) {
 	$remote = $1;
 	chomp($tapehost = `hostname`);
@@ -334,20 +341,22 @@ sub backup {
         $remote = '';
     }
 
+    my $label = &get_label($dir);
+
     if ($type eq 'dump') {
-	$string = &backup_dump($localdir,$remote,$tapehost);
+	$string = &backup_dump($label,$localdir,$remote,$tapehost);
     } elsif ($type eq 'afio') {
-	$string = &backup_afio($localdir,$remote,$tapehost);
+	$string = &backup_afio($label,$localdir,$remote,$tapehost);
     } elsif ($type eq 'tar') {
-	$string = &backup_tar($localdir,$remote,$tapehost);
+	$string = &backup_tar($label,$localdir,$remote,$tapehost);
     } elsif ($type eq 'cpio') {
-	$string = &backup_cpio($localdir,$remote,$tapehost);
+	$string = &backup_cpio($label,$localdir,$remote,$tapehost);
     }
 
     &line();
     my $stamp = &get_label($dir);
-    &log("Timestamp $stampdir/$sprefix.$stamp.$level");
-    system("touch $stampdir/$sprefix.$stamp.$level");
+    &log("Timestamp $cfg::stampdir/$cfg::sprefix.$stamp.$global::level");
+    system("touch $cfg::stampdir/$cfg::sprefix.$stamp.$global::level");
 
     &line();
     &log("Running \"$string\"");
@@ -356,17 +365,17 @@ sub backup {
     # since we erased the tape
     # (or if using ftape/vtblc, since we can find the file number)
     # (or if we had -erase on the commandline)
-    if ((($opt{'fs'} eq "all") and ($level eq "0"))
+    if ((($global::opt{'fs'} eq "all") and ($global::level eq "0"))
         or
-        ($ftape eq "true")
+        ($cfg::ftape eq "true")
         or
-        ($opt{'erase'})) {
-        &log("Backup will be file number $filenum");
+        ($global::opt{'erase'})) {
+        &log("Backup will be file number $global::nextfile");
     }
 
     # Enough fooling around... run it
     &line();
-    system("$string 2>&1 | tee -a $log");
+    system("$string 2>&1 | tee -a $global::log");
     if ($?) {
 	&log("Error from $type backup, exiting....\n");
 	exit(1);
@@ -391,15 +400,15 @@ sub backup_dump {
     my $string = '';
 
     if ($remote) {
-        $string .= "$remoteshell $remote \"r";
+        $string .= "$cfg::remoteshell $remote \"r";
     }
 
-    $string .= "dump $level" . "uBbf $dump_length $blksize";
+    $string .= "dump $global::level" . "uBbf $cfg::dump_length $cfg::blksize";
 
     if ($remote) {
-        $string .= " $tapehost:$device $dir\"";
+        $string .= " $tapehost:$cfg::device $dir\"";
     } else {
-        $string .= " $device $dir";
+        $string .= " $cfg::device $dir";
     }
 
     return($string);
@@ -411,25 +420,31 @@ sub backup_dump {
 ######################################################################
 sub backup_afio {
     my($label,$dir,$remote,$tapehost) = @_;
-    my $string  = '';
+    my $string = '';
+    my $tmpstamp;
 
     if ($remote) {
-	$string  .= "$remoteshell $remote -n \"";
+	$string  .= "$cfg::remoteshell $remote -n \"";
+    }
+
+    if ($global::level ne "0") {
+        $tmpstamp = "/tmp/refdate.$label";
+        $_ = &get_last_date($label,$global::level);
+        $string .= "touch -d \"$_\" $tmpstamp; ";
     }
 
     $string .= "cd $dir; find . -xdev";
 
-    if ($level ne "0") {
-        my $last_stamp = &get_latest_stamp($label,$level,$remote);
-        $string .= " -newer $last_stamp";
+    if ($global::level ne "0") {
+         $string .= " -newer $tmpstamp";
     }
 
-    $string .= " -print | afio -o $afio_compress $afio_verbose -b $afio_blksize -c $afio_buffer";
+    $string .= " -print | afio -o $cfg::afio_compress $cfg::afio_verbose -b $cfg::afio_blksize -c $cfg::afio_buffer";
 
     if ($remote) {
-        $string .= " -B $tapehost%$remoteshell:$device\"";
+        $string .= " -B $tapehost%$cfg::remoteshell:$cfg::device\"";
     } else {
-        $string .= " -B $device";
+        $string .= " -B $cfg::device";
     }
 
     return($string);
@@ -441,24 +456,30 @@ sub backup_afio {
 sub backup_cpio {
     my($label,$dir,$remote,$tapehost) = @_;
     my $string = '';
+    my $tmpstamp;
 
     if ($remote) {
-        $string .= "$remoteshell $host -n \"";
+        $string .= "$cfg::remoteshell $remote -n \"";
+    }
+
+    if ($global::level ne "0") {
+        $tmpstamp = "/tmp/refdate.$label";
+        $_ = &get_last_date($label,$global::level);
+        $string .= "touch -d \"$_\" $tmpstamp; ";
     }
 
     $string .= "cd $dir; find . -xdev";
 
-    if ($level ne "0") {
-        my $last_stamp = &get_latest_stamp($label,$level,$remote);
-        $string .= " -newer $last_stamp";
+    if ($global::level ne "0") {
+         $string .= " -newer $tmpstamp";
     }
 
-    $string .= " -print | cpio -o $cpio_verbose -H $cpio_format -C $cpio_blksize";
+    $string .= " -print | cpio -o $cfg::cpio_verbose -H $cfg::cpio_format -C $cfg::cpio_blksize";
 
     if ($remote) {
-        $string .= " -F $tapehost:$device\"";
+        $string .= " -F $tapehost:$cfg::device\"";
     } else {
-        $string .= " -F $device";
+        $string .= " -F $cfg::device";
     }
 
     return($string);
@@ -468,29 +489,27 @@ sub backup_cpio {
 # Return command to backup a filesystem using tar
 ######################################################################
 sub backup_tar {
-    my($fs,$dir,$remote,$tapehost) = @_;
+    my($label,$dir,$remote,$tapehost) = @_;
     my $string = '';
 
     if ($remote) {
-        $string  .= "$remoteshell $remote \"";
+        $string  .= "$cfg::remoteshell $remote \"";
     }
 
 
-    $string .= "tar -C $dir -c $tar_compress $tar_verbose -b $tar_blksize -l";
+    $string .= "tar -C $dir -c $cfg::tar_compress $cfg::tar_verbose -b $cfg::tar_blksize -l";
 
-    if ($level ne "0") {
+    if ($global::level ne "0") {
         # With this one we dont have to copy the stampfile to the remote system
         # since we only need the string from date -r on the stamp file
-        my $last_stamp = &get_latest_stamp($label,$level,'');
-        mt $tardate;
-        chomp($tardate = `date -r $last_stamp`)
-        $string .= " -N \'$tardate\'";
+        my $last_date = &get_last_date($label,$global::level);
+        $string .= " -N \'$last_date\'";
     }
 
     if ($remote) {
-        $string .= " --rsh-command $remoteshell -f $tapehost:$device .\"";
+        $string .= " --rsh-command $cfg::remoteshell -f $tapehost:$cfg::device .\"";
     } else {
-        $string .= " -f $device .";
+        $string .= " -f $cfg::device .";
     }
 
     return($string);
@@ -501,34 +520,34 @@ sub backup_tar {
 ######################################################################
 sub list_routine {
 
-    if ($backuptype eq 'dump') {
+    if ($cfg::type eq 'dump') {
         &mt('query');
         &line();
-	system("restore -t -b $blksize -f $device");
-        &line();
-        &mt('query');
-        exit;
-
-    } elsif ($backuptype eq 'afio') {
-        &mt('query');
-        &line();
-        system("afio -t $afio_verbose -b $afio_blksize -B $device");
+	system("restore -t -b $cfg::blksize -f $cfg::device");
         &line();
         &mt('query');
         exit;
 
-    } elsif ($backuptype eq 'tar') {
+    } elsif ($cfg::type eq 'afio') {
         &mt('query');
         &line();
-        system("tar -t $tar_verbose $tar_compress -b $tar_blksize -f $device");
+        system("afio -t $cfg::afio_verbose -b $cfg::afio_blksize -B $cfg::device");
         &line();
         &mt('query');
         exit;
 
-    } elsif ($backuptype eq 'cpio') {
+    } elsif ($cfg::type eq 'tar') {
         &mt('query');
         &line();
-        system("cpio -t $cpio_verbose -H $cpio_format -C $cpio_blksize -F $device");
+        system("tar -t $cfg::tar_verbose $cfg::tar_compress -b $cfg::tar_blksize -f $cfg::device");
+        &line();
+        &mt('query');
+        exit;
+
+    } elsif ($cfg::type eq 'cpio') {
+        &mt('query');
+        &line();
+        system("cpio -t $cfg::cpio_verbose -H $cfg::cpio_format -C $cfg::cpio_blksize -F $cfg::device");
         &line();
         &mt('query');
         exit;
@@ -541,34 +560,34 @@ sub list_routine {
 ######################################################################
 sub extract_routine {
 
-    if ($backuptype eq 'dump') {
+    if ($cfg::type eq 'dump') {
         &mt('query');
         &line();
-	system("restore -r -v -b $blksize -f $device");
+	system("restore -r -v -b $cfg::blksize -f $cfg::device");
         &line();
         &mt('query');
 	exit;
 
-    } elsif ($backuptype eq 'afio') {
+    } elsif ($cfg::type eq 'afio') {
         &mt('query');
         &line();
-        system("afio -i -x $afio_compress $afio_verbose -b $afio_blksize -B $device");
-        &line();
-        &mt('query');
-        exit;
-
-    } elsif ($backuptype eq 'tar') {
-        &mt('query');
-        &line();
-        system("tar -x -p $tar_compress $tar_verbose -b $tar_blksize -f $device");
+        system("afio -i -x $cfg::afio_compress $cfg::afio_verbose -b $cfg::afio_blksize -B $cfg::device");
         &line();
         &mt('query');
         exit;
 
-    } elsif ($backuptype eq 'cpio') {
+    } elsif ($cfg::type eq 'tar') {
         &mt('query');
         &line();
-        system("cpio -i -m -d $cpio_verbose -H $cpio_format -C $cpio_blksize -F $device");
+        system("tar -x -p $cfg::tar_compress $cfg::tar_verbose -b $cfg::tar_blksize -f $cfg::device");
+        &line();
+        &mt('query');
+        exit;
+
+    } elsif ($cfg::type eq 'cpio') {
+        &mt('query');
+        &line();
+        system("cpio -i -m -d $cfg::cpio_verbose -H $cfg::cpio_format -C $cfg::cpio_blksize -F $cfg::device");
         &line();
         &mt('query');
         exit;
@@ -581,31 +600,31 @@ sub extract_routine {
 ######################################################################
 sub compare_routine {
 
-    if ($backuptype eq 'dump') {
+    if ($cfg::type eq 'dump') {
         &mt('query');
         &line();
-	system("restore -C -b $blksize -f $device");
-        &line();
-        &mt('query');
-	exit;
-
-    } elsif ($backuptype eq 'afio') {
-        &mt('query');
-        &line();
-        system("afio -r $afio_compress -b $afio_blksize -B $device");
+	system("restore -C -b $cfg::blksize -f $cfg::device");
         &line();
         &mt('query');
 	exit;
 
-    } elsif ($backuptype eq 'tar') {
+    } elsif ($cfg::type eq 'afio') {
         &mt('query');
         &line();
-        system("tar -d $tar_compress -b $tar_blksize -f $device");
+        system("afio -r $cfg::afio_compress -b $cfg::afio_blksize -B $cfg::device");
         &line();
         &mt('query');
 	exit;
 
-    } elsif ($backuptype eq 'cpio') {
+    } elsif ($cfg::type eq 'tar') {
+        &mt('query');
+        &line();
+        system("tar -d $cfg::tar_compress -b $cfg::tar_blksize -f $cfg::device");
+        &line();
+        &mt('query');
+	exit;
+
+    } elsif ($cfg::type eq 'cpio') {
         die("cpio not capable of comparing files\n");
 
     }
@@ -616,16 +635,16 @@ sub compare_routine {
 ######################################################################
 sub restore_routine {
 
-    if ($backuptype eq 'dump') {
+    if ($cfg::type eq 'dump') {
         &mt('query');
         &line();
-	system("restore -i -v -b $blksize -f $device");
+	system("restore -i -v -b $cfg::blksize -f $cfg::device");
         &line();
         &mt('query');
 	exit;
 
     } else {
-        die("Interactive restore for $backuptype not done yet\n");
+        die("Interactive restore for $cfg::type not done yet\n");
     }
 }
 
@@ -654,8 +673,8 @@ sub get_label {
 sub log {
     my($msg) = @_;
     print "$msg\n";
-    if (defined($log)) {
-        open(LOG,">>$log");
+    if (defined($global::log)) {
+        open(LOG,">>$global::log");
         print LOG "$msg\n";
         close(LOG);
     }
@@ -666,8 +685,8 @@ sub log {
 ######################################################################
 sub line {
     print "----------------------------------------\n";
-    if (defined($log)) {
-        open(LOG,">>$log");
+    if (defined($global::log)) {
+        open(LOG,">>$global::log");
         print LOG "----------------------------------------\n";
         close(LOG);
     }
@@ -677,8 +696,11 @@ sub line {
 # Read configuration file
 ######################################################################
 sub readconfigfile {
-    if (defined($opt{'c'})) {
-        $configfile = $opt{'c'};
+
+    my $configfile;
+
+    if (defined($global::opt{'c'})) {
+        $configfile = $global::opt{'c'};
     } else {
         $configfile = "/etc/flexbackup.conf";
     }
@@ -700,7 +722,7 @@ sub mt {
     my($operation) = @_;
 
     if ($operation eq 'query') {
-        if ($ftape eq 'true') {
+        if ($cfg::ftape eq 'true') {
             $operation = 'getsize';
         } else {
             $operation = 'status';
@@ -708,20 +730,20 @@ sub mt {
     }
 
     if ($operation eq 'endofdata') {
-        if ($ftape eq 'true') {
+        if ($cfg::ftape eq 'true') {
             $operation = 'eom';
         } else {
             $operation = 'eod';
         }
     }
 
-    if (defined($log)) {
-        system("$mt -f $device $operation 2>&1 | tee -a $log");
+    if (defined($global::log)) {
+        system("$global::mt -f $cfg::device $operation 2>&1 | tee -a $global::log");
     } else {
-        system("$mt -f $device $operation 2>&1");
+        system("$global::mt -f $cfg::device $operation 2>&1");
     }
     if ($?) {
-	&log("Error from $mt $operation, exiting....\n");
+	&log("Error from $global::mt $operation, exiting....\n");
         exit(1);
     }
 }
@@ -732,11 +754,11 @@ sub mt {
 sub optioncheck {
 
     # ftape support
-    if (defined($ftape)) {
-	if ($ftape eq 'true') {
-	    $mt = 'ftmt';
-	} elsif ($ftape eq 'false') {
-	    $mt = 'mt';
+    if (defined($cfg::ftape)) {
+	if ($cfg::ftape eq 'true') {
+	    $global::mt = 'ftmt';
+	} elsif ($cfg::ftape eq 'false') {
+	    $global::mt = 'mt';
 	} else {
 	    die("\$ftape must be defined as true or false\n");
 	}
@@ -745,88 +767,88 @@ sub optioncheck {
     }
 
     # log/stamp files
-    if (defined($logdir)) {
-	if (! -d $logdir) {
-            mkdir("$logdir",0755) or die("Can't mkdir $logdir: $!");
+    if (defined($cfg::logdir)) {
+	if (! -d $cfg::logdir) {
+            mkdir("$cfg::logdir",0755) or die("Can't mkdir $cfg::logdir: $!");
 	}
     } else {
-	die("$logdir must be defined\n");
+	die("\$logdir must be defined\n");
     }
-    if (defined($stampdir)) {
-        if (! -d $stampdir) {
-            mkdir("$stampdir",0755) or die("Can't mkdir $stampdir: $!");
+    if (defined($cfg::stampdir)) {
+        if (! -d $cfg::stampdir) {
+            mkdir("$cfg::stampdir",0755) or die("Can't mkdir $cfg::stampdir: $!");
         }
     } else {
-        die("$stampdir must be defined\n");
+        die("\$stampdir must be defined\n");
     }
 
     # archive type
-    if (defined($opt{'type'})) {
-        $backuptype = $opt{'type'};
+    if (defined($global::opt{'type'})) {
+        $cfg::type = $global::opt{'type'};
     }
 
     # Type-specific setup
-    if (defined($backuptype)) {
+    if (defined($cfg::type)) {
 
-	if ($backuptype eq 'afio') {
+	if ($cfg::type eq 'afio') {
 
             # Compress flag
-            if ($afio_compress eq "true") {
-                $afio_compress = "-Z";
+            if ($cfg::afio_compress eq "true") {
+                $cfg::afio_compress = "-Z";
             } else {
-                $afio_compress = "";
+                $cfg::afio_compress = "";
             }
 
             # Verbose flag
-            if ($afio_verbose eq "true") {
-                $afio_verbose = "-v -z";
+            if ($cfg::afio_verbose eq "true") {
+                $cfg::afio_verbose = "-v -z";
             } else {
-                $afio_verbose = "";
+                $cfg::afio_verbose = "";
             }
 
             # For afio, blocksize needs k appended
-            $afio_blksize = $blksize . "k";
+            $cfg::afio_blksize = $cfg::blksize . "k";
 
-	} elsif ($backuptype eq 'dump') {
+	} elsif ($cfg::type eq 'dump') {
 
-	} elsif ($backuptype eq 'tar') {
+	} elsif ($cfg::type eq 'tar') {
 
             # Compress flag
-            if ($tar_compress eq "true") {
-                $tar_compress = "-z";
+            if ($cfg::tar_compress eq "true") {
+                $cfg::tar_compress = "-z";
             } else {
-                $tar_compress = "";
+                $cfg::tar_compress = "";
             }
 
             # Verbose flag
-            if ($tar_verbose eq "true") {
-                $tar_verbose = "-v --totals";
+            if ($cfg::tar_verbose eq "true") {
+                $cfg::tar_verbose = "-v --totals";
             } else {
-                $tar_verbose = "";
+                $cfg::tar_verbose = "";
             }
 
             # For tar, blocks are in 512-byte units
             # not 1024 (1k) like dump, afio
-            $tar_blksize = $blksize * 2;
+            $cfg::tar_blksize = $cfg::blksize * 2;
 
-	} elsif ($backuptype eq 'cpio') {
+	} elsif ($cfg::type eq 'cpio') {
 
             # Verbose flag
-            if ($cpio_verbose eq "true") {
-                $cpio_verbose = "-v";
+            if ($cfg::cpio_verbose eq "true") {
+                $cfg::cpio_verbose = "-v";
             } else {
-                $cpio_verbose = "";
+                $cfg::cpio_verbose = "";
             }
 
             # For cpio, blocks are in bytes
             # not 1024 (1k) like dump, afio
-            $cpio_blksize = $blksize * 1024;
+            $cfg::cpio_blksize = $cfg::blksize * 1024;
 
 	} else {
-	    die("\$backuptype must be defined as afio, dump, tar, or cpio\n");
+	    die("\$type must be defined as afio, dump, tar, or cpio\n");
 	}
     } else {
-	die("\$backuptype must be defined as afio, dump, tar, or cpio\n");
+	die("\$type must be defined as afio, dump, tar, or cpio\n");
     }
 
 
