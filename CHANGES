@@ -54,7 +54,7 @@ Changes beyond stable release:
   - test-tape-drive now diffs 3 files, one in the middle is different
     (will catch people using rewind-on-close device)
 
-  - "-extract -files" -> "-extract -flist" to hopefully avoid confusion
+  - "-extract -files" -> "-extract -flist" to hopefully be more clear
 
   - db/file rm flags tweaked:
        Redid rmindex semantics again, see help 
@@ -65,6 +65,8 @@ Changes beyond stable release:
 
 
 Cleanup:
+  - When level > 9 and using files, -toc sorts better now
+  - Config file with spaces in path works
   - Don't check for writeable stampdir for non-backup
   - Don't check for writeable logdir for non-backup
   - Don't tie to db for non-backup

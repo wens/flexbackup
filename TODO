@@ -5,13 +5,11 @@ Flexbackup to-do list
 Some of these might not happen
 
 Currently in progress:
- - Check old release for use_file + -erase.  nukes db entry for keyfile
-   check -newtape
-   (devel too as well)
-
  - How to spec dirs with spaces for sets/dir/prune?
- - Fix so -toc when using a dir rm's the index entry if file does not
-   exist (before listing)
+ - Check if tar label 99 char limit on unix
+ - Try it under cygwin just for grins
+     need to fix fs spec / prune for spaces
+     why is touch of label failing?
 
 Cleanup/fix:
  - Better cleanup after error in backup
@@ -20,7 +18,6 @@ Cleanup/fix:
     - Use dump combined flags (for older dumps that want abc not -a -b -c)
     - Not all finds have the -fstype flag (from $traverse_fs)
     - How to handle (use lowest common denominator flags?  sorta what's tried now)
- - When level > 9 and using files, -toc sorts it wrong (cosmetic nit)
  - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
  - If comp_log is changed, we don't nuke old logs that normally would be
    overwritten with ourselves if comp_log stayed the same. (cosmetic nit)

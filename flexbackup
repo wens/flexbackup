@@ -2166,10 +2166,10 @@ sub readconfigfile {
     } else {
 	$configfile = $main::CONFFILE;
     }
-    if (! -r $configfile) {
+    if (! -r "$configfile") {
 	die("config file $configfile: $OS_ERROR");
     }
-    system("perl -c $configfile 2>&1");
+    system("perl -c \"$configfile\" 2>&1");
     if ($CHILD_ERROR) {
 	die("syntax error in config file $configfile");
     }
@@ -3908,6 +3908,16 @@ sub new_tape_key {
 
 	    &log("| Directory's existing key is $key");
 
+	    # Make sure keyfile entry is there
+	    if (!defined($main::index{"$key|$cfg::keyfile"})) {
+		my $label = "<index keyfile, dir=$cfg::device>";
+		if (defined($main::debug)) {
+		    &log("(debug) \$main::index{$key|$cfg::keyfile} = $label");
+		} else {
+		    $main::index{"$key|$cfg::keyfile"} = $label;
+		}
+	    }
+
 	    # Figure out the existing files
 	    foreach (sort keys %main::index) {
 		my ($tape,$filenum) = split(/\|/,$_);
@@ -4089,7 +4099,6 @@ sub toc_routine {
 	die("Invalid key spec $main::opt{toc}");
     }
 
-
     # Go through the index and fill hashes
     foreach my $key (keys %main::index) {
 	($tape,$file) = split(/\|/,$key);
@@ -4100,8 +4109,6 @@ sub toc_routine {
 	}
     }
 
-    &log('');
-
     # Print the toc of each tape in our desired list
     foreach $desired (sort bynumber keys %desired_keys) {
 
@@ -4111,6 +4118,7 @@ sub toc_routine {
 	foreach $tape (sort bynumber keys %tape_files) {
 	    if ($tape eq $desired) {
 		$found = 1;
+		&log('');
 		&log("File  Contents    (tape index $tape)");
 		&log("-" x $length);
 		foreach $file (sort bynumber keys %{$tape_files{$tape}}) {
@@ -4122,12 +4130,24 @@ sub toc_routine {
 
 	foreach $dir (sort bynumber keys %disk_files) {
 	    if ($dir eq $desired) {
+		my @array;
 		$found = 1;
+		foreach $file (sort keys %{$disk_files{$dir}}) {
+		    if ((! -e "$cfg::device/$file") and
+			(!defined($main::opt{'toc'}) or ($main::opt{'toc'} eq ''))) {
+			&log("| Bogus index entry - $file does not exist");
+			&rmindex("$dir:$file");
+			delete $disk_files{$dir}{$file};
+		    }
+		}
+		&log('');
 		&log("File  Contents    (dir index $dir)");
 		&log("-" x $length);
-		foreach $file (sort keys %{$disk_files{$dir}}) {
-		    $_ = sprintf("%-04s",$file);
-		    &log($_ . " " . $disk_files{$dir}{$file});
+		foreach $file (keys %{$disk_files{$dir}}) {
+		    push(@array, $file . " " . $disk_files{$dir}{$file});
+		}
+		foreach (sort byfilename @array) {
+		    &log($_);
 		}
 	    }
 	}
@@ -4291,6 +4311,36 @@ sub maybe_delete_old_index {
 ######################################################################
 sub bynumber {
     $a <=> $b;
+}
+
+
+######################################################################
+# Sort by archive filename
+######################################################################
+sub byfilename {
+
+    return 0 if ($a =~ m/^$cfg::keyfile/);
+    return 1 if ($b =~ m/^$cfg::keyfile/);
+
+    my $alabel;
+    my $alevel;
+    my $blabel;
+    my $blevel;
+
+    if ($a =~ m/^(.+)\.(\d+)(\.(\d+))?\./) {
+	$alabel = $1;
+	$alevel = $2;
+	if ($b =~ m/^(.+)\.(\d+)(\.(\d+))?\./) {
+	    $blabel = $1;
+	    $blevel = $2;
+
+	    if ($alabel eq $blabel) {
+		return($alevel <=> $blevel);
+	    }
+	}
+    }
+
+    return($a cmp $b);
 }
 
 
