@@ -941,7 +941,7 @@ sub backup_afio {
     $cmd = "$main::path{printf} \"Volume Label:\\n$title\\n\\n\" > $tmplabel";
     push(@cmds, &maybe_remote_cmd($cmd, $remote));
 
-    $cmd = "cd $dir && ";
+    $cmd = "cd \"$dir\" && ";
     $cmd .= "($main::path{printf} \"//--$tmplabel flexbackup.volume_header_info\\n\" && ";
     $cmd .= &file_list_cmd($dir, $stamp, 'newline', $level, $remote);
     $cmd .= ") | ";
@@ -1014,7 +1014,7 @@ sub backup_cpio {
     $cmd = "$main::path{touch} \"$dir/$title\"";
     push(@cmds, &maybe_remote_cmd($cmd, $remote));
 
-    $cmd = "cd $dir && ";
+    $cmd = "cd \"$dir\" && ";
     $cmd .= &file_list_cmd($dir, $stamp, 'null', $level, $remote);
     $cmd .= "| ";
 
@@ -1072,7 +1072,7 @@ sub backup_tar {
 	$stamp = &get_last_date($label, $level, 'filename');
     }
 
-    $cmd = "cd $dir && ";
+    $cmd = "cd \"$dir\" && ";
     $cmd .= &file_list_cmd($dir, $stamp, 'null', $level, $remote);
     $cmd .= "| ";
 
@@ -1136,7 +1136,7 @@ sub backup_star {
 	$stamp = &get_last_date($label, $level, 'filename');
     }
 
-    $cmd = "cd $dir && ";
+    $cmd = "cd \"$dir\" && ";
     $cmd .= &file_list_cmd($dir, $stamp, 'newline', $level, $remote);
     $cmd .= "| ";
 
@@ -1209,7 +1209,7 @@ sub backup_pax {
     $cmd = "$main::path{touch} \"$dir/$title\"";
     push(@cmds, &maybe_remote_cmd($cmd, $remote));
 
-    $cmd = "cd $dir && ";
+    $cmd = "cd \"$dir\" && ";
     $cmd .= &file_list_cmd( $dir, $stamp, 'newline', $level, $remote);
     $cmd .= "| ";
 
@@ -1276,7 +1276,7 @@ sub backup_zip {
     $cmd = "$main::path{touch} \"$dir/$title\"";
     push(@cmds, &maybe_remote_cmd($cmd, $remote));
 
-    $cmd = "cd $dir && ";
+    $cmd = "cd \"$dir\" && ";
     $cmd .= &file_list_cmd($dir, $stamp, 'newline', $level, $remote);
     $cmd .= "| ";
 
