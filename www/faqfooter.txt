@@ -1,2 +1,0 @@
-
-FAQ compilation thanks to "makefaq"
