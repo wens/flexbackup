@@ -47,7 +47,7 @@ o first verify behavior of dump using dumpdates
       http://www.arkeia.com/archives_indexed/2000/10/msg00006.html
       http://www.sans.org/rr/backup/central.php
   
-  To sum up, no changes are needed.
+  To sum up, no changes are *needed*.
   
    we can do what people call "incremental" as long as you increase the
    backup level each day.  (Well, you can do up to 8 of them.)
@@ -55,6 +55,12 @@ o first verify behavior of dump using dumpdates
    we can do what people call "differential" just by keeping the number the
    same for consecutive backups
       
+   If anything, make a mode where people coming from the DOS/win world 
+   can use
+       'full' 'differential' 'incremental' 
+   that is different from the numbered level backups. Alias 0 == full and
+   implement the other two.
+
 
  - remote tape drive (rmt) support
      Caleb Crome <caleb@crome.org>
