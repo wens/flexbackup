@@ -24,17 +24,12 @@ Cleanup/fix:
     - How to handle (use lowest common denominator flags?  sorta what's tried now)
 
 Misc:
+ - add faq re: pkg delta how it works
  - Add faq on -erase -newtape taking forever / erase_rewind_only
      could be mt erase, could be dd index hang (-test-tape-drive)
- - add faq re: pkg delta how it works
 
- - fix description text in sf project, freshmeat
-     sets
-     pruning
-     pkgdelta
-     filelist
-     copy
-
+ - fix description text in sf project, freshmeat fornew features
+     sets pruning pkgdelta filelist copy
  - Add faq on files changing underneath tar? sql db dump?
  - Create mbuffer rpm (if I can make it work)
  - Man page (create from -help perhaps)
