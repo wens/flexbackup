@@ -728,10 +728,11 @@ sub backup_dump {
 
     # Warnings
     if (defined($cfg::exclude_expr[0])) {
-	&log("| Note: \$exclude_expr is ignored for dump");
+	&log("| NOTE: \$exclude_expr is ignored for dump");
     }
-    if ($cfg::traverse_fs eq "true") {
-	&log("| Note: \$traverse_fs is always false for dump");
+
+    if ($cfg::traverse_fs ne 'false') {
+	&log("| NOTE: \$traverse_fs is always false for dump");
     }
 
     # With this one we don't have to put a stampfile on the remote system
@@ -804,14 +805,12 @@ sub backup_afio {
     $cmd = "$main::path{'printf'} \"Volume Label:\\n$title\\n\\n\" > $tmplabel";
     push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
 
-    $cmd = '';
-    $cmd .= "cd $dir && ";
+    # FIXME check this with volume label...
+    $cmd = "cd $dir && ";
     $cmd .= "(echo //--$tmplabel flexbackup.volume_header_info && ";
-    $cmd .= "$main::path{'find'} . $main::mountpoint_flag ";
-    $cmd .= "-newer $tmpstamp ";
-    $cmd .= "$main::exclude_expr ";
-    $cmd .= "-print0 ";
+    $cmd .= &file_list_cmd($dir,$tmpstamp,'null');
     $cmd .= ") | ";
+
     $cmd .= "$main::path{'afio'} -o -0 ";
     $cmd .= "$no_compress ";
     $cmd .= "-z ";
@@ -870,19 +869,17 @@ sub backup_cpio {
     $cmd = "$main::path{'touch'} \"$dir/$title\"";
     push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
 
-    $cmd = '';
-    $cmd .= "cd $dir && ";
-    $cmd .= "$main::path{'find'} . $main::mountpoint_flag ";
-    $cmd .= "-newer $tmpstamp ";
-    $cmd .= "$main::exclude_expr ";
-    $cmd .= "-print0 ";
+    $cmd = "cd $dir && ";
+    $cmd .= &file_list_cmd($dir,$tmpstamp,'null');
     $cmd .= "| ";
+
     $cmd .= "$main::path{'cpio'} -o ";
     $cmd .= "-0 ";
     $cmd .= "-H $cfg::cpio_format ";
     $cmd .= "$main::cpio_verb_flag ";
     $cmd .= "$main::cpio_blk_flag ";
     $cmd .= "$main::z";
+
     if ($main::remote and ($cfg::buffer eq "buffer")) {
 	$cmd .= "$main::buffer_cmd";
     }
@@ -920,13 +917,10 @@ sub backup_tar {
     $cmd = "$main::path{'touch'} $main::touch_flag \"$_\" $tmpstamp";
     push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
 
-    $cmd = '';
-    $cmd .= "cd $dir && ";
-    $cmd .= "$main::path{find} . $main::mountpoint_flag ";
-    $cmd .= "-newer $tmpstamp ";
-    $cmd .= "$main::exclude_expr ";
-    $cmd .= "-print0 ";
+    $cmd = "cd $dir && ";
+    $cmd .= &file_list_cmd($dir,$tmpstamp,'null');
     $cmd .= "| ";
+
     $cmd .= "$main::path{tar} --create ";
     $cmd .= "--null ";
     $cmd .= "--files-from=- ";
@@ -942,6 +936,7 @@ sub backup_tar {
     $cmd .= "$main::tar_blk_flag ";
     $cmd .= "--file - ";
     $cmd .= "$main::z";
+
     if ($main::remote and ($cfg::buffer eq "buffer")) {
 	$cmd .= "$main::buffer_cmd";
     }
@@ -960,7 +955,6 @@ sub backup_tar {
     return(@cmds);
 
 }
-
 
 ######################################################################
 # List the files in an archive
@@ -1486,7 +1480,7 @@ sub mt {
 	    #        unlink("$cfg::device/$_") or die ("Can't rm $cfg::device/$_: $OS_ERROR");
 	    #    }
 	    #    closedir(DIR);
-            #
+	    #
 	    #}
 
 	    if ($cfg::erase_rewind_only eq "true") {
@@ -1768,7 +1762,7 @@ sub optioncheck {
 
     # Traverse mountpoints?
     if ($cfg::traverse_fs eq "local") {
-	$main::mountpoint_flag = "! -fstype nfs";
+	$main::mountpoint_flag = "! -fstype nfs ! -fstype smbfs";
     } elsif ($cfg::traverse_fs eq "all") {
 	$main::mountpoint_flag = "";
     } else {
@@ -3142,5 +3136,33 @@ sub get_incremental_level {
     $highestlevel++;
 
     return($highestlevel);
+
+}
+
+######################################################################
+# Common commands to invoke 'find' & get a desired file list on stdout
+######################################################################
+sub file_list_cmd {
+
+    my $dir = shift(@_);
+    my $timestampfile = shift(@_);
+    my $separator = shift(@_);
+
+    if (!defined($separator) or ($separator !~ m/^(null|newline)$/)) {
+        $separator = 'null';
+    }
+
+    my $cmd = '';
+    $cmd .= "$main::path{'find'} . $main::mountpoint_flag ";
+    $cmd .= "-newer $timestampfile ";
+    $cmd .= "$main::exclude_expr ";
+
+    if ($separator eq 'newline') {
+        $cmd .= "-print ";
+    } else {
+        $cmd .= "-print0 ";
+    }
+
+    return($cmd);
 
 }
