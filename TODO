@@ -27,31 +27,34 @@ Features to add:
       Michael Matsumura <michael@limit.org> [ depends on behavior of
       multiple same-level, see below ]
 
- - Several suggestions of this type, need to sort out:
-  o first verify behavior of dump using dumpdates
+ - Several suggestions of incremental/differntial type, need to sort out:
+
+o first verify behavior of dump using dumpdates
 
     A: Multiple same-number get everything more recent then last
        higher-numbered.  '9' always get all since '[0-8]', no matter how many
        '9's you do in a row
 
-  o also re-check they way my timestamps work
+      see also  http://docs.sun.com/db/doc/805-7228/6j6q7uf18?a=view
+
+  o also re-check they way my timestamps work make sure its the same
 
     A:
 
-  o then sort out the below
-   - incremental?
-      incremental makes get all since the backup, whatever it is
 
-     OR You'd only have two choices - full & incremental.
-     something like this may help those confused by dump "levels" as well.
 
-   - differential mode (all since previous higher level)
-     interaction w/ logs
-     interaction w/ files
-     (how is this different from now?)
-     
-   - maybe simple alias full = 0, incremental = 9.  
-      A: NO! doesn't work with dump level semantics
+  Check these links:
+      http://www.arkeia.com/archives_indexed/2000/10/msg00006.html
+      http://www.sans.org/rr/backup/central.php
+  
+  To sum up, no changes are needed.
+  
+   we can do what people call "incremental" as long as you increase the
+   backup level each day.  (Well, you can do up to 8 of them.)
+
+   we can do what people call "differential" just by keeping the number the
+   same for consecutive backups
+      
 
  - remote tape drive (rmt) support
      Caleb Crome <caleb@crome.org>
