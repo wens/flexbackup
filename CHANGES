@@ -2,24 +2,24 @@ $Id$
 $Name$
 
 ----------------------------------------------------------------------
-In CVS pending next release
+Version 1.2.1 (200310??)
 
 Changes:
  - Added "-ignore-errors" flag to allow backups to continue even if
    commands return non-zero exit status.  Use at your own risk.
- - Added manpages
+ - Added contributed manpages
  - Add 'rsync' type that acts like 'copy' but using rsync instead of piped
    cpio's.  You need rsync >= 2.5.6 for this to work!
- - Added lzop support
- - Recognize .deb files as ar archives
+ - Added lzop compression support
  - Spinning bar indicator for long-running pkg delta operations if
    output is a terminal
+ - Recognize .deb files as ar archives
  - Skip proc/devpts/devfs/tmpfs for traverse_fs=local or all
 
 Bug fixes/cleanup:
- - Clean up after things a bit better if error detected
+ - Cleanup better if error detected
  - Fix quoting in check_remote_progs if your remote shell is csh
- - Make sure we don't generate conflicting index keys (as long as -newtape 
+ - Make sure we don't generate conflicting index keys (as long as -newtape
    is not run in parallel)
 
 ----------------------------------------------------------------------
