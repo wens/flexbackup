@@ -7,16 +7,16 @@ CVSVER := $(shell echo v$(VER) | sed -e 's/\./_/g')
 SITE := ./www
 RPM  := /net/rpm
 DATE := $(shell date)
-CVSROOT := :ext:edwinh@cvs.sourceforge.net:/cvsroot/flexbackup
+CVS := cvs -d :ext:edwinh@cvs.sourceforge.net:/cvsroot/flexbackup
 
 commit:
-	cvs commit
+	$(CVS) commit
 
 all: tar rpm lsm
 
 tag: version commit
 
-	cvs tag -F $(CVSVER)
+	$(CVS) tag -F $(CVSVER)
 
 lsm: version
 	cp flexbackup.lsm.template flexbackup.lsm
@@ -24,7 +24,7 @@ lsm: version
 	perl -pi -e 's/DATE/$(DATE)/' flexbackup.lsm
 
 tar: version tag
-	cd /tmp; cvs export -r $(CVSVER) flexbackup; mv flexbackup flexbackup-$(VER)
+	cd /tmp; $(CVS) export -r $(CVSVER) flexbackup; mv flexbackup flexbackup-$(VER)
 	cd /tmp/flexbackup-$(VER); mv Makefile.dist Makefile
 	cd /tmp/flexbackup-$(VER); mv flexbackup.spec.template flexbackup.spec
 	cd /tmp/flexbackup-$(VER); perl -pi -e 's/%define version.*/%define version $(VER)/' flexbackup.spec
