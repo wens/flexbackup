@@ -4264,14 +4264,24 @@ sub file_list_cmd {
 	open(NEWLIST,"$write") || die;
 	while(<LIST>) {
 
+	    my $key;
 	    chomp(my $file = $_);
+
+	    # Strip leading ./
 	    $file =~  s:^\./::g;
 
+	    # Don't care about the backup dir itself
 	    next if ($file eq '.');
 
-	    if (!defined($main::packaged{'localhost'}{"$dir/$file"})
+	    if ($dir eq '/') {
+		$key = "/$file"
+	    } else {
+		$key = "$dir/$file"
+	    }
+
+	    if (!defined($main::packaged{'localhost'}{$key})
 		or
-		defined($main::changed{'localhost'}{"$dir/$file"})) {
+		defined($main::changed{'localhost'}{$key})) {
 
 		if ($separator eq 'null') {
 		    print NEWLIST "./$file\0";
