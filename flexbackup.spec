@@ -53,7 +53,6 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 /usr/bin/flexbackup
-/usr/bin/multibuf
 %defattr(-,root,root)
 %doc CHANGES COPYING TODO README CREDITS flexbackup.lsm INSTALL
 %dir /var/state/flexbackup
@@ -61,9 +60,6 @@ rm -rf $RPM_BUILD_ROOT
 %config /etc/flexbackup.conf
 
 %changelog
-* Sun Nov  7 1999 Edwin Huffstutler <edwinh@computer.org>
-- add multibuf
-
 * Sat Sep 25 1999 Edwin Huffstutler <edwinh@computer.org>
 - add more requires, update description, email address.
 - really goes in /usr/bin since it needs perl anyway --

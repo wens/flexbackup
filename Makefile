@@ -5,7 +5,7 @@
 
 CVSVER := $(shell echo v$(VER) | sed -e 's/\./_/g')
 SITE := ./www
-RPM  := /usr/src/redhat
+RPM  := /net/rpm
 DATE := $(shell date)
 
 commit:
@@ -30,13 +30,11 @@ tar: tag lsm
 	cd /tmp; echo yes | cvs release -d flexbackup-$(VER)
 
 rpm: tar
-	sudo cp $(SITE)/tarball/flexbackup-$(VER).tar.gz $(RPM)/SOURCES
-	sudo rpm -ba flexbackup.spec
+	rpm -ta $(SITE)/tarball/flexbackup-$(VER).tar.gz
 	cp -p $(RPM)/RPMS/noarch/flexbackup-$(VER)-1.noarch.rpm $(SITE)/RPMS
 	cp -p $(RPM)/SRPMS/flexbackup-$(VER)-1.src.rpm $(SITE)/RPMS
-	sudo rpm --rmsource flexbackup.spec
-	sudo rm $(RPM)/RPMS/noarch/flexbackup-$(VER)-1.noarch.rpm
-	sudo rm $(RPM)/SRPMS/flexbackup-$(VER)-1.src.rpm
+	rm $(RPM)/RPMS/noarch/flexbackup-$(VER)-1.noarch.rpm
+	rm $(RPM)/SRPMS/flexbackup-$(VER)-1.src.rpm
 
 webdoc:
 	cd /tmp; cvs co -r $(CVSVER) flexbackup
