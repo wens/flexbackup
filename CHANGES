@@ -10,6 +10,12 @@ Changes:
   - Added support for "zip" as valid archive compression type
   - Added support for "zip" as valid log compression type
 
+Bug Fixes:
+  - $erase_rewind_only wasn't working right if we didn't call
+    &mt('rewind') right before or after &mt('erase') (I think all spots
+    are covered now, but anyway...).  Now we might call rewind twice if
+    this is set, but it won't hurt. (from e-smith patches)
+
 Cleanup:
   - Redid the way buffer/read/write strings were constructed to make more sense
   - Don't set tape blocksize with -toc unless we want current tape (from John)

@@ -1824,7 +1824,7 @@ sub mt {
 	    #}
 
 	    if ($cfg::erase_rewind_only eq "true") {
-		next;
+		$operation = 'rewind';
 	    } elsif ($main::uname =~ /Linux/) {
 		$operation = 'erase';
 	    } elsif ($main::uname =~ /OpenBSD/) {
