@@ -2645,10 +2645,8 @@ sub optioncheck {
     }
 
 
-    # Last step - check buffer and any remote hosts for required programs
-    if (($cfg::buffer ne 'false') or %remotehosts) {
-	&line('screen');
-    }
+    # Last step - check buffer, shelltype and any remote hosts for required programs
+    &line('screen');
 
     if ($cfg::buffer eq 'buffer') {
 	&test_bufferprog($main::path{'buffer'}, $cfg::buffer_megs, 'localhost');
