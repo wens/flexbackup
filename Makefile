@@ -15,16 +15,17 @@ commit:
 all: tar rpm
 
 tag: version commit
-	perl -pi -e 's/^ README for version .*/ README for version $(VER)/' README
-	perl -pi -e 's/^Version:        .*/Version:        $(VER)/' flexbackup.lsm.template
-	perl -pi -e 's/^Entered-date:   .*/Entered-date:   $(DATE)/' flexbackup.lsm.template
-	perl -pi -e 's/%define version .*/%define version $(VER)/' flexbackup.spec
-	cvs commit -m "" flexbackup.lsm.template flexbackup.spec README
+
 	cvs tag -F $(CVSVER)
 
 tar: tag
 	cd /tmp; cvs export -r $(CVSVER) flexbackup; mv flexbackup flexbackup-$(VER)
 	cd /tmp/flexbackup-$(VER); mv Makefile.dist Makefile
+	cd /tmp/flexbackup-$(VER); mv flexbackup.lsm.template flexbackup.lsm
+	cd /tmp/flexbackup-$(VER); mv flexbackup.spec.template flexbackup.spec
+	cd /tmp/flexbackup-$(VER); perl -pi -e 's/^Version:        .*/Version:        $(VER)/' flexbackup.lsm
+	cd /tmp/flexbackup-$(VER); perl -pi -e 's/^Entered-date:   .*/Entered-date:   $(DATE)/' flexbackup.lsm
+	cd /tmp/flexbackup-$(VER); perl -pi -e 's/%define version .*/%define version $(VER)/' flexbackup.spec
 	tar -C /tmp -z -c -v -X tar.exclude -f $(SITE)/tarball/flexbackup-$(VER).tar.gz flexbackup-$(VER)
 	ln -snf flexbackup-$(VER).tar.gz $(SITE)/tarball/flexbackup-latest.tar.gz
 	cp /tmp/flexbackup-$(VER)/CHANGES /tmp/flexbackup-$(VER)/README /tmp/flexbackup-$(VER)/TODO $(SITE)

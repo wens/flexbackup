@@ -1,4 +1,4 @@
-edit CHANGES,TODO,README
+edit CHANGES,TODO
 
 change verison/date header in CHANGES
 edit index.html for verions/date
@@ -11,6 +11,8 @@ upload files/web to sourceforge.net
 get flexbackup.org synced
 
 upload files to sunsite
+  ncftpput flexbackup.lsm ftp://ibiblio.org/incoming/Linux
+  ncftpput www/tarball/flexbackup-XXXX ftp://ibiblio.org/incoming/Linux
 
 freshmeat notice
 

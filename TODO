@@ -14,28 +14,32 @@ Cleanup/fix:
  - Try to use dump combined flags (for older dumps that want abc not -a -b -c)
  - When level > 9 and using files, -toc sorts it wrong (cosmetic nit)
  - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
- - Not all finds have the -fstype flag
+ - Not all finds have the -fstype flag (from $traverse_fs)
+ - Check for existence of remote executables (John had something)
+
 
 Misc:
  - Make a manual page (or other enchanced doc)! too many options now :)
-   someone made us a good start or two:
+   someone made a good start or two:
      http://myezserver.com/downloads/mitel/howto/flexbackup-howto.html
      http://www.cyber-euskadi.com/howtos/contrib/flexbackup-restore-from-disk-howto.html
  - Someone needs to put a bunch of stuff in a faq
- - Check lsm template/ibiblio.org stuff. automate
+     Started... not much at this point
  - Try bfr or dbuffer? (buffer seems unmaintained; no O_LARGEFILE)
+     Maybe document how to recompile buffer
  - Try against torture-test list:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
 
 
 Features to add:
  - smbtar?
-     doable - overload type 'tar' only a fs spec of something like
+     doable - overload type 'tar'. smbtar triggers with a fs spec of something like
                smb:user:pass@host/share:dir
      smbtar has "files newer than" option, test
      don't want password echoed
+     no exclude from find
  - star? (tar but w/ acl support, built in fifo buffering)
- - Check for existence of remote executables (John had something)
+ - pax (wraps tar/cpio)?  Might be good for portable command options though
  - Non-root use (remote too)
     document sudo workaround from Alex
     maybe works using the path overrides I put in?
@@ -60,7 +64,6 @@ Features to add:
  - CD-ROM burning (or just .iso type?) for full backups? any?
  - Put .zip back in if I can make it behave
  - Zip as compression not archive type at least?  (can't unzip stdin)
- - pax (just wraps tar/cpio)?
  - When using files
       Make lower numbered level nuke higher ones & rm index?
       Erase option to to nuke the archive files & records in dir?

@@ -1,4 +1,5 @@
 flexbackup.lsm.template
+flexbackup.spec.template
 sizelsm.perl
 tar.exclude
 release-steps

@@ -1,7 +1,7 @@
-Begin3
-Title:          flexbackup
-Version:        0.9.9.5
-Entered-date:   Sat Jan 11 16:20:19 MST 2003
+Begin4
+Title: flexbackup
+Version: VERSION
+Entered-date: DATE
 Description:
 Flexible backup script.
 Features:
@@ -10,20 +10,19 @@ Features:
    o Compression and buffering for all backup types
    o Handles multivolume backups
    o Backup, extract, compare, list modes
-   o Full (0) and 1-9 levels of incremental backup
-   o Keeps a table of contents so you know what's on each tape
+   o Full and numbered levels of incremental backup
+   o Simple table of contents so you know what archives are on each tape
    o Does remote filesystems (over rsh/ssh; no special service)
-   o Works with IDE/SCSI tapes on Linux/FreeBSD, Linux ftape, or disk files
+   o Works with IDE/SCSI tapes on Linux/FreeBSD, or on disk archives
    o Nice log files
-Keywords:       backup dump restore afio tar cpio ftape
-Author:         edwinh@computer.org (Edwin Huffstutler)
-Maintained-by:  edwinh@computer.org (Edwin Huffstutler)
-Primary-site:   flexbackup.sourceforge.net /flexbackup/tarball
-                SIZE
-Alternate-site: metalab.unc.edu /pub/linux/system/backup
-                SIZE
+Keywords: backup dump restore afio tar cpio ftape
+Author: edwinh@computer.org (Edwin Huffstutler)
+Maintained-by: edwinh@computer.org (Edwin Huffstutler)
+Primary-site: http://flexbackup.sourceforge.net /tarball
+              flexbackup-VERSION.tar.gz
+Alternate-site: http://flexbackup.org /tarball
+                flexbackup-VERSION.tar.gz
 Original-site:
-Platforms:      IDE/SCSI tape drive
-                Linux ftape devices
+Platforms: Unix-like system with perl and standard archivers. tape drive optional.
 Copying-policy: GPL
 End

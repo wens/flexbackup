@@ -1,10 +1,7 @@
 $Id$
 $Name$
 
-Version 0.9.9.6 (TBD)
-
-Bug fixes:
- - Some commands still weren't using path overrides (dd,mt)
+Version 0.9.9.6 (20030112)
 
 Changes:
  - Can now backup to / read from remote tape drives.
@@ -12,12 +9,25 @@ Changes:
      Uses ssh pipelines like our remote fs backups - not rmt.
      Old mail idea from Caleb Crome <caleb@crome.org>, reworked.
 
+Bug fixes:
+ - Some commands still weren't using path overrides (dd,mt)
+
 Cleanup:
  - Refactored some code due to the above.
+ - afio volume header had extra newline
  - File list routine to nuke duplicated code
+ - Echo list/extract log filename.
+ - Ffind -depth is recommended.
+ - Add .tbz auto file extension.
+ - Fix incorrect tapedevice test in read setup function. (cosmetic result)
 
 ----------------------------------------------------------------------
 Version 0.9.9.5 (20030111)
+
+Changes:
+ - Static filenames option when using disk (same fs, same level overwrite)
+     based on 0.9.8 patch from Michael Matsumura <michael@limit.org>
+     split into $staticlogs / $staticfiles config options
 
 Bug fixes:
  - Old bug: stamp files from the various parts of 'all' were not getting
@@ -25,11 +35,6 @@ Bug fixes:
  - Fixed '-level incremental' with fs=all.  Had to refactor some code and
      not use a global level variable.  logs filenames a little different
      for 'all' in this case.
-
-Changes:
- - Static filenames option when using disk (same fs, same level overwrite)
-     based on 0.9.8 patch from Michael Matsumura <michael@limit.org>
-     split into $staticlogs / $staticfiles config options
 
 Cleanup:
  - Make path overrides also search $PATH (say if we just changed the name
