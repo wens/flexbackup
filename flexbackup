@@ -2461,10 +2461,10 @@ sub mt {
 		if (defined($main::remotetapehost)) {
 		    $command = &maybe_remote_cmd($command, $main::remotetapehost);
 		}
-                if (defined($main::debug)) {
-                    &log("(debug) $command");
-                }
-                system($command);
+		if (defined($main::debug)) {
+		    &log("(debug) $command");
+		}
+		system($command);
 		if ($CHILD_ERROR) {
 		    &log("| Trying \"mt defblksize\" instead of \"mt setblk\"");
 		    my $oldoperation = $operation;
@@ -2473,10 +2473,10 @@ sub mt {
 		    if (defined($main::remotetapehost)) {
 			$command = &maybe_remote_cmd($command, $main::remotetapehost);
 		    }
-                    if (defined($main::debug)) {
-                        &log("(debug) $command");
-                    }
-                    system($command);
+		    if (defined($main::debug)) {
+			&log("(debug) $command");
+		    }
+		    system($command);
 		    if ($CHILD_ERROR) {
 			&log("Error setting block size");
 			&log("Neither of these commands worked:");
@@ -2944,6 +2944,10 @@ sub optioncheck {
 	    $main::opt{'dir'} = &nuke_trailing_slash($main::opt{'dir'});
 
     } elsif (defined($main::opt{'set'})) {
+
+	if (defined($main::use_stdout)) {
+	    push(@main::errors,"can't use -set with stdout option");
+	}
 
 	foreach my $set (keys %cfg::set) {
 	    if ($set eq 'all') {
