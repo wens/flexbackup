@@ -105,34 +105,44 @@ files, by the way.
 
 <q>I get I/O errors or other errors from my tape drive.
 
-<a>Try these one at a time:<OL>
-<LI>If you are using buffering, turn it off (<CODE>$buffer='false'</CODE>) until you 
+<a>Run this: <CODE>flexbackup -test-tape-drive</CODE>.  It writes a couple
+small files to the tape, then reads & diffs them.  This will flush out any
+problems with parameters like blocking, filemarks, and padding; or issues
+with the tape drive or driver itself.
+
+<P>If it fails, try these one at a time:<OL>
+<LI>If you are using buffering, turn it off (<CODE>$buffer='false'</CODE>) until you
     can get things working without it.
-<LI>Change the block size parameter (<CODE>$blksize</CODE>) in the 
-    configuration file.  The default is 10k, but some tape drives like 32 or 64 
-    much better.  
+<LI>Change the block size parameter (<CODE>$blksize</CODE>) in the
+    configuration file.  The default is 10k, but some tape drives like 32k or 64k
+    much better.
 <LI>Try setting <CODE>$pad_blocks</CODE> to false
 <LI>Switch the setting of <CODE>$mt_var_blocksize</CODE> to false
+<LI>Try with with <CODE>$indexes</CODE> set to false
 </OL>
 
 <P>If you are using an IDE tape drive under Linux, and are still having
 trouble, you might also try the 'ide-scsi' layer with the 'st' module, and
 treating the thing like a SCSI tape - I've had more success that way.
 
-<P>You can also just try writing/reading stuff straight from the drive
-with tar and dd (to factor flexbackup out of the loop).  If you can get that
-working, but flexbackup still seems to malfunction, let us know.  Try
-things like: (The example below uses afio to test, others will be different)
+<P>You can also just try writing/reading stuff straight from the drive with
+tar and dd (to factor flexbackup out of the loop), although that's what the
+<CODE>-test-tape-drive</CODE> switch tries to do.  If you can get that working,
+but flexbackup still seems to malfunction, let us know.  Try things like:
+(The example below uses afio to test, tar/cpio/others will be different)
+
 <PRE>
   # Backup two dirs
+  mt -f /dev/tape setblk 32768
   mt -f /dev/tape rewind
-  find /dir1 -print | afio -o -z -v -b 64k - | dd ibs=64k obs=64k of=/dev/tape
-  find /dir2 -print | afio -o -z -v -b 64k - | dd ibs=64k obs=64k of=/dev/tape
+  mt -f /dev/tape erase
+  find /dir1 -print | afio -o -z -v -b 32k - | dd ibs=32k obs=32k of=/dev/tape
+  find /dir2 -print | afio -o -z -v -b 32k - | dd ibs=32k obs=32k of=/dev/tape
 
   # List
   mt -f /dev/tape rewind
-  dd ibs=64k obs=64k if=/dev/tape | afio -t -z -v -b 64k -
-  dd ibs=64k obs=64k if=/dev/tape | afio -t -z -v -b 64k -
+  dd ibs=32k obs=32k if=/dev/tape | afio -t -z -v -b 32k -
+  dd ibs=32k obs=32k if=/dev/tape | afio -t -z -v -b 32k -
 </PRE>
 
 <c>Common problems
