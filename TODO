@@ -5,7 +5,6 @@ Flexbackup to-do list
 Some of these might not happen
 
 Currently in progress:
- - How to spec dirs with spaces for sets/dir/prune?
  - Try it under cygwin just for grins
 
 Cleanup/fix:
@@ -38,6 +37,7 @@ Misc:
      example for -wday use
      onefile
      -files -> -flist
+     spaces in dirs/prune
  - Create mbuffer rpm
  - Make a manual page (AND other enchanced documentation, more than a README)
    someone made a good start or two:

@@ -19,8 +19,8 @@ Changes beyond stable release:
       set is a different tape (acts like the old numeric index to @filesystems)
 
   - Per-filesystem subtree pruning
-       $prune{'/'} = "tmp proc";
-       $prune{'host:/'} = "disk*";
+       $prune{'/'} = "tmp proc mnt";
+       $prune{'host:/'} = "disk.?";
 
   - Added packaging system delta capability (RPM only for now).
 
@@ -65,6 +65,8 @@ Changes beyond stable release:
 
 
 Cleanup:
+  - Allow dirs/prune paths with spaces in them - to use, enclose all 
+    items in  the lists in quotes.
   - When level > 9 and using files, -toc sorts better now
   - Config file with spaces in path works
   - Don't check for writeable stampdir for non-backup
