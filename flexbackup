@@ -4326,17 +4326,17 @@ sub byfilename {
     my $blabel;
     my $blevel;
 
-    if ($a =~ m/^(.+)\.(\d+)(\.(\d+))?\./) {
+    if ($a =~ m/^(.+?)\.(\d+)(\.(\d+))?\./) {
 	$alabel = $1;
 	$alevel = $2;
-	if ($b =~ m/^(.+)\.(\d+)(\.(\d+))?\./) {
+	if ($b =~ m/^(.+?)\.(\d+)(\.(\d+))?\./) {
 	    $blabel = $1;
 	    $blevel = $2;
 
 	    if ($alabel eq $blabel) {
 		return($alevel <=> $blevel);
-	    }
-	}
+            }
+        }
     }
 
     return($a cmp $b);

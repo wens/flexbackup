@@ -1,8 +1,6 @@
 $Id$
 $Name$
 
-Development version 1.1.1
-
 Changes beyond stable release:
 
   - Different way to spec the filesystems. This lets us have arbitrarily
