@@ -21,6 +21,7 @@ Currently:
    check -newtape
 
  - Finish up -set / -dir
+     check for defined set name = all and bail
      test with tapes
      how to spec dirs with spaces?
 
