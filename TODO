@@ -11,6 +11,8 @@ Cleanup/fix:
      tar == gtar put still want to do normal path-seach)
  - bash PIPESTATUS trick fails if remote filesystem and shell there!=bash
      and shell local==bash. bah.
+ - check buffer avail mem thing from John
+ - revisit -cnewer problem
 
 Misc:
  - make a manual page (or other enchanced doc)! too many options now :)
@@ -21,7 +23,29 @@ Misc:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
 
 Features to add:
+ - static filenames when using disk (same fs, same level overwrite)?
+      Michael Matsumura <michael@limit.org> [ depends on behavior of
+      multiple same-level, see below ]
+ - remote tape drive (rmt) support
+     Caleb Crome <caleb@crome.org>
+
+ Several suggestions of this type, need to sort out:
+  o first verify behavior of dump using dumpdates
+  o also re-check they way my timestamps work
+  o then sort out the below
+   - incremental?
+      incremental makes get all since the backup, whatverver it is
+      (isn't this just like 9's in a row?)
+     something like this may help those confused by dump "levels" as well.
+     OR You'd only have two choices - full & incremental.
+   - differential mode (all since previous higher level)
+     interaction w/ logs
+     interaction w/ files
+     (how is this different from now?)
+   - maybe simple alias full = 0, incremental = 9
+
  - make remote machine path overrides possible, that supercede others
+ - check for existence of remote executables
  - make -extract -files for afio/cpio/zip recurse dirs
       dump/tar already to this.
  - try restore -D for comparing subdirs w/ restore
@@ -30,10 +54,6 @@ Features to add:
  - some "level" that uses rpm, verifies all packages, and just backs
       up any file not in a package OR changed from a package. and the rpm list.
       once the above works make it work for debian packages
- - differential mode (all since previous higher level)
-     interaction w/ logs
-     interaction w/ files
-     need someone to explain why they wanted this again
  - "no blocking at all" option
  - arbitratry "groups" that act sort of like "all"
  - multiple tapes for levels that aren't 0
