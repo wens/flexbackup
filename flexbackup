@@ -763,6 +763,8 @@ sub backup {
 	($remove, @cmds) = &backup_shar($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'lha') {
 	($remove, @cmds) = &backup_lha($label, $localdir, $title, $level, $remote);
+    } elsif ($cfg::type eq 'rsync') {
+	($remove, @cmds) = &backup_rsync($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'filelist') {
 	($remove, @cmds) = &backup_filelist($label, $localdir, $title, $level, $remote);
     }
@@ -1728,6 +1730,10 @@ sub list_routine {
 
 	$cmd .= "perl -pe 'last if (! m/^#/)'";
 
+    } elsif ($cfg::type eq 'rsync') {
+
+	### FIXME
+
     } elsif ($cfg::type eq 'lha') {
 	my $tmpfile = "$cfg::tmpdir/lha.$PROCESS_ID";
 	$cmd .= "$main::path{cat} > $tmpfile ; ";
@@ -1884,6 +1890,10 @@ sub extract_routine {
 	if ($restore_files ne '') {
 	    &log("| NOTE: \"-flist/-onefile\" ignored for shar");
 	}
+
+    } elsif ($cfg::type eq 'rsync') {
+
+	### FIXME
 
     } elsif ($cfg::type eq 'filelist') {
 
@@ -2211,11 +2221,11 @@ sub mt {
     # We want 1-filemark behavior always
     # Set if currently doing blocksize command
     foreach my $operation (@operations) {
-        if ($operation =~ m/generic-blocksize/) {
-            if ($main::uname =~ /FreeBSD/) {
-                push(@operations,'seteotmodel 1');
-            }
-        }
+	if ($operation =~ m/generic-blocksize/) {
+	    if ($main::uname =~ /FreeBSD/) {
+		push(@operations,'seteotmodel 1');
+	    }
+	}
     }
 
     foreach my $operation (@operations) {
@@ -2428,7 +2438,7 @@ sub optioncheck {
 
     # First check if things are defined in the config file
     # Checks exist, true/false, or one of options
-    &check(\$cfg::type,'type','dump afio cpio tar star pax zip ar shar lha filelist');
+    &check(\$cfg::type,'type','dump afio cpio tar star pax zip ar shar lha rsync filelist');
     &check(\$cfg::compress,'compress','gzip bzip2 compress zip false hardware');
     &check(\$cfg::compr_level,'compr_level','exist');
     &check(\$cfg::verbose,'verbose');
