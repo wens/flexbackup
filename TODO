@@ -4,58 +4,53 @@ $Name$
 Flexbackup to-do list
 Some of these might not happen, but figured I should jot them down
 
-Test tapes again since it's been so long since I used it
+Cleanup/fix:
+ - test tapes again since it's been so long since I used it
+ - clean up all the $main:: vars, split into types
+post 1.0:
+ - make -extract -files for afio/cpio/zip recurse dirs
+      dump/tar already to this.
+ - try restore -D for comparing subdirs w/ restore
 
-Move CVS to sourceforge.net
-
-Try bfr or dbuffer (buffer seems unmaintained; no O_LARGEFILE)
-
--------------------
-
-Try against torture-test list:
-http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
-
--------------------
-OLD LIST:
-
-when using files
-  make lower numbered level nuke higher ones & rm index?
+Misc: 
+ - Contact Paul and get flexbackup.org updated
+    freshmeat entry fixed to sf.net otherwise
+ - Check lsm template/ibiblio.org stuff
+ - Move CVS to sourceforge.net
+ - Try bfr or dbuffer (buffer seems unmaintained; no O_LARGEFILE)
+ - Try against torture-test list:
+     http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
 
 Features to add:
  - interactive restore-like shell for types besides dump
       see notes below
  - some "level" that uses rpm, verifies all packages, and just backs
       up any file not in a package OR changed from a package. and the rpm list.
- - once the above works make it work for debian packages
+      once the above works make it work for debian packages
+ - make a manual page (or other enchanced doc)!  too many options now :)
  - differential mode (all since previous higher level)
      interaction w/ logs
      interaction w/ files
+     need someone to explain why they wanted this again
  - "no blocking at all" option
- - make a manual page!  too many options now :)
  - arbitratry "groups" that act sort of like "all"
  - multiple tapes for levels that aren't 0
- - Gnome driver/configurator utility
-      I have a "picture" of what I want this to look like
-      use glade + libglade
-      will be a separate program that just manipulates flexbackup
  - extract options to not overwrite existing files
- - remote extract/compare/restore
-      just install s/w on client w/remote tape device. need config file
-      option
- - encryption with gnupg
  - cd-rom burning (or just .iso type?) for full backups?
  - put .zip back in if I can make it behave
  - .zip as compression not archive type at least?  (can't unzip stdin)
- - lha?
  - star? (tar but w/ acl support)
  - smbtar/smbclient?
  - pax (just wraps tar/cpio)?
-
-Cleanup/fix:
- - make -extract -files for afio/cpio/zip recurse dirs
-      dump/tar already to this.
- - try restore -D for comparing subdirs w/ restore
-
+ - remote extract/compare/restore
+      just install s/w on client w/remote tape device. need config file
+      option
+ - when using files
+      make lower numbered level nuke higher ones & rm index?
+      do I really want erase to nuke the archive files?
+ - encryption with gnupg?
+ - gnome driver/configurator utility
+      will be a separate program that just manipulates flexbackup
 
 -------------------
 

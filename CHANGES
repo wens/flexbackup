@@ -12,8 +12,6 @@ Changes:
       "-regex" so the old argument is gone).
   - also took out the sed of the leading "./" since the null-terminated
       file list messed it up too.  Was just for looks anyway.
-  - when using files don't bother telling us we skip mt operations all the
-      time
   - cpio flags use the short options so more compatible with other cpio's
   - cleaned out tape-only messages when using files
 
@@ -24,7 +22,8 @@ Bug fixes:
       was impossible...
 
       bash has a PIPESTATUS array variable for this, so I took care of it for
-      systems where SHELL is bash...
+      systems where SHELL is bash... tcsh seems to set $? if anything fails,
+      so it's ok too.
 
       I don't know if there is a way to fix it generically.
 
