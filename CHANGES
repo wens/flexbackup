@@ -18,6 +18,7 @@ Changes:
  - Add hooks for mbuffer's multivolume support (experimental)
 
 Bug fixes/cleanup:
+ - FreeBSD pkgdelta support fixed up
  - Cleanup better if error detected
  - Fix quoting in check_remote_progs if your remote shell is csh
  - Make sure we don't generate conflicting index keys (as long as -newtape
