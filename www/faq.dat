@@ -26,14 +26,13 @@ your expression matches what you want to exclude by:<BR><BR> <CODE>cd
 <a>You can do this with 'sudo'.
 <OL>
 <LI>Set up a passphraseless ssh key for a user to run the backups.
-<LI>Set <CODE>$remoteuser</CODE> in the config file to this user.
 <LI>Set <CODE>$path{command} = 'sudo command';</CODE> in the config file.
     Do this for all commands that will need privilege (find, afio/tar/etc, 
     perhaps buffer)
 <LI>Set up an /etc/sudoers file with something like this:<BR><BR>
 <CODE>
 Cmnd_Alias BACKUP = /usr/bin/afio, /usr/bin/find<BR>
-backupuser  ALL = NOPASSWD: BACKUP</CODE>
+backupuser ALL = NOPASSWD: BACKUP</CODE>
 </OL>
 
 <c>Backup
