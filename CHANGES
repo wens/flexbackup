@@ -1,6 +1,12 @@
 $Id$
 $Name$
 
+
+Bug fixes:
+ - afio + null fix in pre6 didn't work on FreeBSD - can't get it to behave
+    there.  Switch back to newline-separated for afio types.
+
+----------------------------------------------------------------------
 Version 1.0pre6 (20030126)
 
 Bug fixes:
