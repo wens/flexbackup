@@ -1308,8 +1308,7 @@ sub mt {
             } elsif ($main::uname =~ /OSF1/) {
                 $operation = 'seod';
             } elsif ($main::uname =~ /AIX/) {
-                warn "don't know how to seek to end of data on AIX";
-                next;
+                $operation = 'fsf 1000';
             } elsif ($main::uname =~ /HP-UX/) {
                 $operation = 'eod';
             } elsif ($main::uname =~ /SunOS/) {
