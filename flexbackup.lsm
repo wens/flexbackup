@@ -5,9 +5,10 @@ Entered-date:   Sat Sep 25 19:30:32 MST 1999
 Description:
 Flexible backup script.
 Features:
-   o Easy to configure (at least I think so)
+   o Easy to configure
    o Uses dump, afio, tar, or cpio with the flick of a switch
    o Backup, extract, compare, list modes
+   o Compression and buffering for all archive types
    o Full (0) and 1-9 levels of incremental backup
    o Filesystem-oriented (won't traverse devices)
    o Does remote filesystems (over rsh/ssh; no special service)

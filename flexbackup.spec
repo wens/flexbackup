@@ -12,21 +12,24 @@ BuildRoot: /var/tmp/flexbackup-root
 BuildArch: noarch
 Requires: mt-st
 Requires: gzip
+Requires: bzip2
+Requires: buffer
 Requires: fileutils
+Requires: findutils
 
 
 %description
 Flexible backup script.
 
 Features:
-   o Easy to configure (at least I think so)
+   o Easy to configure
    o Uses dump, afio, tar, or cpio with the flick of a switch
    o Backup, extract, compare, list modes
+   o Compression and buffering for all backup types
    o Full (0) and 1-9 levels of incremental backup
-   o Filesystem-oriented (wont traverse devices)
+   o Filesystem-oriented (won't traverse devices)
    o Does remote filesystems (over rsh/ssh; no special service)
-   o Works with IDE/SCSI tapes on Linux/FreeBSD
-     or Linux ftape (allows table of contents support)
+   o Works with IDE/SCSI tapes on Linux/FreeBSD, Linux ftape, or disk files
    o Nice log files
 
 
@@ -56,5 +59,8 @@ rm -rf $RPM_BUILD_ROOT
 %config /etc/flexbackup.conf
 
 %changelog
+* Sat Sep 25 1999 Edwin Huffstutler <edwinh@computer.org>
+- add more requires, update description, email address
+
 * Sat Sep 18 1999 Edwin Huffstutler <edwinh@computer.org>
 - initial rpm package

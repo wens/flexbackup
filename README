@@ -14,6 +14,7 @@ Features:
    o Easy to configure
    o Uses dump, afio, tar, or cpio with the flick of a switch
    o Backup, extract, compare, list modes
+   o Compression and buffering options for all backup types
    o Full (0) and 1-9 levels of incremental backup (ala "dump")
    o Filesystem-oriented (won't traverse devices)
    o Does remote filesystems (over rsh/ssh; no special service)
@@ -25,6 +26,7 @@ Features:
 Software needed:
    o perl
    o gzip or bzip2
+   o buffer
    o mt (or ftmt if using ftape)
    o one or more of
        dump/restore afio tar cpio
@@ -47,6 +49,9 @@ packages were any combination of:
    o Too simplistic, or hard-coded assumptions
    o No scripts helped drive "dump/restore"
    o Didn't have features I wanted
+
+I also wanted to take the standard backup tools and make a generic
+interface to them.
 
 ----------------------------------------------------------------------
 USE
@@ -102,13 +107,16 @@ NOTES
 
  I suggest using either the "dump" or "afio" types.  Dump would be
  perfect if it did compression and could exclude file patterns, but it
- isn't designed that way... afio is a good bet if you want
- compression, it does it one file at a time.  One bit error will not
- corrupt your entire archive like with a compressed tar or cpio
- scheme.
+ isn't designed that way... if you want compression, afio is the best
+ bet.  It compresses one file at a time.  An error will not corrupt
+ your entire archive like with other types.
+
+ When comparing "dump" archives, and if you only backed up a
+ subdirectory of a filesystem, you will get errors for the "other"
+ parts of the filesystem.
 
 ----------------------------------------------------------------------
-MISC
+MISCELLANEOUS
 
  I did this to to help automate my life.
  See the TODO list for what I might be planning to do next

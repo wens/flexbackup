@@ -5,14 +5,14 @@ Entered-date:   Sat Sep 25 19:30:32 MST 1999
 Description:
 Flexible backup script.
 Features:
-   o Easy to configure (at least I think so)
+   o Easy to configure
    o Uses dump, afio, tar, or cpio with the flick of a switch
+   o Compression and buffering for all backup types
    o Backup, extract, compare, list modes
    o Full (0) and 1-9 levels of incremental backup
    o Filesystem-oriented (won't traverse devices)
    o Does remote filesystems (over rsh/ssh; no special service)
-   o Works with IDE/SCSI tapes on Linux/FreeBSD
-     or Linux ftape (allows table of contents support)
+   o Works with IDE/SCSI tapes on Linux/FreeBSD, Linux ftape, or disk files
    o Nice log files
 Keywords:       backup dump restore afio tar cpio ftape
 Author:         edwinh@computer.org (Edwin Huffstutler)
