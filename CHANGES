@@ -12,6 +12,7 @@ Bug fixes/cleanup:
  - Print note that filelist type updates the timestamp (many times one
    will want it to for testing, but just so people know to delete it
    otherwise)
+ - Syntax check message goes to stdout not stderr
 
 ----------------------------------------------------------------------
 Version 1.2.1 (20031010)

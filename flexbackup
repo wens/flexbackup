@@ -2413,7 +2413,7 @@ sub readconfigfile {
     if (! -r "$configfile") {
 	die("config file $configfile: $OS_ERROR");
     }
-    system("perl -c \"$configfile\"");
+    system("perl -c \"$configfile\" 2>&1");
     if ($CHILD_ERROR) {
 	die("syntax error in config file $configfile");
     }
