@@ -1,7 +1,17 @@
-<c>General<q>What is the purpose of this program?<a>To build a Frequently-Asked-Question page in either HTML or text.
-<c>General
-<q>Who wrote it?
-<a><a href="mailto:dyork@lodestar2.com">Dan York</a> wrote the initial program and released it. <a href="mailto:dave@superluminal.com">Dave Seidel</a> then modified it to include configuration classes and other substantial changes.  Dan integrated those changes with his... and released it.
+<c>
+General
+<q>
+What is the purpose of this program?
+<a>
+To build a Frequently-Asked-Question page in either HTML or text.
+
+<c>
+General
+<q>
+Who wrote it?
+<a>
+<a href="mailto:dyork@lodestar2.com">Dan York</a> wrote the initial program and released it. <a href="mailto:dave@superluminal.com">Dave Seidel</a> then modified it to include configuration classes and other substantial changes.  Dan integrated those changes with his... and released it.
+
 <c>
 General
 <q>
@@ -15,11 +25,24 @@ and he had a long airplane ride ahead of him... so he wrote the code.
 Dave was looking to create a FAQ for his <a href="http://beast.gtk.org/">
 BEAST/BSE</a> web site <i>and</i> was looking to learn more about python, 
 so he took Dan's code and changed it almost beyond recognition!
-<c>Data<q>Do I have to call the data file <code>faq.dat</code>?<a>That is the
+
+<c>
+Data
+<q>
+Do I have to call the data file <code>faq.dat</code>?
+<a>
+That is the
 default file name used in all of the current configurations.  If you want to
 change the file name, you can modify the configurations in the actual source
 code or use the '-i' command line option.
-<c>Programming<q>Why python?<a>Why not?  It's easy and fun.... visit <a href="http://www.python.org/">www.python.org</a> for more information.
+
+<c>
+Programming
+<q>
+Why python?
+<a>
+Why not?  It's easy and fun.... visit <a href="http://www.python.org/">www.python.org</a> for more information.
+
 <c>Programming<q>Are there enhancements you would like to add?
 <a>Subsequent revisions have tackled most of the enhancements I was seeking to
 add. At the moment, the only real enhancements I would like to add are:
