@@ -51,7 +51,7 @@ Changes:
          flexbackup -rmindex <key> -f <file>
   - added "-rmfile <file>" option if we are backing up to disk.  nukes
       archive and its related index entry
-  - take the seconds filed out of the archive + log names... it was just
+  - take the seconds field out of the archive + log names... it was just
       too long to interact with, and who really does more than 1 backup in a
       minute?
   - removed zip archive support.  They just don't like to work with
