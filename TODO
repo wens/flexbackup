@@ -66,7 +66,7 @@ Features to add:
  - remote tape drive (rmt) support
      Caleb Crome <caleb@crome.org>
  - make remote machine path overrides possible, that supercede others
- - check for existence of remote executables
+ - check for existence of remote executables (John had something)
  - make -extract -files for afio/cpio/zip recurse dirs
       dump/tar already to this.
  - try restore -D for comparing subdirs w/ restore
