@@ -5,28 +5,27 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
- - test mbuffer
-
  - Better cleanup after error in backup
  - Clean up more $main:: vars, split into types or refactor code
  - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
  - If comp_log is changed, we don't nuke old logs that normally would be
    overwritten with ourselves if comp_log stayed the same. (cosmetic nit)
  - Fix afio w/null (FreeBSD printf can't spit out null char)
- - Whole class of cross-platform stuff:
+ - rpm-delta mode - prelink messages clutter stderr
+ - Whole class of cross-platform command switch stuff:
     - Use dump combined flags (for older dumps that want abc not -a -b -c)
     - Not all finds have the -fstype flag (from $traverse_fs)
-    - How to handle (use lowest common denominator flags?  sorta what's tried now)
+    - Use lowest common denominator flags? Sort of what's tried now w/ cpio
 
 Misc:
- - add faq re: pkg delta how it works
  - Add faq on -erase -newtape taking forever / erase_rewind_only
      could be mt erase, could be dd index hang (-test-tape-drive)
 
- - fix description text in sf project, freshmeat fornew features
-     sets pruning pkgdelta filelist copy
+ - Fix description text in sf project, freshmeat for new features
+     sets pruning pkgdelta filelist copy pipe
+
  - Add faq on files changing underneath tar? sql db dump?
- - Create mbuffer rpm (if I can make it work)
+ - Create mbuffer rpm (if I can make it work reliably for myself)
  - Man page (create from -help perhaps)
  - Try against torture-test list:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
@@ -48,7 +47,7 @@ Features to add:
       problem.  Tapes just haven't kept capacity with using spare disks in
       other machines, for example.
 
- - Make package delta work with debian pkgs
+ - Make package delta work with debian pkgs or others
 
  - CD-ROM burning (or just .iso type?) for full backups? any?
       just act like to-file archives, and take those files & write to CD?
