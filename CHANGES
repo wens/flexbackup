@@ -5,8 +5,8 @@ Bug fixes:
  - If using files, "-fs all", and and multiple array entries for $filesystems,
    index was getting hosed up.
 
- - newtape/erase on dirs makes sure index keyfile listed in index
- 
+ - newtape/erase when using dirs was deleting keyfile entry from index db
+
 ----------------------------------------------------------------------
 Version 1.0.2 (20030219)
 
