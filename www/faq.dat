@@ -12,7 +12,7 @@ of flexbackup have added <TT>-full</TT>, <TT>-differential</TT>,
 <TT>-incremental</TT> that get translated into appropriate dump-style level numbers.
 
 <c>
-Backup & Configuration
+Backup & Configuration
 <q>
 Backups seem to work ok, but I can't get extracting/listing to work.
 <a>
@@ -20,7 +20,7 @@ Usually a matter of tape positioning.  Use 'mt rewind; mt fsf
 &lt;n&gt;' to get to the right file number on the tape, or use the
 "-num" switch with "-list|extract|compare|restore" to have flexbackup
 do it for you.  If you are using flexbackup's indexes, remember that
-file number 0 is a header,
+file number 0 is a header used for the index itself.
 
 <c>
 Backup & Configuration
@@ -47,9 +47,26 @@ Use the non-rewinding device.
 <c>
 Backup & Configuration
 <q>
-How do I get remote backups over ssh to work without prompting for a passwrd?
+How do I get remote backups over ssh to work without prompting for a password?
 <a>
-...point to some ssh FAQ somewhere...
+If you're not using SSH, you should be. Switch to SSH and don't use rsh. If you
+are using SSH and still having a problem with it asking for a password, then
+your RSAAuthentication parameters are either incorrect of you have
+public/private key problems.
+
+Section 7.2.2 of the SSH FAQ might help:
+
+  http://www.onsight.com/faq/ssh/ssh-faq.html
+
+In a nutshell the value of your ~/.ssh/identity.pub needs to be present in your
+~/.ssh/authorized_keys file for RSA authentication to work. For root accounts
+you might also need to put
+
+  PermitRootLogin yes
+
+in your sshd_config file as root is treated with more care than normal user
+accounts. Note: you might choose without-password or forced-commands-only
+instead of yes for more security. See your ssh(1) and sshd(1) man pages.
 
 <c>
 Backup & Configuration
@@ -79,7 +96,7 @@ read the manpage...
 <c>
 Recovery
 <q>
-I don't have the index files! (disk died, different machine, etc)
+I don't have the index files! (disk died, different machine, etc.)
 <a>
 This is OK, you can still extract/restore/etc. The index files are for
 human convenience only.  Just skip the first file on the tape, it's a
