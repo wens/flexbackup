@@ -12,7 +12,7 @@ CVS := cvs -d :ext:edwinh@cvs.sourceforge.net:/cvsroot/flexbackup
 commit:
 	$(CVS) commit
 
-all: tar rpm lsm
+all: tar rpm
 
 tag: version commit
 

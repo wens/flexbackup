@@ -1,6 +1,8 @@
 $Id$
 $Name$
 
+Development version 1.1.0
+
 Changes:
 
   - Added packaging system delta capability (RPM only for now).

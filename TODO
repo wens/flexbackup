@@ -29,7 +29,7 @@ Cleanup/fix:
  - Delete deprecated sections
 
 Misc:
- - Update README/faq for new items changes since 1.0.2
+ - Update README/faq/spec/lsm for new items changes since 1.0.2
      pkgdelta
      filelist
      mt_blksize
