@@ -1,6 +1,8 @@
 $Id$
 $Name$
 
+Version 0.9.7 (19991019)
+
 New Features:
  - table-of-contents support - tells you which backups are on which tapes.
      uses a simple "key" on the tape plus on-disk database files
