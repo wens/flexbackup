@@ -21,17 +21,16 @@
 #  flexbackup [...] -wday <n>      : backup only if the week day matches
 #                                    the input number.  Sunday is 0 or 7.
 # READING ARCHIVES:
-#  flexbackup -list                : list files in archive at current
-#                                    tape position
-#  flexbackup -extract             : extract all files from current tape
-#                                    position into your current working directory
-#  flexbackup -extract -files <f>  : restore the files listed in file <f>
-#                                    from current tape position into your
+#  flexbackup -list                : list files in archive
+#  flexbackup -extract             : extract all files from archive into your
 #                                    current working directory
-#  flexbackup -compare             : compare archive at current tape position
-#                                    with the files in your current directory
+#  flexbackup -extract -files <f>  : restore the files listed in file <f>
+#                                    into your current working directory
+#  flexbackup -compare             : compare archive with the files in your
+#                                    current directory
 #  flexbackup -restore             : interactive restore (dump type only for now)
-#  flexbackup [operation] -num <n> : read file number n from tape
+#  flexbackup [operation] -num <n> : read file number n from tape; if not given
+#                                    uses current tape position
 #  flexbackup [operation] <file>   : if archiving to files rather than a device,
 #                                    list/extract/compare/restore options take
 #                                    a filename argument
@@ -693,7 +692,12 @@ sub backup {
 
     # Write list of packages
     # FIXME not if -n
-    if (defined($main::pkgdelta) and ($cfg::pkgdelta_archive_list eq 'true')) {
+    if (defined($main::pkgdelta) and
+	(
+	 ($cfg::pkgdelta_archive_list eq 'true') or
+	 (($cfg::pkgdelta_archive_list eq 'rootonly') and ($localdir eq '/'))
+	 )
+	) {
 	$pkglist = "$localdir/$pkglist";
 	my $write = "> $pkglist";
 	my $h;
@@ -745,7 +749,10 @@ sub backup {
 
     # Create/nuke tmp file list if we did local package delta
     if (defined($main::pkgdelta)) {
-	if ($cfg::pkgdelta_archive_list eq 'true') {
+	if (
+	    ($cfg::pkgdelta_archive_list eq 'true') or
+	    (($cfg::pkgdelta_archive_list eq 'rootonly') and ($localdir eq '/'))
+	    ) {
 	    push(@cmds, &maybe_remote_cmd("$main::path{rm} -f $main::pkgdelta_filelist $pkglist", $remote));
 	} else {
 	    push(@cmds, &maybe_remote_cmd("$main::path{rm} -f $pkglist", $remote));
@@ -2348,6 +2355,8 @@ sub optioncheck {
     my $realdev;
     my $buffer_blk_flag;
     my $buffer_pad_flag;
+    my $mbuffer_blk_flag;
+    my $mbuffer_pad_flag;
 
     # Archive type on commandline
     if (defined($main::opt{'type'})) {
@@ -2374,7 +2383,7 @@ sub optioncheck {
     &check(\$cfg::atime_preserve,'atime_preserve');
     &check(\$cfg::indexes,'indexes');
     &check(\$cfg::staticfiles,'staticfiles');
-    &check(\$cfg::buffer,'buffer','false buffer bfr');
+    &check(\$cfg::buffer,'buffer','false buffer mbuffer');
     &check(\$cfg::buffer_megs,'buffer_megs','exist');
     &check(\$cfg::pad_blocks,'pad_blocks');
     &check(\$cfg::device,'device','exist');
@@ -2539,7 +2548,7 @@ sub optioncheck {
 	} else {
 	    $cfg::mt_blksize = $cfg::blksize * 1024;
 	}
-	print "NOTE: Your config file uses deprecated \$mt_var_blksize.\n";
+	print "NOTE: Your config file uses deprecated variable \$mt_var_blksize.\n";
 	print "      Please update to using \$mt_blksize\n\n";
 	sleep(1);
     }
@@ -2553,6 +2562,7 @@ sub optioncheck {
     if ($cfg::mt_blksize !~ m/^\d+$/) {
 	push(@main::errors,"\$mt_blksize must be set to an integer");
     } else {
+	# FIXME warn if not a factor of $cfg::blksize
 	$main::mt_blksize = $cfg::mt_blksize;
     }
 
@@ -2564,6 +2574,8 @@ sub optioncheck {
     if ($cfg::blksize ne '0') {
 	# buffer blocksize needs k appended
 	$buffer_blk_flag = "-s " . $cfg::blksize . "k";
+	# mbuffer blocksize in bytes
+	$mbuffer_blk_flag = "-s " . $cfg::blksize * 1024;
 	# dd blocksize needs k appended
 	$main::dd_blk_flag = "ibs=" . $cfg::blksize . "k obs=" . $cfg::blksize . "k";
 	# dump blocksize just in k like the config file
@@ -2571,20 +2583,18 @@ sub optioncheck {
 	# afio blocksize needs k appended
 	$main::afio_blk_flag = "-b " . $cfg::blksize . "k";
 	# cpio blocks are in bytes
-	$main::cpio_blk_flag = $cfg::blksize * 1024;
-	$main::cpio_blk_flag = "-C $main::cpio_blk_flag";
+	$main::cpio_blk_flag = "-C " . $cfg::blksize * 1024;
 	# tar blocks are in 512-byte units
 	# long name is really --blocking-factor but changed from --block-size
 	# only in recent versions.  just use the short flag.
-	$main::tar_blk_flag =  $cfg::blksize * 2;
-	$main::tar_blk_flag = "-b $main::tar_blk_flag";
+	$main::tar_blk_flag = "-b " . $cfg::blksize * 2;
 	# star blocks are in 512-byte units
-	$main::star_blk_flag =  $cfg::blksize * 2;
-	$main::star_blk_flag = "blocks=$main::star_blk_flag";
+	$main::star_blk_flag = "blocks=" . $cfg::blksize * 2;
 	# pax blocksize needs k appended
 	$main::pax_blk_flag = "-b " . $cfg::blksize . "k";
     } else {
 	$buffer_blk_flag = "";
+	$mbuffer_blk_flag = "";
 	$main::dd_blk_flag = "";
 	$main::dump_blk_flag = "";
 	$main::afio_blk_flag = "";
@@ -2669,16 +2679,25 @@ sub optioncheck {
 	$main::write_cmd = "$main::path{buffer} -m $megs $buffer_blk_flag $write_flags";
 	$main::read_cmd = "$main::path{buffer} -m $megs $buffer_blk_flag $read_flags";
 
-    } elsif ($cfg::buffer eq "bfr") {
+    } elsif ($cfg::buffer eq "mbuffer") {
 
-	$main::path{'bfr'} = &checkinpath('bfr');
-	push(@main::remoteprogs, $main::path{'bfr'});
+	$main::path{'mbuffer'} = &checkinpath('mbuffer');
+	push(@main::remoteprogs, $main::path{'mbuffer'});
 
-	my $megs = $cfg::buffer_megs . "m";
+	my $write_flags;
+	my $read_flags;
+	my $megs = $cfg::buffer_megs . "M";
 
-	$main::buffer_cmd = " | $main::path{bfr} -b $megs";
-	$main::write_cmd = "$main::path{bfr} -b $megs | $main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=";
-	$main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag if=";
+	if (defined($main::tapedevice)) {
+	    $write_flags = "-t -q -f -u 100 -p 75 -o ";
+	    $read_flags = "-t -u 100 -p 75 -i ";
+	} else {
+	    $write_flags = "-t -q -f -p 75 -o ";
+	    $read_flags = "-t -p 75 -i ";
+	}
+	$main::buffer_cmd = " | $main::path{mbuffer} -t -q -m $megs $buffer_blk_flag";
+	$main::write_cmd = "$main::path{mbuffer} -m $megs $buffer_blk_flag $write_flags";
+	$main::read_cmd = "$main::path{mbuffer} -m $megs $buffer_blk_flag $read_flags";
 
     } else {
 
@@ -3061,7 +3080,7 @@ sub optioncheck {
     # Package delta option
     if (defined($main::opt{'pkgdelta'})) {
 
-	&check(\$cfg::pkgdelta_archive_list,'pkgdelta_archive_list');
+	&check(\$cfg::pkgdelta_archive_list,'pkgdelta_archive_list','true false rootonly');
 	&check(\$cfg::pkgdelta_archive_unowned,'pkgdelta_archive_unowned');
 	&check(\$cfg::pkgdelta_archive_changed,'pkgdelta_archive_changed');
 
@@ -3669,19 +3688,15 @@ sub setup_before_read {
 }
 
 ######################################################################
-# Read from file/device (needed to handle 'bfr' case)
+# Read from file/device - in future buffer cmds might need a blocking
+# dd read ahead of them
 ######################################################################
 sub read_function {
 
     my $file = shift(@_);
     my $cmd;
 
-    # bfr needs a blocking dd read ahead of it
-    if ($cfg::buffer eq 'bfr') {
-	$cmd = $main::read_cmd . '"' . $file . '"' . $main::buffer_cmd;
-    } else {
-	$cmd = $main::read_cmd . '"' . $file . '"';
-    }
+    $cmd = $main::read_cmd . '"' . $file . '"';
 
     return($cmd);
 
@@ -4686,7 +4701,15 @@ sub test_tape_drive {
     my $cmd;
     my $tmp1 = "$cfg::tmpdir/test1.$PROCESS_ID";
     my $tmp2 = "$cfg::tmpdir/test2.$PROCESS_ID";
+    my $tmp3 = "$cfg::tmpdir/test2.$PROCESS_ID";
     my $fail = 0;
+    my $configfile;
+
+    if (defined($main::opt{'c'})) {
+	$configfile = $main::opt{'c'};
+    } else {
+	$configfile = $main::CONFFILE;
+    }
 
     &mt("generic-blocksize $main::mt_blksize");
 
@@ -4694,7 +4717,6 @@ sub test_tape_drive {
     &log("| Hit CTRL-C to abort within 10 seconds...");
     &line();
     sleep(10);
-
     &log("| If for some reason this program does not exit within a few minutes,");
     &log("| Hit CTRL-C, and try adjusting \$blksize, \$pad_blocks, or \$mt_blksize.");
     &line();
@@ -4704,9 +4726,8 @@ sub test_tape_drive {
 
     &mt('generic-query');
     &log('');
-
     &log("Writing test file \#1");
-    $cmd = "$main::path{cat} $0";
+    $cmd = "$main::path{cat} $configfile";
     $cmd = &append_writer_cmd($cmd);
     if (!defined($main::opt{'n'})) {
 	system($cmd);
@@ -4719,7 +4740,6 @@ sub test_tape_drive {
 
     &mt('generic-query');
     &log('');
-
     &log("Writing test file \#2");
     $cmd = "$main::path{cat} $0";
     $cmd = &append_writer_cmd($cmd);
@@ -4734,7 +4754,20 @@ sub test_tape_drive {
 
     &mt('generic-query');
     &log('');
+    &log("Writing test file \#3");
+    $cmd = "$main::path{cat} $0";
+    $cmd = &append_writer_cmd($cmd);
+    if (!defined($main::opt{'n'})) {
+	system($cmd);
+	if ($CHILD_ERROR) {
+	    $fail++;
+	}
+    } else {
+	&log($cmd);
+    }
 
+    &mt('generic-query');
+    &log('');
     &log('Rewinding...');
     &mt('rewind');
     if ($cfg::indexes eq 'true') {
@@ -4768,7 +4801,6 @@ sub test_tape_drive {
 
     &mt('generic-query');
     &log('');
-
     &log("Reading test file \#2");
     $cmd = &read_function($main::device);
     if (defined($main::remotetapehost)) {
@@ -4793,30 +4825,54 @@ sub test_tape_drive {
 
     &mt('generic-query');
     &log('');
+    &log("Reading test file \#3");
+    $cmd = &read_function($main::device);
+    if (defined($main::remotetapehost)) {
+	$cmd = &maybe_remote_cmd($cmd, $main::remotetapehost);
+	# Buffer both sides if remote
+	$cmd .= $main::buffer_cmd;
+    }
+    # if pad blocks was true we have nulls at the end (won't be in this script otherwise)
+    if ($cfg::pad_blocks eq 'true') {
+	$cmd .= " | $main::path{tr} -d '\\0' > $tmp3";
+    } else {
+	$cmd .= "> $tmp3";
+    }
+    if (!defined($main::opt{'n'})) {
+	system($cmd);
+	if ($CHILD_ERROR) {
+	    $fail++;
+	}
+    } else {
+	&log($cmd);
+    }
 
+    &mt('generic-query');
+    &log('');
     &mt('rewind');
-
     &log("Comparing...");
     if (!defined($main::opt{'n'})) {
 	system("$main::path{diff} -q $0 $tmp1");
 	if ($CHILD_ERROR) {
 	    $fail++;
 	}
-    } else {
-	&log("$main::path{diff} -q $0 $tmp1");
-    }
-
-    if (!defined($main::opt{'n'})) {
-	system("$main::path{diff} -q $0 $tmp2");
+	system("$main::path{diff} -q $configfile $tmp2");
+	if ($CHILD_ERROR) {
+	    $fail++;
+	}
+	system("$main::path{diff} -q $0 $tmp3");
 	if ($CHILD_ERROR) {
 	    $fail++;
 	}
     } else {
-	&log("$main::path{diff} -q $0 $tmp2");
+	&log("$main::path{diff} -q $0 $tmp1");
+	&log("$main::path{diff} -q $configfile $tmp2");
+	&log("$main::path{diff} -q $0 $tmp3");
     }
 
     unlink $tmp1;
     unlink $tmp2;
+    unlink $tmp3;
 
     if ($fail != 0) {
 	print "\nFAILURE! Problem with tape driver or parameters.  Please see the FAQ\n";
