@@ -212,7 +212,6 @@ if (defined($main::opt{'restore'})) {
     &backup_routine();
 
 } elsif (defined($main::opt{'toc'})) {
-
     &line();
     # Only do this if we're going to grab current tape index
     if ($main::opt{'toc'} eq '') {
@@ -4741,7 +4740,7 @@ sub test_tape_drive {
     &line();
     sleep(10);
 
-    &log("| If for some reason this prgram does not exit within a few minutes,");
+    &log("| If for some reason this program does not exit within a few minutes,");
     &log("| Hit CTRL-C, and try adjusting \$blksize, \$pad_blocks, or \$mt_blksize.");
     &line();
 
