@@ -5,6 +5,9 @@ Flexbackup to-do list
 Some of these might not happen, but figured I should jot them down
 
 Cleanup/fix:
+ - Argument "200301072208|0" isn't numeric in numeric comparison
+    when using tapes now...
+    redo -toc to use two hashes for disk/tape files, sort them differently
  - test tapes again since it's been so long since I used it
  - go back trough old unread mail archive for obvious bugs etc
 post 1.0:
