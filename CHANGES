@@ -1,6 +1,13 @@
 $Id$
 $Name$
 
+Version 1.0pre6 (20030126)
+
+Bug fixes:
+ - Fix problem with afio volume headers and null-terminated file lists.
+     The first file in afio archives was being missed (actually showed up
+     in the label instead of the archive)
+
 Cleanup:
  - "-rmfile" yells if no argument
  - Move shell/remote/buffer check to its own function after option
