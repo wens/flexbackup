@@ -99,6 +99,7 @@ if (defined($main::opt{'version'})) {
 
 
 # Get/read config file
+&log("flexbackup version " . &versionstring());
 &readconfigfile();
 
 # Set OS type
@@ -175,39 +176,33 @@ sub backup_routine {
     $label = &get_label($main::opt{'fs'});
     $main::log = "$cfg::logdir/$cfg::prefix$label.$main::level.$main::date";
     if (! open(LOG,">$main::log")) {
-        die "Can't write to $main::log: $!\n";
+        die "Can't write to $main::log: $OS_ERROR\n";
     }
     close(LOG);
 
-    # Spew some info
-    &log("flexbackup version " . &versionstring());
-    $_ = &current_time();
-    &log("Current time is $_");
-    &log("Doing level $main::level backup of $main::opt{fs} using $cfg::type");
-
     # Remove old log files
     # ("old" = any higher-numbered logs for this label)
-    opendir(DIR,"$cfg::logdir") or die("Can't open cfg::logdir: $!\n");
+    opendir(DIR,"$cfg::logdir") or die("Can't open cfg::logdir: $OS_ERROR\n");
     @files = readdir(DIR);
     foreach (reverse sort @files) {
-        next if (! m/^$cfg::prefix$label\.([0-9])\.([0-9]+)(.gz)?$/);
+        next if (! m/^$cfg::prefix$label\.([0-9])\.([0-9]+)(\.gz|\.bz2)?$/);
         my $olddate = $2;
         if ($1 > $main::level) {
             print "Removing old level $1 log of $main::opt{fs} ($olddate)\n";
-            unlink("$cfg::logdir/$_") or warn("Can't remove $_: $!\n");
+            unlink("$cfg::logdir/$_") or warn("Can't remove $_: $OS_ERROR\n");
         }
     }
     close(DIR);
 
     # Remove old stamp files
     # ("old" = any higher-numbered stamps for this label)
-    opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $!\n");
+    opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $OS_ERROR\n");
     @files = readdir(DIR);
     foreach (reverse sort @files) {
         next if (! m/^$cfg::sprefix$label\.([0-9])$/);
         if ($1 > $main::level) {
             print "Removing old level $1 timestamp of $main::opt{fs}\n";
-            unlink("$cfg::stampdir/$_") or warn("Can't remove $_: $!\n");
+            unlink("$cfg::stampdir/$_") or warn("Can't remove $_: $OS_ERROR\n");
         }
     }
     close(DIR);
@@ -218,6 +213,11 @@ sub backup_routine {
     # Main backup routine
     #
     ##########################
+    # Spew some info
+    $_ = &current_time();
+    &log("Current time: $_");
+    &log("Doing level $main::level backup of $main::opt{fs} using $cfg::type");
+
     if ($main::opt{'fs'} eq 'all') {
 
         foreach $list (@cfg::filesystems) {
@@ -265,7 +265,7 @@ sub backup_routine {
 
             # Iterate over the filesystems and back 'em up
             foreach (split(/\s+/,$list)) {
-                &backup($cfg::type,$_);
+                &backup($_);
                 $main::contents{$main::nextfile} = "$cfg::type $_ ($main::level)";
                 $main::nextfile++;
             }
@@ -316,7 +316,7 @@ sub backup_routine {
         }
         &line();
         &mt('generic-query');
-        &backup($cfg::type,$main::opt{'fs'});
+        &backup($main::opt{'fs'});
         &line();
         &log("Rewinding...");
         &mt('rewind');
@@ -333,7 +333,7 @@ sub backup_routine {
     if ($cfg::comp_log ne 'false') {
         print "Compressing log file ($main::log)\n";
         system("$cfg::comp_log -f $main::log");
-        if ($?) {
+        if ($CHILD_ERROR) {
             warn("error compressing log file\n");
         }
     }
@@ -395,12 +395,10 @@ sub tag {
 ######################################################################
 sub backup {
 
-    my $type = shift(@_);
     my $dir = shift(@_);
     my $cmd;
     my $tapehost;
     my $remote;
-    my $date_at_start;
     my $localdir = $dir;
     my $label = &get_label($dir);
 
@@ -416,25 +414,36 @@ sub backup {
     # Create file name if writing to a file
     # (config file's $device points to a dir in this case)
     if (defined($main::use_file)) {
-        $_ = $main::date . "." . $type;
-        if ($type eq "tar") {
+        $_ = $main::date . "." . $main::level . "." . $cfg::type;
+        if ($cfg::type eq "tar") {
             if ($cfg::tar_compress eq "gzip") {
                 $_ .= ".gz";
             } elsif ($cfg::tar_compress eq "bzip2") {
                 $_ .= ".bz2";
             }
+        } elsif ($cfg::type eq "afio") {
+            # tag these a little different, the archive file itself isn't a
+            # .gz or .bz2, but the files in it are....
+            if ($cfg::afio_compress eq "gzip") {
+                $_ .= "-gz";
+            } elsif ($cfg::afio_compress eq "bzip2") {
+                $_ .= "-bz2";
+            }
         }
         $cfg::device = $cfg::device . "/" . $label . "." . $_;
     }
 
+    # Just get the date for now; don't write the timestamp
+    # Until after the backup has run
+    $main::date_at_start = &current_time();
 
-    if ($type eq 'dump') {
+    if ($cfg::type eq 'dump') {
 	$cmd = &backup_dump($label,$localdir,$remote,$tapehost);
-    } elsif ($type eq 'afio') {
+    } elsif ($cfg::type eq 'afio') {
 	$cmd = &backup_afio($label,$localdir,$remote,$tapehost);
-    } elsif ($type eq 'tar') {
+    } elsif ($cfg::type eq 'tar') {
 	$cmd = &backup_tar($label,$localdir,$remote,$tapehost);
-    } elsif ($type eq 'cpio') {
+   } elsif ($cfg::type eq 'cpio') {
 	$cmd = &backup_cpio($label,$localdir,$remote,$tapehost);
     }
 
@@ -447,38 +456,34 @@ sub backup {
         ($cfg::ftape eq "true")
         or
         ($main::opt{'erase'})) {
-        &log("Backup will be file number $main::nextfile");
+        &log("This will be file number $main::nextfile");
     }
-
-    # Just get the date for now; don't write the timestamp
-    # Until after the backup has run
-    $date_at_start = &current_time();
 
     # Enough fooling around... run it
     &log("$cmd");
     &line();
     if (!defined($main::opt{'n'})) {
         system("($cmd) 2>&1 | tee -a $main::log");
-        if ($?) {
-            &log("$type: error from backup, exiting....\n");
+        if ($CHILD_ERROR) {
+            &log("$cfg::type: error from backup, exiting....\n");
             exit(1);
         }
     } else {
         &log("(debug) command output would be here");
     }
 
-    # tar is causing me fits; mt right after archive operations is giving i/o errors
-    if ($type eq 'tar') {
-        sleep 5;
-    }
-
     # Create timestamp file, but use date from before the backup started
     # so next time we will catch files that might have been toucehd during the run
     &line();
-    &log("Timestamp $date_at_start $cfg::stampdir/$cfg::sprefix$label.$main::level");
-    system("touch -t $date_at_start $cfg::stampdir/$cfg::sprefix$label.$main::level");
+    &log("Timestamp $cfg::stampdir/$cfg::sprefix$label.$main::level: $main::date_at_start");
+    system("touch -t $main::date_at_start $cfg::stampdir/$cfg::sprefix$label.$main::level");
     $_ = &current_time();
-    &log("Current time is $_");
+    &log("Current time: $_");
+
+    # tar is causing me fits; mt right after archive operations is giving i/o errors
+    if ($cfg::type eq 'tar') {
+        sleep 5;
+    }
 
     # Show where we are on the tape
     &line();
@@ -554,7 +559,7 @@ sub backup_afio {
     }
 
     $tmpstamp = "/tmp/refdate.$label";
-    $_ = &get_last_date($label,$main::level);
+    $_ = &get_last_date($label);
     $cmd .= "touch -t $_ $tmpstamp && ";
 
     $cmd .= "cd $dir && find . -xdev -newer $tmpstamp -print | ";
@@ -594,7 +599,7 @@ sub backup_cpio {
     }
 
     $tmpstamp = "/tmp/refdate.$label";
-    $_ = &get_last_date($label,$main::level);
+    $_ = &get_last_date($label);
     $cmd .= "touch -t $_ $tmpstamp && ";
 
     $cmd .= "cd $dir && find . -xdev -newer $tmpstamp -print | ";
@@ -640,7 +645,7 @@ sub backup_tar {
     }
 
     $tmpstamp = "/tmp/refdate.$label";
-    $_ = &get_last_date($label,$main::level);
+    $_ = &get_last_date($label);
     $cmd .= "touch -t $_ $tmpstamp && ";
 
     $cmd .= "cd $dir && find . -xdev -newer $tmpstamp -print | ";
@@ -669,8 +674,6 @@ sub backup_tar {
 sub list_routine {
 
     my $cmd;
-
-    &log("flexbackup version " . &versionstring());
 
     $cfg::device = &maybe_get_filename();
 
@@ -711,8 +714,6 @@ sub extract_routine {
 
     my $cmd;
 
-    &log("flexbackup version " . &versionstring());
-
     $cfg::device = &maybe_get_filename();
 
     &line();
@@ -750,8 +751,6 @@ sub extract_routine {
 sub compare_routine {
 
     my $cmd;
-
-    &log("flexbackup version " . &versionstring());
 
     $cfg::device = &maybe_get_filename();
 
@@ -791,8 +790,6 @@ sub compare_routine {
 sub restore_routine {
 
     my $cmd;
-
-    &log("flexbackup version " . &versionstring());
 
     $cfg::device = &maybe_get_filename();
 
@@ -850,17 +847,20 @@ sub get_label {
 sub get_last_date {
 
     my $label = shift(@_);
-    my $level = shift(@_);
     my $file;
+    my $val;
+    my $print_val;
+    my $lastlevel = 0;
     my $targetfile = '';
 
     # Find last stamp file
-    opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $!\n");
+    opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $OS_ERROR\n");
     my @files = readdir(DIR);
     foreach $file (reverse sort @files) {
         next if ($file !~ m/^$cfg::sprefix$label\.([0-9])$/);
         if ($1 <= $main::level) {
             $targetfile = "$cfg::stampdir/$file";
+            $lastlevel = $1;
             last;
         }
     }
@@ -869,18 +869,24 @@ sub get_last_date {
     # get date from targetfile
     # or complain if level > 0 and no timestamp
     # or use the epoch for level 0
-    if ($level eq "0") {
-        return('197001010000.00');
+    if ($main::level eq "0") {
+        $val = '197001010000.00';
+        $print_val = "the epoch";
 
     } elsif ($targetfile ne '') {
         chomp($_ = `date -r $targetfile +%Y%m%d%H%M.%S`);
-        return($_);
+        $val = $_;
+        $print_val = $_;
 
     } else {
-        die("Can't do a level $level backup - no level 0 timestamp found\n");
+        die("Can't do a level $main::level backup - no level 0 timestamp found\n");
 
     }
 
+    &log("Date of last level $lastlevel backup: $print_val");
+    &log("Date of this level $main::level backup: $main::date_at_start");
+    &line();
+    return($val);
 }
 
 ######################################################################
@@ -927,10 +933,10 @@ sub readconfigfile {
         $configfile = "/etc/flexbackup.conf";
     }
     if (! -r $configfile) {
-        die("config file $configfile: $!\n");
+        die("config file $configfile: $OS_ERROR\n");
     }
     system("perl -c $configfile 2>&1");
-    if ($?) {
+    if ($CHILD_ERROR) {
         die("syntax error in config file $configfile\n");
     }
 
@@ -953,6 +959,8 @@ sub readconfigfile {
 sub mt {
 
     my $operation = shift(@_);
+    my $oldoperation;
+    my $out;
 
     # mt & ftmt slightly different
     if ($operation eq 'generic-query') {
@@ -986,12 +994,32 @@ sub mt {
     } elsif (defined($main::opt{'n'})) {
         &log("(debug) $main::mt -f $cfg::device $operation");
     } else {
+
+        # Try and see which of setblksize/defblksize will work
+        # This is kludgy, but doable
+        chomp($out = `$main::mt -f $cfg::device $operation 2>&1`);
+        if ($CHILD_ERROR) {
+            &log("Trying \"mt defblksize\" instead of \"mt setblk\"");
+            $oldoperation = $operation;
+            $operation =~ s/setblk/defsetblk/;
+            chomp($out = `$main::mt -f $cfg::device $operation 2>&1`);
+            if ($CHILD_ERROR) {
+                &log("Error setting block size");
+                &log("Neither of these commands worked:");
+                &log("  $main::mt -f $cfg::device $oldoperation");
+                &log("  $main::mt -f $cfg::device $operation");
+                exit(1);
+
+            }
+        }
+
         if (defined($main::log)) {
             system("$main::mt -f $cfg::device $operation 2>&1 | tee -a $main::log");
         } else {
             system("$main::mt -f $cfg::device $operation 2>&1");
         }
-        if ($?) {
+
+        if ($CHILD_ERROR) {
             &log("Error from $main::mt $operation\n");
             exit(1);
         }
@@ -1049,6 +1077,15 @@ sub optioncheck {
         push(@main::errors,"\$device must be set to a directory or a device");
     }
 
+    # check we can find rsh or ssh
+    &checkinpath($cfg::remoteshell);
+
+    # check we can find common stuff
+    &checkinpath('touch');
+    &checkinpath('date');
+    &checkinpath('hostname');
+    &checkinpath('dd');
+
     # can we write to it?
     if (! -w $cfg::device) {
         push(@main::errors,"Can't write to $cfg::device");
@@ -1056,8 +1093,11 @@ sub optioncheck {
 
     # ftape support
     if ($cfg::ftape eq 'true') {
+        &checkinpath('ftmt');
+        &checkinpath('vtblc');
         $main::mt = 'ftmt';
     } else {
+        &checkinpath('mt');
         $main::mt = 'mt';
     }
 
@@ -1089,15 +1129,24 @@ sub optioncheck {
     # Type-specific setup
     if ($cfg::type eq 'afio') {
 
+        &checkinpath('afio');
+
         # Compress flag
-        if ($cfg::afio_compress eq "gzip") {
-            $main::afio_z_flag = "-Z";
-        } elsif ($cfg::afio_compress eq "bzip2") {
-            if (defined($main::opt{'fs'})) {
-                $main::afio_z_flag = "-P bzip2 -Z";
-            } else {
-                $main::afio_z_flag = "-P bzip2 -Q -d -Z";
+        if ($cfg::afio_compress =~ m/^(gzip|bzip2)$/) {
+
+            &checkinpath($cfg::afio_compress);
+
+            # Compression factor
+            if ($cfg::afio_comp_level !~ m/^[123456789]$/) {
+                push(@main::errors,"\$afio_comp_level must be set to 1-9");
             }
+
+            if (defined($main::opt{'fs'})) {
+                $main::afio_z_flag = "-P $cfg::afio_compress -Q -$cfg::afio_comp_level -Z";
+            } else {
+                $main::afio_z_flag = "-P $cfg::afio_compress -Q -d -Z";
+            }
+
         } else {
             $main::afio_z_flag = "";
         }
@@ -1142,6 +1191,9 @@ sub optioncheck {
 
     } elsif ($cfg::type eq 'dump') {
 
+        &checkinpath('dump');
+        &checkinpath('restore');
+
         # Length of tape
         if ($cfg::dump_length =~ m/^\d+$/) {
             # Really need buffer in units of blksize not k
@@ -1158,10 +1210,14 @@ sub optioncheck {
 
     } elsif ($cfg::type eq 'tar') {
 
+        &checkinpath('tar');
+
         # Compress flag
         if ($cfg::tar_compress eq "gzip") {
+            &checkinpath('gzip');
             $main::tar_z_flag = "-z";
         } elsif ($cfg::tar_compress eq "bzip2") {
+            &checkinpath('bzip2');
             $main::tar_z_flag = "--use-compress-program bzip2";
         } else {
             $main::tar_z_flag = "";
@@ -1180,6 +1236,8 @@ sub optioncheck {
 
     } elsif ($cfg::type eq 'cpio') {
 
+        &checkinpath('cpio');
+
         # Verbose flag
         if ($cfg::cpio_verbose eq "true") {
             $main::cpio_verb_flag = "-v";
@@ -1193,17 +1251,19 @@ sub optioncheck {
     }
 
     # log/stamp files
+    &checkinpath($cfg::comp_log) if ($cfg::comp_log ne "false");
+
     if (! -d $cfg::logdir) {
-        mkdir("$cfg::logdir",0755) or push(@main::errors,"Can't mkdir $cfg::logdir: $!");
+        mkdir("$cfg::logdir",0755) or push(@main::errors,"Can't mkdir $cfg::logdir: $OS_ERROR");
     }
     if (! -w $cfg::logdir) {
-        push(@main::errors,"Can't write to $cfg::logdir: $!");
+        push(@main::errors,"Can't write to $cfg::logdir: $OS_ERROR");
     }
     if (! -d $cfg::stampdir) {
-        mkdir("$cfg::stampdir",0755) or push(@main::errors,"Can't mkdir $cfg::stampdir: $!");
+        mkdir("$cfg::stampdir",0755) or push(@main::errors,"Can't mkdir $cfg::stampdir: $OS_ERROR");
     }
     if (! -w $cfg::stampdir) {
-        push(@main::errors,"Can't write to $cfg::stampdir: $!");
+        push(@main::errors,"Can't write to $cfg::stampdir: $OS_ERROR");
     }
 
     # levels
@@ -1252,21 +1312,21 @@ sub optioncheck {
 ######################################################################
 sub usage {
 
-    open(FILE,"$0") or die "Can't open $0: $!\n";
+    open(FILE,"$0") or die "Can't open $0: $OS_ERROR\n";
     while(<FILE>) {
-	last if (m/^\#\s+USAGE:/);
+        last if (m/^\#\s+USAGE:/);
     }
     while(<FILE>) {
-	last if (m/^\#\#\#\#\#\#\#/);
-	s/^\#//;
-	print;
+        last if (m/^\#\#\#\#\#\#\#/);
+        s/^\#//;
+        print;
     }
     close(FILE);
 
 }
 
 ######################################################################
-# Return version string form CVS tag
+# Return version string from CVS tag
 ######################################################################
 sub versionstring {
 
@@ -1292,8 +1352,8 @@ sub current_time {
     my $string;
     my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
 
-    $year += 1900; # year from localtime has 1900 subtracted
-    $mon += 1; # month from localtime starts at 0
+    $year += 1900;              # year from localtime has 1900 subtracted
+    $mon += 1;                  # month from localtime starts at 0
 
     $string = sprintf("%04d",$year) . sprintf("%02d",$mon) . sprintf("%02d",$mday);
 
@@ -1370,7 +1430,7 @@ sub check {
 
     my $ref = shift(@_);
     my $varname = shift(@_);
-    my $ok = shift(@_);  # list of ok values, or empty for t/f, or "exists"
+    my $ok = shift(@_);         # list of ok values, or empty for t/f, or "exists"
     my @ok;
     my $found = 0;
     my $realvarname;
@@ -1396,5 +1456,24 @@ sub check {
             }
         }
     }
+
+}
+
+######################################################################
+# Check to see if a program is found in $PATH
+######################################################################
+sub checkinpath {
+    my ($file) = @_;
+    my ($dir, @path);
+
+    @path = split(/:/,$ENV{'PATH'});
+
+    foreach $dir (@path) {
+        if (-e "${dir}/$file" && -x _) {
+            return "${dir}/$file";
+        }
+    }
+    push(@main::errors,"$file not found in \$PATH");
+    return(0);
 
 }

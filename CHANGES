@@ -2,14 +2,17 @@ Version 0.9.4
 
 New features:
  - bzip2 option for afio and tar archives, as well as log files
+ - configurable compression level for afio
  - multiple tapes for an "all" level 0.  This just lets you split up
      backups onto different tapes, not end-of-media type of
      multivolume problems (that's on the todo list)
  - support for remote dump over ssh - use dd over sn ssh pipe
  - support ssh for cpio remote backups - use dd over an ssh pipe
  - add -reten switch to retension before backup or any other operation
- 
+ - print "date of this level" sort of like dump does
+
 Bug fixes/cleanup:
+ - test if mt setblksize or mt defblksize is the right command to use
  - dump -a (autosize) works now. Found my problem was a known bug.
     >>> NOTE for Linux w/dump, you MUST install dump-0.4b4-10
        (redhat lorax) or newer, or equivalent patches if you want
@@ -21,6 +24,7 @@ Bug fixes/cleanup:
  - with label "host:path-dir"; didn't work w/ remomte + files
      labels are now "host-path-dir"
  - sanity checks in the setup, flag variables
+ - check for programs in your path
 
 ---------------------------------------------------------------
 Version 0.9.3 (for testing only)

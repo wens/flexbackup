@@ -1,28 +1,20 @@
-Flexbackup todo list as of version 0.9.4
+Flexbackup to-do list as of version 0.9.4
 
 Some of these might not happen, but figured I should jot them down
 
+Features:
+ - afio compression factor
  - exclude regexp's
      dump won't be able to do this
- - resurrect my old drive and test ftape stuff again
- - check remoteshell,vtblc,afio,cpio,tar, etc in path
- - check that dump dir exists
  - compression for dump, cpio
      do this with the dd pipeline like I did for ssh + cpio
  - require the "buffer" utility
      use with a pipeline again
      that way we can set a global buffer size for types not just afio
      dump + ssh or dump + compress would stream better this way
- - autodetect ftape and raw device to eliminate configuration
  - nocompress file extension list for afio
  - arbitrary "list of files" extract
- - figure out why I can't get dump -T to work
- - get restore to compare subdirectories of mountpoints correctly
-     the mountpoint is the top of the dump archive, even if you dump a
-     subdir
- - related problem to the above 2 bullets.  dump updates
-     /etc/dumpdates if you dump a subdir, so if you do another
-     backup of a different dir of the same fs your timestamps are hosed
+ - configurable path for programs (gtar=tar, etc)
  - support multiple tapes for a single archive
      dump already does this? maybe afio & tar I think
      Would it screw up on remote?
@@ -31,9 +23,6 @@ Some of these might not happen, but figured I should jot them down
      work in a volume label scheme
      ideas from Scott Penrose?
  - interactive restore-like shell for types besides dump
- - commands for backups become sequential rather rthan a huge
-     commandline.  Use subroutine to abstract away remote command.
-     Fix duplicated code in afio,cpio,tar
  - log files for extract/compare/etc?
  - remote extract/compare/restore
      possible at all?
@@ -42,3 +31,20 @@ Some of these might not happen, but figured I should jot them down
      "linux backup" util looked like the right kind of interface
      http://mirrors.darkelf.net. contact author.
  - cd-rom burning (or just .iso type?) for full backups?
+
+Cleanup/fix:
+ - resurrect my old drive and test ftape stuff again
+ - check that dump dir exists
+ - autodetect ftape and raw device to eliminate configuration
+ - commands for backups become sequential rather than a huge
+     commandline.  Use subroutine to abstract away remote command.
+     Fix duplicated code in afio,cpio,tar
+ - figure out dump length being multple of blocksize problem
+     manpage says one thing, behavior is another
+ - figure out why I can't get dump -T to work
+ - get restore to compare subdirectories of mountpoints correctly
+     the mountpoint is the top of the dump archive, even if you dump a
+     subdir
+ - related problem to the above 2 bullets.  dump updates
+     /etc/dumpdates if you dump a subdir, so if you do another
+     backup of a different dir of the same fs your timestamps are hosed
