@@ -775,7 +775,7 @@ sub backup {
 		    if (defined($main::use_file)) {
 			delete $main::index{$indexkey};
 		    } else {
-			$main::index{$indexkey} = "**ERROR during write, valid?** " . $main::index{$indexkey};
+			$main::index{$indexkey} .= "\n\t---> ERROR occurred during write, above may not be valid";
 		    }
 		}
 		# If file, rm botched file regardless of index
