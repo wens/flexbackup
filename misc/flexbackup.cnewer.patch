@@ -1,0 +1,113 @@
+From dirk.pirschel@fernuni-hagen.de  Sat May 13 05:17:43 2000
+X-VM-v5-Data: ([nil nil nil nil nil nil nil nil nil]
+	["2237" "Saturday" "13" "May" "2000" "13:40:30" "+0200" "Dirk Pirschel" "dirk@pirschel.de" nil "73" "Flexbackup patch" "^From:" nil nil "5" nil nil nil nil nil nil nil nil]
+	nil)
+Return-Path: <dirk.pirschel@fernuni-hagen.de>
+Received: from localhost (IDENT:root@localhost [127.0.0.1])
+	by cx81598-a.chnd1.az.home.com (8.9.3/8.9.3) with ESMTP id FAA06199
+	for <edwinh+flexbackup@localhost>; Sat, 13 May 2000 05:17:42 -0700
+Received: from mail.chnd1.az.home.com
+	by localhost with POP3 (fetchmail-5.3.1)
+	for edwinh+flexbackup@localhost (single-drop); Sat, 13 May 2000 05:17:42 -0700 (MST)
+Received: from h3.mail.home.com ([24.2.2.27]) by mail.rdc1.az.home.com
+          (InterMail vM.4.01.02.00 201-229-116) with ESMTP
+          id <20000513121330.NGYU11091.mail.rdc1.az.home.com@h3.mail.home.com>
+          for <flexbackup@mail.chnd1.az.home.com>;
+          Sat, 13 May 2000 05:13:30 -0700
+Received: from mx5-e.mail.home.com (mx5-e.mail.home.com [24.2.2.24])
+	by h3.mail.home.com (8.9.3/8.9.0) with ESMTP id FAA25625
+	for <flexbackup@home.com>; Sat, 13 May 2000 05:13:29 -0700 (PDT)
+Received: from tux.pirschel.de (dialin102-nt.pg7.frankfurt.nikoma.de [213.54.38.102])
+	by mx5-e.mail.home.com (8.9.1/8.9.1) with ESMTP id FAA18783
+	for <flexbackup@home.com>; Sat, 13 May 2000 05:13:25 -0700 (PDT)
+Received: (from pirschel@localhost)
+	by tux.pirschel.de (8.9.3/8.9.3) id NAA06051
+	for flexbackup@home.com; Sat, 13 May 2000 13:40:30 +0200
+Message-ID: <20000513134030.F336@tux.pirschel.de>
+Mime-Version: 1.0
+Content-Type: multipart/signed; micalg=pgp-sha1;
+	protocol="application/pgp-signature"; boundary="jq0ap7NbKX2Kqbes"
+Content-Disposition: inline
+From: Dirk Pirschel <dirk@pirschel.de>
+To: Edwin Huffstutler <flexbackup@home.com>
+Subject: Flexbackup patch
+Date: Sat, 13 May 2000 13:40:30 +0200
+User-Agent: Mutt/1.1.14i
+Status: O
+Content-Length: 2237
+Lines: 73
+
+
+--jq0ap7NbKX2Kqbes
+Content-Type: text/plain; charset=us-ascii
+Content-Disposition: inline
+Content-Transfer-Encoding: quoted-printable
+
+Hi Edwin,
+
+Your skript backups only files with changed mtime, but not files with
+changed ctime.  To fix this, i have replaced "find -newer" by
+"find ( -newer -or -cnewer )".
+
+pirschel@tux:~/bin > diff -u flexbackup.orig flexbackup
+--- flexbackup.orig     Mon May  1 13:58:03 2000
++++ flexbackup  Sat May 13 13:08:51 2000
+@@ -645,7 +645,7 @@
+     $cmd .=3D "cd $dir ; ";
+     $cmd .=3D "(echo //--$tmplabel flexbackup.volume_header_info && ";
+     $cmd .=3D "find . $main::mountpoint_flag ";
+-    $cmd .=3D "-newer $tmpstamp ";
++    $cmd .=3D "\\( -newer $tmpstamp -or -cnewer $tmpstamp \\) ";
+     $cmd .=3D "-print | ";
+     $cmd .=3D "sed -e \"s%^\./%%\" ";
+     $cmd .=3D "$main::exclude_cmd ";
+@@ -701,7 +701,7 @@
+=20
+     $cmd .=3D "cd $dir ; ";
+     $cmd .=3D "find . $main::mountpoint_flag ";
+-    $cmd .=3D "-newer $tmpstamp ";
++    $cmd .=3D "\\( -newer $tmpstamp -or -cnewer $tmpstamp \\) ";
+     $cmd .=3D "-print | ";
+     $cmd .=3D "sed -e \"s%^\./%%\" ";
+     $cmd .=3D "$main::exclude_cmd ";
+@@ -745,7 +745,7 @@
+     $cmd .=3D "cd $dir ; ";
+     $cmd .=3D "find . $main::mountpoint_flag ";
+     $cmd .=3D "! -type d ";
+-    $cmd .=3D "-newer $tmpstamp ";
++    $cmd .=3D "\\( -newer $tmpstamp -or -cnewer $tmpstamp \\) ";
+     $cmd .=3D "-print | ";
+     $cmd .=3D "sed -e \"s%^\./%%\" ";
+     $cmd .=3D "$main::exclude_cmd ";
+@@ -804,7 +804,7 @@
+=20
+     $cmd .=3D "cd $dir ; ";
+     $cmd .=3D "find . $main::mountpoint_flag ";
+-    $cmd .=3D "-newer $tmpstamp ";
++    $cmd .=3D "\\( -newer $tmpstamp -or -cnewer $tmpstamp \\) ";
+     $cmd .=3D "-print | ";
+     $cmd .=3D "sed -e \"s%^\./%%\" ";
+     $cmd .=3D "$main::exclude_cmd ";
+
+
+Dirk
+
+--=20
+Dirk Pirschel   EMail: dirk@pirschel.de
+                       dirk.pirschel@fernuni-hagen.de
+
+--jq0ap7NbKX2Kqbes
+Content-Type: application/pgp-signature
+Content-Disposition: inline
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1.0.1 (GNU/Linux)
+Comment: For info see http://www.gnupg.org
+
+iD8DBQE5HT8uxJ5Dfiog8/YRAkT6AKCIQK0Cp2gX7EIEI3KnQVrpRUKCWgCfQL8X
+iVyp7XHZf8Msy4ENqK1iIYs=
+=9h7l
+-----END PGP SIGNATURE-----
+
+--jq0ap7NbKX2Kqbes--
+
