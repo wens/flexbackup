@@ -527,7 +527,7 @@ sub backup_routine {
 	} else{
 	    &log("| Removing old level $lev log of $label");
 	}
-	if (!defined($main::opt{'n'})) {
+	if (!defined($main::debug)) {
 	    unlink("$lf") or warn("Can't remove $lf: $OS_ERROR\n");
 	}
     }
@@ -697,14 +697,14 @@ sub backup {
 	    @_ = split(/\//,$main::device);
 	    $_ = pop(@_);
 	    $indexkey = "$tape_key|$_";
-	    if (defined($main::opt{'n'})) {
+	    if (defined($main::debug)) {
 		&log("(debug) \$main::index{$indexkey} = $title_without_type");
 	    } else {
 		$main::index{$indexkey} = "$title_without_type";
 	    }
 	} else {
 	    $indexkey = "$tape_key|$main::nextfile";
-	    if (defined($main::opt{'n'})) {
+	    if (defined($main::debug)) {
 		&log("(debug) \$main::index{$indexkey} = $title");
 	    } else {
 		$main::index{$indexkey} = $title;
@@ -714,7 +714,6 @@ sub backup {
     }
 
     # Write list of packages
-    # FIXME not if -n
     if (defined($main::pkgdelta) and
 	(
 	 ($cfg::pkgdelta_archive_list eq 'true') or
@@ -732,11 +731,13 @@ sub backup {
 	} else {
 	    $h = 'localhost';
 	}
-	open(LIST,"$write") || die;
-	foreach my $pkg (sort keys %{$main::package_list{$h}}) {
-	    print LIST "$pkg\n";
+	if (!defined(main::opt{'n'})) {
+	    open(LIST,"$write") || die;
+	    foreach my $pkg (sort keys %{$main::package_list{$h}}) {
+		print LIST "$pkg\n";
+	    }
+	    close(LIST);
 	}
-	close(LIST);
     }
 
     &log("| Backup of: $dir");
@@ -844,7 +845,7 @@ sub backup {
     &line();
 
     # Enough fooling around... run it.
-    if (!defined($main::opt{'n'})) {
+    if (!defined($main::debug)) {
 	foreach $cmd (@cmds) {
 
 	    if ($main::shelltype{'localhost'} eq 'bash2') {
@@ -906,7 +907,7 @@ sub backup {
     # Actually remove the old stamp files now that we are done
     foreach my $ts (sort keys %oldstamps) {
 	print "| Removing out of date level $oldstamps{$ts} timestamp for $dir\n";
-	if (!defined($main::opt{'n'})) {
+	if (!defined($main::debug)) {
 	    unlink("$ts") or warn("Can't remove $ts: $OS_ERROR\n");
 	}
     }
@@ -916,14 +917,14 @@ sub backup {
     my $t = &current_time('ctime');
     &log("| Backup start: $main::date_at_start");
     &log("| Backup end:   $t");
-    if (!defined($main::opt{'n'})) {
+    if (!defined($main::debug)) {
 	system("$main::path{touch} -t \"$main::stamp_at_start\" \"$cfg::stampdir/$cfg::sprefix$label.$level\"");
     }
 
     &line();
 
     # Got errors unless I paused before trying to access the tape right way...
-    if ((!defined($main::opt{'n'})) and defined($main::tapedevice)) {
+    if ((!defined($main::debug)) and defined($main::tapedevice)) {
 	sleep 10;
     }
 
@@ -2364,7 +2365,7 @@ sub mt {
 		$command = &maybe_remote_cmd($command, $main::remotetapehost);
 	    }
 
-	    if (!defined($main::opt{'n'})) {
+	    if (!defined($main::debug)) {
 
 		open(CMD,"($command) 2>&1 |") || die;
 		if (defined($main::log)) { open(LOG,">>$main::log") || die; }
@@ -2409,6 +2410,11 @@ sub optioncheck {
     # Device flag on commandline
     if (defined($main::opt{'device'})) {
 	$cfg::device = $main::opt{'device'};
+    }
+
+    # Debug
+    if (defined($main::opt{'n'})) {
+	$main::debug = 1;
     }
 
     # First check if things are defined in the config file
@@ -3210,7 +3216,7 @@ sub optioncheck {
     }
 
     # Test
-    if (defined($main::opt{'n'})) {
+    if (defined($main::debug)) {
 	&log('(debug) no backup or mt commands will be executed');
 	&log('(debug) no old stamps or old log files will be removed');
     }
@@ -3580,7 +3586,7 @@ sub run_or_echo_then_query {
     &split_and_echo($cmd);
     &line();
 
-    if (!defined($main::opt{'n'})) {
+    if (!defined($main::debug)) {
 	system("($cmd) 2>&1 | $main::path{tee} -a $main::log");
     } else {
 	&log("(debug) command output would be here");
@@ -3863,7 +3869,7 @@ sub split_and_echo {
     local($Text::Wrap::separator) = " \\\n";
 
     # This make it easier to cut-n-paste for debugging commands manually
-    if (defined($main::opt{'n'})) {
+    if (defined($main::debug)) {
 	$initial_tab = " ";
 	$subsequent_tab = "   ";
     } else {
@@ -3920,7 +3926,7 @@ sub new_tape_key {
     $string = "$main::path{printf} \'$key\\nThis is a flexbackup index key\\n\' | ";
     $string .=  "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=$dev";
 
-    if (defined($main::opt{'n'})) {
+    if (defined($main::debug)) {
 	&log("(debug) $string");
     } else {
 	`$string 2> /dev/null`;
@@ -3930,14 +3936,14 @@ sub new_tape_key {
 
     if (defined($main::use_file)) {
 	my $label = "<index keyfile, dir=$cfg::device>";
-	if (defined($main::opt{'n'})) {
+	if (defined($main::debug)) {
 	    &log("(debug) \$main::index{$key|$cfg::keyfile} = $label");
 	} else {
 	    $main::index{"$key|$cfg::keyfile"} = $label;
 	}
     } else {
 	my $label = "<tape index key>";
-	if (defined($main::opt{'n'})) {
+	if (defined($main::debug)) {
 	    &log("(debug) \$main::index{$key|0} = $label");
 	} else {
 	    $main::index{"$key|0"} = $label;
@@ -3977,7 +3983,7 @@ sub get_tape_key {
 	    $string = &maybe_remote_cmd($string, $main::remotetapehost);
 	}
 
-	if (defined($main::opt{'n'})) {
+	if (defined($main::debug)) {
 	    &log("(debug) $string");
 	    $key = '';
 	} else {
@@ -4188,7 +4194,7 @@ sub rmindex {
 		    ($filenum eq $file)) {
 		    &log("| Deleting record for $tape file $filenum");
 		    $found++;
-		    if (defined($main::opt{'n'})) {
+		    if (defined($main::debug)) {
 			&log("(debug) delete \$main::index{$tape|$filenum}");
 		    } else {
 			delete $main::index{"$tape|$filenum"};
@@ -4201,7 +4207,7 @@ sub rmindex {
 		if ($tape eq $key) {
 		    &log("| Deleting record for $tape file $filenum");
 		    $found++;
-		    if (defined($main::opt{'n'})) {
+		    if (defined($main::debug)) {
 			&log("(debug) delete \$main::index{$tape|$filenum}");
 		    } else {
 			delete $main::index{"$tape|$filenum"};
@@ -4381,7 +4387,6 @@ sub file_list_cmd {
 
 	# Use the normal level & timestamp mechanism to get a list of files
 	# Then only keep unowned or owned+changed files
-	# FIXME no file create if -n
 
 	my $host;
 	my $find = &maybe_remote_cmd("cd \"$dir\"; $cmd -print", $remote);
@@ -4396,47 +4401,49 @@ sub file_list_cmd {
 	    $host = 'localhost';
 	}
 	&log("| Finding subset of files based on packaging system delta");
-	open(LIST,"$find |") || die;
-	open(NEWLIST,"$write") || die;
-	while(<LIST>) {
+	if (!defined($main::debug)) {
+	    open(LIST,"$find |") || die;
+	    open(NEWLIST,"$write") || die;
+	    while(<LIST>) {
 
-	    my $key;
-	    my $archive = 0;
-	    chomp(my $file = $_);
+		my $key;
+		my $archive = 0;
+		chomp(my $file = $_);
 
-	    # Strip leading ./
-	    $file =~  s:^\./::g;
+		# Strip leading ./
+		$file =~  s:^\./::g;
 
-	    # Don't care about the backup dir itself
-	    next if ($file eq '.');
+		# Don't care about the backup dir itself
+		next if ($file eq '.');
 
-	    if ($dir eq '/') {
-		$key = "/$file"
-	    } else {
-		$key = "$dir/$file"
-	    }
+		if ($dir eq '/') {
+		    $key = "/$file"
+		    } else {
+			$key = "$dir/$file"
+			}
 
-	    if (($cfg::pkgdelta_archive_unowned eq 'true') and
-		!defined($main::packaged{$host}{$key})) {
-		$archive = 1;
-	    }
-
-	    if (($cfg::pkgdelta_archive_changed eq 'true') and
-		defined($main::changed{$host}{$key})) {
-		$archive = 1;
-	    }
-
-	    if ($archive == 1) {
-		if ($separator eq 'null') {
-		    print NEWLIST "./$file\0";
-		} else {
-		    print NEWLIST "./$file\n";
+		if (($cfg::pkgdelta_archive_unowned eq 'true') and
+		    !defined($main::packaged{$host}{$key})) {
+		    $archive = 1;
 		}
-	    }
 
+		if (($cfg::pkgdelta_archive_changed eq 'true') and
+		    defined($main::changed{$host}{$key})) {
+		    $archive = 1;
+		}
+
+		if ($archive == 1) {
+		    if ($separator eq 'null') {
+			print NEWLIST "./$file\0";
+		    } else {
+			print NEWLIST "./$file\n";
+		    }
+		}
+
+	    }
+	    close(LIST);
+	    close(NEWLIST);
 	}
-	close(LIST);
-	close(NEWLIST);
 
 	&line();
 
@@ -4466,7 +4473,7 @@ sub list_packages {
 	} else {
 	    &log("| Listing all RPM packages...");
 	}
-	if (defined($main::opt{'n'})) {
+	if (defined($main::debug)) {
 	    &log("(debug) $cmd");
 	} else {
 	    open(LIST,"$cmd |") || die;
@@ -4499,7 +4506,7 @@ sub find_packaged_files {
 	} else {
 	    &log("| Finding all files owned by RPM packages...");
 	}
-	if (defined($main::opt{'n'})) {
+	if (defined($main::debug)) {
 	    &log("(debug) $cmd");
 	} else {
 	    open(LIST,"$cmd |") || die;
@@ -4535,7 +4542,7 @@ sub find_changed_files {
 	    &log("| Finding changed package files...");
 	}
 	&log("| May take quite a while, please be patient");
-	if (defined($main::opt{'n'})) {
+	if (defined($main::debug)) {
 	    &log("(debug) $cmd");
 	} else {
 	    open(LIST,"$cmd |") || die;
@@ -4591,7 +4598,7 @@ sub test_bufferprog {
 	$pipecmd =  "cat $tmp_script | ($main::remoteshell $host 'cat > $tmp_script; sh $tmp_script; rm -f $tmp_script')";
     }
 
-    if (!defined($main::opt{'n'})) {
+    if (!defined($main::debug)) {
 
 	open(PIPE,"$pipecmd |") || die;
 	while (<PIPE>) {
@@ -4661,7 +4668,7 @@ sub check_remote_progs {
     foreach my $host (keys %$remotehost_ref) {
 	print "| Checking for required programs on host $host... ";
 	my $cmd = "$main::remoteshell $host sh -c '$string'";
-	if (defined($main::opt{'n'})) {
+	if (defined($main::debug)) {
 	    print "\n(debug) $cmd\n";
 	    next;
 	}
@@ -4715,7 +4722,7 @@ sub check_shell {
 
     $main::shelltype{$host} = 'unknown';
 
-    if (defined($main::opt{'n'})) {
+    if (defined($main::debug)) {
 	print "\n(debug) $pipecmd\n";
     }
 
@@ -4806,7 +4813,7 @@ sub test_tape_drive {
     &log("Writing test file \#1");
     $cmd = "$main::path{cat} $0";
     $cmd = &append_writer_cmd($cmd);
-    if (!defined($main::opt{'n'})) {
+    if (!defined($main::debug)) {
 	system($cmd);
 	if ($CHILD_ERROR) {
 	    $fail++;
@@ -4819,7 +4826,7 @@ sub test_tape_drive {
     &log("Writing test file \#2");
     $cmd = "$main::path{cat} $configfile";
     $cmd = &append_writer_cmd($cmd);
-    if (!defined($main::opt{'n'})) {
+    if (!defined($main::debug)) {
 	system($cmd);
 	if ($CHILD_ERROR) {
 	    $fail++;
@@ -4832,7 +4839,7 @@ sub test_tape_drive {
     &log("Writing test file \#3");
     $cmd = "$main::path{cat} $0";
     $cmd = &append_writer_cmd($cmd);
-    if (!defined($main::opt{'n'})) {
+    if (!defined($main::debug)) {
 	system($cmd);
 	if ($CHILD_ERROR) {
 	    $fail++;
@@ -4865,7 +4872,7 @@ sub test_tape_drive {
     } else {
 	$cmd .= "> $tmp1";
     }
-    if (!defined($main::opt{'n'})) {
+    if (!defined($main::debug)) {
 	system($cmd);
 	if ($CHILD_ERROR) {
 	    $fail++;
@@ -4888,7 +4895,7 @@ sub test_tape_drive {
     } else {
 	$cmd .= "> $tmp2";
     }
-    if (!defined($main::opt{'n'})) {
+    if (!defined($main::debug)) {
 	system($cmd);
 	if ($CHILD_ERROR) {
 	    $fail++;
@@ -4911,7 +4918,7 @@ sub test_tape_drive {
     } else {
 	$cmd .= "> $tmp3";
     }
-    if (!defined($main::opt{'n'})) {
+    if (!defined($main::debug)) {
 	system($cmd);
 	if ($CHILD_ERROR) {
 	    $fail++;
@@ -4924,7 +4931,7 @@ sub test_tape_drive {
     &log('');
     &mt('rewind');
     &log("Comparing...");
-    if (!defined($main::opt{'n'})) {
+    if (!defined($main::debug)) {
 	system("$main::path{diff} -q $0 $tmp1");
 	if ($CHILD_ERROR) {
 	    $fail++;
