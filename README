@@ -18,9 +18,8 @@ Features:
    o Full (0) and 1-9 levels of incremental backup (ala "dump")
    o Keeps a table of contents so you know what's on each tape
    o Does remote filesystems (over rsh/ssh; no special service)
-   o Works with IDE/SCSI tapes
-     or Linux ftape (allows table of contents support)
-     or archive to normal files rather than device
+   o Works with IDE/SCSI tapes, Linux ftape,
+     or archives to normal files rather than a device
    o Nice log files
 
 Software needed:
