@@ -6,6 +6,11 @@ Version 1.2.0 ()
 
 Changes:
   - devel -> stable
+
+----------------------------------------------------------------------
+Version 1.1.8 (20030621)
+
+Changes:
   - Detect old config file
   - Config file parsing not so rigid - if values not found, it now uses
     defaults (w/ message printed so you know it)
@@ -13,6 +18,8 @@ Changes:
   - Compare works for copy type (just diff -r -q)
 
 Bugfixes/cleanup:
+  - Doh! index key creation broken for to-disk backups as a result of 1.1.7
+    changes.  Fixed.
   - Relative links for $device get chased correctly
   - $pkgdelta_archive_changed = false didn't work.
   - README updated; example for filesystem setup & cron.
@@ -111,16 +118,6 @@ Cleanup:
   - Don't check for writeable stampdir for non-backup
   - Don't check for writeable logdir for non-backup
   - Don't tie to db for non-backup
-
-----------------------------------------------------------------------
-Version 1.0.4 (20030618)
-
-Bug fixes:
-  - Don't use --same-order for tar. -extract -files would fail if you had
-    more than one file and they weren't in the expected order
-  - Use --ignore-failed-read for tar
-  - Remote tape drive device didn't create index key correctly
-  - Typo/update star flags setup
 
 ----------------------------------------------------------------------
 Version 1.0.3 (20030313)
