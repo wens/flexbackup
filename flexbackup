@@ -3192,7 +3192,7 @@ sub setup_before_read {
 	} elsif (defined($main::blockdevice)) {
 	    &log("| Reading from block device $main::device");
 	} else {
-	    &log("| Reading from current tape position");
+	    &log("| Reading from CURRENT TAPE POSITION");
 	}
     }
 
