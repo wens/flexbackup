@@ -4,8 +4,6 @@ $Name$
 Flexbackup to-do list
 Some of these might not happen
 
-Backport test-tape-drive, mt op override, compression
-
 Cleanup/fix:
  - Better cleanup after error in backup
  - Clean up more $main:: vars, split into types or refactor code
@@ -33,12 +31,12 @@ Misc:
      http://myezserver.com/downloads/mitel/howto/flexbackup-howto.html
      http://www.cyber-euskadi.com/howtos/contrib/flexbackup-restore-from-disk-howto.html
      how about french?  http://sgmf.free.fr/flexbackup_doc.html
-   Better faq in the works
  - Try bfr? (buffer seems unmaintained; no O_LARGEFILE)
+     
+     support for bfr in devel branch already
+     
      Maybe document how to recompile buffer
-     bfr looks like it will work.  will need dd too to block...
- - Document sudo workaround from Alex
- - Document John's BSD shared mem thing
+
  - Try against torture-test list:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
 
@@ -47,14 +45,14 @@ Features to add:
  - Add a "filelist" type that just does the find & saves it, not the files
     themselves.  Will help for debugging
 
-     in devel branch
+     in devel branch already
 
  - Some switch that in addition to level timestamp checks, filters via rpm,
      and just backs up any file not in a package OR changed from a
      package. and backs up the rpm list.  Once that works make it work for
      debian packages, BSD ports, etc if possible.
 
-     in devel branch
+     in devel branch already (for rpm anyway)
 
  - Handle multi-volume backups (original idea w/ 'multibuf' never panned out)
 
