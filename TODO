@@ -34,6 +34,7 @@ Misc:
      filelist
      mt_blksize
      example for -wday use
+ - add faq on max size    
  - Add link/rpm for mbuffer
  - Make a manual page (AND other enchanced documentation, more than a README)
    someone made a good start or two:

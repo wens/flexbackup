@@ -3,9 +3,6 @@ $Name$
 
 Changes:
 
-  - Added 'bfr' program as alternative to 'buffer'.
-    See http://www.glines.org:8000/software/buffer.html
-
   - Added packaging system delta capability (RPM only for now).
 
     If you give "-pkgdelta rpm", after the level/timestamp checks, we
@@ -17,6 +14,9 @@ Changes:
       $pkgdelta_archive_list
       $pkgdelta_archive_unowned
       $pkgdelta_archive_changed
+
+  - Added 'mbuffer' program as alternative to 'buffer'
+    http://www.rcs.ei.tum.de/~maierkom/privat/software/mbuffer/
 
   - Added 'filelist' type that doesn't back up anything, but prints/saves
     the list of files that would have been archived.  Good for debugging
@@ -33,6 +33,9 @@ Changes:
 
   - Added -wday option (helps with once-a-month, on a certain day of the
     week only cron setups)
+
+  - test-tape-drive now diffs 3 feils, one in the middle is different
+    (will catch people using rewind-on-close device)
 
 Cleanup:
   - Don't check for writeable stampdir for non-backup
