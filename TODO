@@ -16,7 +16,6 @@ Cleanup/fix:
 Misc:
  - make a manual page (or other enchanced doc)! too many options now :)
  - someone needs to put a bunch of stuff in a faq
- - mail lists running and used
  - Check lsm template/ibiblio.org stuff. automate
  - Try bfr or dbuffer (buffer seems unmaintained; no O_LARGEFILE)
  - Try against torture-test list:
