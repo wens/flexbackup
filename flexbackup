@@ -2408,7 +2408,7 @@ sub optioncheck {
     &check(\$cfg::device,'device','exist');
     &check(\$cfg::remoteshell,'remoteshell','ssh ssh2 ssh1 rsh');
     &check(\$cfg::remoteuser,'remoteuser','exist');
-    &check(\$cfg::erase_tape_all_level_zero,'erase_tape_all_level_zero');
+    &check(\$cfg::erase_tape_set_level_zero,'erase_tape_set_level_zero');
     &check(\$cfg::erase_rewind_only,'erase_rewind_only');
     &check(\$cfg::logdir,'logdir','exist');
     &check(\$cfg::tmpdir,'tmpdir','exist');
@@ -3758,7 +3758,7 @@ sub set_tape_operation_defaults {
 	    !defined($main::use_file)) {
 	    # Set level zero, using device. Retension & erase a new tape
 	    # (config file may tell us not to erase)
-	    if ($cfg::erase_tape_all_level_zero eq "true") {
+	    if ($cfg::erase_tape_set_level_zero eq "true") {
 		$main::do_reten = 1;
 		$main::do_erase = 1;
 	    } else {

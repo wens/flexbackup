@@ -11,14 +11,15 @@ Currently:
  - mbuffer testing w/ remote
  - mbuffer testing w/ end of media
  - Test -test-tape-drive mod
- - Check old release operation for all + use_file + multiple fs array +
-    keys
-           main::device -> cfg::device in 2 spots, do_erase for files
+
+ - Check old release for use_file + -erase.  nukes db entry for keyfile
+   (devel too as well)
+ - -erase for use_file wipes files+index+key?
+
  - Finish up -set / -dir
      yell if given set not defined
      test with tapes too
      how to spec dirs with spaces?
- - -erase for use_file wipes dir+index+key?
  - Exclude paths, not just expressions?  per-fs?
 
 Cleanup/fix:
