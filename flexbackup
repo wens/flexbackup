@@ -15,8 +15,9 @@
 #  flexbackup -fs <x>              : backup directory <x>, level 0
 #  flexbackup -fs all -level <n>   : backup all (defined in config file), level n
 #  flexbackup -fs <x> -level <n>   : backup directory <x>, level n
-#    -level can be an integer, or full/differential/incremental
+#     -level can be an integer, or full/differential/incremental
 #  flexbackup [...] -delta rpm     : only backup files not part of an RPM package
+#                                    or changed from distributed version
 #
 # READING ARCHIVES:
 #  flexbackup -list                : list files in archive at current
@@ -328,6 +329,16 @@ sub backup_routine {
 	close(DIR);
     }
 
+
+    # Possibly populate package-file hashes if we are using
+    # -delta.  This is so we only have to run through these operations
+    # once on this machine
+    if (defined($main::delta)) {
+	&populate_packaged_files('localhost');
+	&populate_changed_files('localhost');
+	$main::pkg_delta_filelist = "$cfg::tmpdir/pkgdelta.$PROCESS_ID";
+        &line();
+    }
 
     ##########################
     #
@@ -658,28 +669,39 @@ sub backup {
     }
 
     &log("| Backup of: $dir");
+    my $remove = '';
     if ($cfg::type eq 'dump') {
-	@cmds = &backup_dump($label, $localdir, $level, $remote);
+	($remove, @cmds) = &backup_dump($label, $localdir, $level, $remote);
     } elsif ($cfg::type eq 'afio') {
-	@cmds = &backup_afio($label, $localdir, $title, $level, $remote);
+	($remove, @cmds) = &backup_afio($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'cpio') {
-	@cmds = &backup_cpio($label, $localdir, $title, $level, $remote);
+	($remove, @cmds) = &backup_cpio($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'tar') {
-	@cmds = &backup_tar($label, $localdir, $title, $level, $remote);
+	($remove, @cmds) = &backup_tar($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'star') {
-	@cmds = &backup_star($label, $localdir, $title, $level, $remote);
+	($remove, @cmds) = &backup_star($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'pax') {
-	@cmds = &backup_pax($label, $localdir, $title, $level, $remote);
+	($remove, @cmds) = &backup_pax($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'zip') {
-	@cmds = &backup_zip($label, $localdir, $title, $level, $remote);
+	($remove, @cmds) = &backup_zip($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'ar') {
-	@cmds = &backup_ar($label, $localdir, $title, $level, $remote);
+	($remove, @cmds) = &backup_ar($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'shar') {
-	@cmds = &backup_shar($label, $localdir, $title, $level, $remote);
+	($remove, @cmds) = &backup_shar($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'lha') {
-	@cmds = &backup_lha($label, $localdir, $title, $level, $remote);
+	($remove, @cmds) = &backup_lha($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'filelist') {
-	@cmds = &backup_filelist($label, $localdir, $title, $level, $remote);
+	($remove, @cmds) = &backup_filelist($label, $localdir, $title, $level, $remote);
+    }
+
+    # Nuke any tmp files used in the above routines
+    if ($remove ne '') {
+        push(@cmds, &maybe_remote_cmd("$main::path{rm} -f $remove", $remote));
+    }
+
+    # Nuke tmp file list if we did local package delta
+    if (defined($main::delta)) {
+	push(@cmds, "$main::path{rm} -f $main::pkg_delta_filelist");
     }
 
     # Strip multiple spaces
@@ -848,9 +870,8 @@ sub backup_dump {
     my $remote = shift(@_);
     my $cmd = '';
     my @cmds;
-    my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
     my $date_flag;
-
+    my $remove = '';
 
     # Need this check here in case fs=all, level=incremental, and we go beyond 9
     if ($level > 9) {
@@ -859,11 +880,15 @@ sub backup_dump {
 
     # Warnings
     if (defined($cfg::exclude_expr[0])) {
-	&log("| NOTE: \$exclude_expr is ignored for dump");
+	&log("| NOTE: \$exclude_expr is ignored for type=dump");
     }
 
     if ($cfg::traverse_fs ne 'false') {
-	&log("| NOTE: \$traverse_fs is always false for dump");
+	&log("| NOTE: \$traverse_fs is always false for type=dump");
+    }
+
+    if (defined($main::delta)) {
+	&log("| NOTE: packaging system delta ignored for for type=dump");
     }
 
     # With this one we don't have to put a stampfile on the remote system
@@ -900,7 +925,7 @@ sub backup_dump {
 
     push(@cmds, $cmd);
 
-    return(@cmds);
+    return($remove, @cmds);
 
 
 }
@@ -920,7 +945,7 @@ sub backup_afio {
     my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
     my $tmplabel = "$cfg::tmpdir/label.$PROCESS_ID";
     my $tmpnocompress = "$cfg::tmpdir/nocompress.$PROCESS_ID";
-    my $remove;
+    my $remove = '';
     my $no_compress = '';
 
     if (defined($remote) and ($level != 0)) {
@@ -978,10 +1003,7 @@ sub backup_afio {
 	$remove .= " $tmpnocompress";
     }
 
-    $cmd = "$main::path{rm} -f $remove";
-    push(@cmds, &maybe_remote_cmd($cmd, $remote));
-
-    return(@cmds);
+    return($remove, @cmds);
 
 }
 
@@ -998,7 +1020,7 @@ sub backup_cpio {
     my $cmd = '';
     my @cmds;
     my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
-    my $remove;
+    my $remove = '';
 
     if (defined($remote) and ($level != 0)) {
 	my $time = &get_last_date($label, $level, 'numeric');
@@ -1043,10 +1065,7 @@ sub backup_cpio {
 	$remove .= " $stamp";
     }
 
-    $cmd = "$main::path{rm} -f $remove";
-    push(@cmds, &maybe_remote_cmd($cmd, $remote));
-
-    return(@cmds);
+    return($remove, @cmds);
 
 }
 
@@ -1063,6 +1082,7 @@ sub backup_tar {
     my $cmd = '';
     my @cmds;
     my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
+    my $remove = '';
 
     if (defined($remote) and ($level != 0)) {
 	my $time = &get_last_date($label, $level, 'numeric');
@@ -1106,11 +1126,10 @@ sub backup_tar {
     push(@cmds, $cmd);
 
     if (defined($remote) and ($level != 0)) {
-	$cmd = "$main::path{rm} -f $stamp";
-	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= "$stamp";
     }
 
-    return(@cmds);
+    return($remove, @cmds);
 
 }
 
@@ -1127,6 +1146,7 @@ sub backup_star {
     my $cmd = '';
     my @cmds;
     my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
+    my $remove = '';
 
     if (defined($remote) and ($level != 0)) {
 	my $time = &get_last_date($label, $level, 'numeric');
@@ -1172,11 +1192,10 @@ sub backup_star {
     push(@cmds, $cmd);
 
     if (defined($remote) and ($level != 0)) {
-	$cmd = "$main::path{rm} -f $stamp";
-	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= " $stamp";
     }
 
-    return(@cmds);
+    return($remove, @cmds);
 
 }
 
@@ -1193,7 +1212,7 @@ sub backup_pax {
     my $cmd = '';
     my @cmds;
     my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
-    my $remove;
+    my $remove = '';
 
     if (defined($remote) and ($level != 0)) {
 	my $time = &get_last_date($label, $level, 'numeric');
@@ -1239,10 +1258,7 @@ sub backup_pax {
 	$remove .= " $stamp";
     }
 
-    $cmd = "$main::path{rm} -f $remove";
-    push(@cmds, &maybe_remote_cmd($cmd, $remote));
-
-    return(@cmds);
+    return($remove, @cmds);
 
 }
 
@@ -1260,7 +1276,7 @@ sub backup_zip {
     my @cmds;
     my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
     my $tmpzip = "$cfg::tmpdir/archive.$PROCESS_ID.zip";
-    my $remove;
+    my $remove = '';
 
     if (defined($remote) and ($level != 0)) {
 	my $time = &get_last_date($label, $level, 'numeric');
@@ -1309,10 +1325,7 @@ sub backup_zip {
 	$remove .= " $stamp";
     }
 
-    $cmd = "$main::path{rm} -f $remove";
-    push(@cmds, &maybe_remote_cmd($cmd, $remote));
-
-    return(@cmds);
+    return($remove, @cmds);
 
 }
 
@@ -1331,7 +1344,7 @@ sub backup_ar {
     my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
     my $filelist = "$cfg::tmpdir/arlist.$PROCESS_ID";
     my $tmpfile = "$cfg::tmpdir/ar.$PROCESS_ID";
-    my $remove;
+    my $remove = '';
 
     &log("| NOTE: ar archives will not descend directories");
 
@@ -1378,10 +1391,7 @@ sub backup_ar {
 	$remove .= " $stamp";
     }
 
-    $cmd = "$main::path{rm} -f $remove";
-    push(@cmds, &maybe_remote_cmd($cmd, $remote));
-
-    return(@cmds);
+    return($remove, @cmds);
 
 }
 
@@ -1398,7 +1408,7 @@ sub backup_shar {
     my $cmd = '';
     my @cmds;
     my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
-    my $remove;
+    my $remove = '';
 
     if (defined($remote) and ($level != 0)) {
 	my $time = &get_last_date($label, $level, 'numeric');
@@ -1432,11 +1442,10 @@ sub backup_shar {
     push(@cmds, $cmd);
 
     if (defined($remote) and ($level != 0)) {
-	$cmd = "$main::path{rm} -f $stamp";
-	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= " $stamp";
     }
 
-    return(@cmds);
+    return($remove, @cmds);
 
 }
 
@@ -1456,7 +1465,7 @@ sub backup_lha {
     my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
     my $filelist = "$cfg::tmpdir/lhalist.$PROCESS_ID";
     my $tmpfile = "$cfg::tmpdir/lha.$PROCESS_ID";
-    my $remove;
+    my $remove = '';
 
     if (defined($remote) and ($level != 0)) {
 	my $time = &get_last_date($label, $level, 'numeric');
@@ -1501,10 +1510,7 @@ sub backup_lha {
 	$remove .= " $stamp";
     }
 
-    $cmd = "$main::path{rm} -f $remove";
-    push(@cmds, &maybe_remote_cmd($cmd, $remote));
-
-    return(@cmds);
+    return($remove, @cmds);
 
 }
 
@@ -1522,7 +1528,7 @@ sub backup_filelist {
     my @cmds;
     my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
     my $filelist = "$cfg::tmpdir/filelist.$PROCESS_ID";
-    my $remove;
+    my $remove = '';
 
     if (defined($remote) and ($level != 0)) {
 	my $time = &get_last_date($label, $level, 'numeric');
@@ -1557,9 +1563,7 @@ sub backup_filelist {
 	$remove .= " $stamp";
     }
 
-    $cmd = "$main::path{rm} -f $remove";
-    push(@cmds, &maybe_remote_cmd($cmd, $remote));
-    return(@cmds);
+    return($remove, @cmds);
 
 }
 
@@ -3054,9 +3058,17 @@ sub optioncheck {
 	}
     }
 
-    # Delta option
+    # Pacakge delta option
     if (defined($main::opt{'delta'})) {
-        # FIXME bail if remote filesystems
+	if (defined $main::remotetapehost) {
+	    if (scalar(keys %main::remotehosts) > 1) {
+		push(@main::errors,"-delta $main::opt{delta} not useable with remote filesystems yet");
+	    }
+	} else {
+	    if (scalar(keys %main::remotehosts) > 0) {
+		push(@main::errors,"-delta $main::opt{delta} not useable with remote filesystems yet");
+	    }
+	}
 	if ($main::opt{'delta'} eq 'rpm') {
 	    $main::delta = 'rpm';
 	    $main::path{'rpm'} = &checkinpath('rpm');
@@ -4221,102 +4233,98 @@ sub file_list_cmd {
 
     $cmd .= "$main::exclude_expr ";
 
-    if (defined($main::delta)) {
-	$cmd .= "-print ";
-	if ($main::delta eq 'rpm') {
-	    $cmd = &file_list_rpmdelta($dir, $level, $cmd, $separator);
-	}
-
-    } else {
+    if (!defined($main::delta)) {
 	if ($separator eq 'newline') {
 	    $cmd .= "-print ";
 	} else {
 	    $cmd .= "-print0 ";
 	}
+    } else {
+
+	# Use the normal level & timestamp mechanism to get a list of files
+	# Then only keep unowned or owned+changed files
+	&log("| Listing level $level to-be-archived files for $dir");
+	&log("| Finding subset of files based on packaging system delta");
+	open(NEWLIST,"> $main::pkg_delta_filelist") || die;
+	open(LIST,"cd \"$dir\"; $cmd -print |") || die;
+	while(<LIST>) {
+
+	    chomp(my $file = $_);
+	    $file =~  s:^\./::g;
+
+            next if ($file eq '');
+
+            if (defined($main::changed{'localhost'}{"$dir/$file"})) {
+                "X changed $file\n";
+            }
+
+	    if (!defined($main::packaged{'localhost'}{"$dir/$file"})
+		or
+		defined($main::changed{'localhost'}{"$dir/$file"})) {
+
+		if ($separator eq 'null') {
+		    print NEWLIST "./$file\0";
+		} else {
+		    print NEWLIST "./$file\n";
+		}
+	    }
+
+	}
+	close(LIST);
+	close(NEWLIST);
+
+	&line();
+
+	$cmd = "$main::path{cat} $main::pkg_delta_filelist "
     }
 
     return($cmd);
 
 }
 
-#############################################################################
-# Additionally filters the list so we only backup any files
-# that are not part of an rpm package OR are changed from the
-# distributed version.
-#############################################################################
-sub file_list_rpmdelta {
 
-    my $dir = shift(@_);
-    my $level = shift(@_);
-    my $findcmd = shift(@_);
-    my $separator = shift(@_);
-    my %owned;
-    my %changed;
-    my @files;
-    my $to_backup_list = "$cfg::tmpdir/tobackup.$$";
-    my @files_to_backup;
+######################################################################
+# Fill %packaged with a list of files on host owned by packages
+######################################################################
+sub populate_packaged_files {
 
-    &log("| RPM package delta - may take a while to select files!");
+    my $host = shift (@_);
 
-    # FIXME do -n
-
-    # FIXME do this once per run (if we have multiple local fs's)
-    # Get a hash of all files under this dir that are "owned"
-    &log("| Finding files owned by packages under $dir...");
-    open(LIST,"$main::path{rpm} -q -a -l |") || die;
-    while(<LIST>) {
-	if (m:^$dir/(.*)$:) {
-	    $owned{$1} = 1;
+    # FIXME -n
+    if ($main::delta eq 'rpm') {
+	&log("| Finding files owned by RPM packages on $host...");
+	open(LIST,"$main::path{rpm} -q -a -l |") || die;
+	while(<LIST>) {
+	    if (m:^(/.*)$:) {
+		$main::packaged{$host}{$1} = 1;
+	    }
 	}
+	close(LIST);
     }
-    close(LIST);
-
-    # FIXME do this once per run (if we have multiple local fs's. this is very slow!)
-    # If it's an "owned" file, it might have been edited or otherwise changed
-    &log("| Finding changed package files under $dir...");
-    open(LIST,"$main::path{rpm} -V -a |") || die;
-    while(<LIST>) {
-	if (m:^(.*) . $dir/(.*)$:) {
-	    $changed{$2} = 1;
-	}
-    }
-    close(LIST);
-
-    # Use the normal level & timestamp mechanism to get a list of files
-    &log("| Listing level $level to-be-archived for $dir...");
-    open(LIST,"cd \"$dir\"; $findcmd |") || die;
-    while(<LIST>) {
-	chomp;
-	s:^\./::g;
-	push(@files, $_);
-    }
-    close(LIST);
-
-    # Then only keep unowned or owned+changed files
-    &log("| Finding subset of files to archive...");
-    foreach my $file (@files) {
-	if (!defined($owned{$file}) or defined($changed{$file})) {
-	    push(@files_to_backup, $file);
-	}
-    }
-
-    # Save list to a temp file
-    open(LIST,"> $to_backup_list") || die;
-    foreach my $file (@files_to_backup) {
-	if ($separator eq 'null') {
-	    print LIST "$file\0";
-	} else {
-	    print LIST "$file\n";
-	}
-    }
-    close(LIST);
-
-    &line();
-
-    # FIXME remove temp file
-    return("$main::path{cat} $to_backup_list");
 }
 
+
+######################################################################
+# Fill %changed with a list of packaged files on host that have been
+# modified
+######################################################################
+sub populate_changed_files {
+
+    my $host = shift (@_);
+
+    # FIXME -n
+    if ($main::delta eq 'rpm') {
+	&log("| Finding changed RPM package files on $host...");
+	&log("| May take quite a while, be patient");
+	open(LIST,"$main::path{rpm} -V -a |") || die;
+	while(<LIST>) {
+	    if (m:^(.*) . (.*)$:) {
+		$main::changed{$host}{$2} = 1;
+	    }
+	}
+	close(LIST);
+    }
+}
 
 #############################################################################
 # Actually test to see if we can run buffer. In situations where SysV shared
@@ -4534,8 +4542,7 @@ sub newtape () {
 #############################################################################
 sub test_tape_drive () {
 
-    # FIXME do -n
-
+    # FIXME -n
     my $cmd;
     my $tmp1 = "$cfg::tmpdir/test1.$PROCESS_ID";
     my $tmp2 = "$cfg::tmpdir/test2.$PROCESS_ID";
