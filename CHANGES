@@ -4,6 +4,9 @@ $Name$
 Version TBD
 
 Changes:
+  - Allow non-root execution along with "sudo". Set
+      path{'command'} = "sudo command" or "sudo -u username command" in
+      the config file.  Idea from Alex Aiminoff's patch to 0.9.8
   - Check that 'buffer' can run with set $megs.
       From John Reynolds, brought forward from 0.9.8
   - Check for existence of remote executables before doing remote backups
@@ -11,6 +14,7 @@ Changes:
   - A "no blocking at all" option. Set $blksize=0 in the config file.
   - Added support for "zip" as valid archive compression type
   - Added support for "zip" as valid log compression type
+  - "-rmfile all"' when using files will rm all files/db entries for that dir
 
 Bug Fixes:
   - $erase_rewind_only wasn't working right if we didn't call
@@ -23,6 +27,7 @@ Cleanup:
   - Don't set tape blocksize with -toc unless we want current tape (from John)
   - Interactive restore creates log file (was in e-smith stuff)
   - Extract/list/compare/restore use date-stamped logfiles (e-smith)
+  - Simplified rmfile() to call existing rmindex() routine
 
 ----------------------------------------------------------------------
 Version 0.9.9.7 (20030115)

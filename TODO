@@ -33,21 +33,14 @@ Misc:
  - Try bfr? (buffer seems unmaintained; no O_LARGEFILE)
      Maybe document how to recompile buffer
      bfr looks like it will work.  will need dd too to block...
+ - Document sudo workaround from Alex
+ - Document John's BSD shared mem thing
  - Try against torture-test list:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
 
 
 Features to add:
- - Non-root use
-    based on sudo workaround from Alex
-    works using the path overrides I put in?
-
-    sudoers:
-      Defaults:backup !authenticate
-      Cmnd_Alias BACKUP = /usr/bin/afio, /usr/bin/find
-      backup  ALL = NOPASSWD: BACKUP
-
-- Some "level" that uses rpm, verifies all packages, and just backs
+ - Some "level" that uses rpm, verifies all packages, and just backs
       up any file not in a package OR changed from a package. and the rpm list.
       once the above works make it work for debian packages
 
@@ -82,11 +75,10 @@ Features to add:
      don't want password echoed
      no exclude from find
      top level of shares only?
-
- - autoconfit (esp if we pkg multivol with it)
- - Better way to spec fs. 
+ - autoconf it (esp if we pkg multivol)
+ - Better way to spec fs.
  - Redo include/exclude paths, not just expressions?
- - Do we want to count on perl (or flexbackup for that matter) being 
+ - Do we want to count on perl (or flexbackup for that matter) being
      installed on remote machines?  We could do some built-in replacements
      for the 'find' for instance and make things more standardized. although
      keeping it simply built out of standard commandline utils is a big plus
@@ -102,11 +94,8 @@ Features to add:
  - Store the index db on the tapes?
       But we don't know the size ahead of time unless hard-limited resperved size.
       Updating db at the beginning of the tape will add tape-travel overhead for every backup.
-      Sometimes rewind->write loses the rest of the contents past the first file?
+      rewind->write loses the rest of the contents past the first file?
  - CD-ROM burning (or just .iso type?) for full backups? any?
- - When using files
-      Make lower numbered level nuke higher ones & rm index?
-      Erase option to to nuke the archive files & records in dir?
  - Encryption with gnupg?
  - Gnome driver/configurator utility
       a separate program that just manipulates flexbackup
