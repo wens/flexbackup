@@ -1,20 +1,24 @@
-Summary: Flexible backup script
-Name: flexbackup
-%define version
-Version: %{version}
-Release: 1
-Packager: Edwin Huffstutler <edwinh+flexbackup@edwinh.org>
-Source: flexbackup-%{version}.tar.gz
-Url: http://flexbackup.sourceforge.net
-Copyright: GPL
-Group: Applications/Archiving
-BuildRoot: /var/tmp/flexbackup-root
-BuildArch: noarch
-Requires: gzip
-Requires: bzip2
-Requires: fileutils
-Requires: findutils
+# Hey emacs, use -*-rpm-spec-*- mode...
 
+%define version
+
+Summary:   Flexible backup script
+Name:      flexbackup
+Version:   %{version}
+Release:   1
+Epoch:     0
+License:   GPL
+Group:     Applications/Archiving
+URL:       http://flexbackup.sourceforge.net
+Source0:   flexbackup-%{version}.tar.gz
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
+BuildArch: noarch
+Packager:  Edwin Huffstutler <edwinh+flexbackup@edwinh.org>
+Requires:  gzip
+Requires:  fileutils
+Requires:  findutils
+
+#---------------------------------------------------------------------
 %description
 A flexible backup tool
 
@@ -28,16 +32,19 @@ Features:
    o Writes to tapes, on-disk archive files, or on-disk directory trees
    o Keeps a table of contents so you know archives are on each tape
    o Nice log files
-                                                                                      
 
+
+#---------------------------------------------------------------------
 %prep
 %setup -q
 
+#---------------------------------------------------------------------
 %build
 make all PREFIX=/usr CONFFILE=/etc/flexbackup.conf
 
+#---------------------------------------------------------------------
 %install
-rm -rf $RPM_BUILD_ROOT
+rm -rf %{buildroot}
 mkdir -p $RPM_BUILD_ROOT/etc
 mkdir -p $RPM_BUILD_ROOT%{_bindir}
 mkdir -p $RPM_BUILD_ROOT%{_mandir}/man1
@@ -46,23 +53,29 @@ mkdir -p $RPM_BUILD_ROOT/var/lib/flexbackup
 mkdir -p $RPM_BUILD_ROOT/var/log/flexbackup
 make install PREFIX=$RPM_BUILD_ROOT/usr CONFFILE=$RPM_BUILD_ROOT/etc/flexbackup.conf
 
+#---------------------------------------------------------------------
 %clean
-rm -rf $RPM_BUILD_ROOT
+rm -rf %{buildroot}
 
+#---------------------------------------------------------------------
 %files
-%defattr(-,root,root)
-%{_bindir}/flexbackup
+%defattr(-,root,root,-)
 %config(noreplace) /etc/flexbackup.conf
+%{_bindir}/*
+%{_mandir}/*/*
 %dir /var/lib/flexbackup
 %dir /var/log/flexbackup
-%{_mandir}/*/*
 %doc CHANGES COPYING TODO README CREDITS INSTALL faq.html
 
+#---------------------------------------------------------------------
 %changelog
-* Tue Jul 29 2003 Edwin Huffstutler <edwinh@hercules.my-net> 
+* Tue Sep 23 2003 Edwin Huffstutler <edwinh@computer.org>
+- cleanup spec a bit
+
+* Tue Jul 29 2003 Edwin Huffstutler <edwinh@hercules.my-net>
 - add manpages, tweak a bit
 
-* Thu Jul  3 2003 Edwin Huffstutler <edwinh@hercules.my-net> 
+* Thu Jul  3 2003 Edwin Huffstutler <edwinh@hercules.my-net>
 - update description
 
 * Tue Feb 18 2003 Edwin Huffstutler <edwinh@hercules.my-net>
