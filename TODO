@@ -4,6 +4,11 @@ $Name$
 Flexbackup to-do list
 Some of these might not happen
 
+Pending:
+ - Scrub manpage
+     Incorporate man pages into install, rpms
+ - Fix key duplication for multiple sets same time
+
 Cleanup/fix:
  - Better cleanup after error in backup
  - Clean up more $main:: vars, split into types or refactor code
@@ -20,7 +25,6 @@ Cleanup/fix:
 Misc:
  - Do .debs?
  - Add faq on files changing underneath? explain sql db dump?
- - Man page (create from -help perhaps)
  - Try against torture-test list:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
  - Update mt manpages collection I keep in cvs
@@ -90,7 +94,10 @@ Features to add:
      keeping it simply built out of standard commandline utils is a big plus
      as well...
 
- - Make per-host path overrides possible, that supercede others?
+ - Make per-host path overrides possible
+
+ - Make -set or -dir able to be given multiple times on the commandline
+   (then wha do we call the log file?
 
  - Stor lists of files backed up in a on-disk db (to help find what to
      restore from?). Actually now you can just 'zgrep filename
