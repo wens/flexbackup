@@ -5,19 +5,36 @@ $Name$
 
 Some of these might not happen, but figured I should jot them down
 
+Current:
+
+ - try afio -g parameter when creating
+ - try restore -d for comparing w/ restore
+ - config option for tar --record-number
+
+ - make exclude_expr a list option
+     gotta watch for -a vs -o for tar
+
  - mail new maintainer of  dump now and ask about -T
    ask about dump length deal
 
  - cleanup erase/reten/etc.  Throw global flags based on options.
    use only -erase -reten flags
 
- - check removing old log files
+ - arbitrary "list of files" extract (give arg to list file)
+   strip /, ./
+   make sure dirs are recursed?
+     afio: use "-w file"
+     cpio: use "--pattern-file file"
+     tar:  use "--files-from file"
+     restore: use "-x filenameinarchive otherfileinarchive" (know this recurses)
+   test all this
+   update readme
 
 Features to add:
-
- - arbitrary "list of files" extract
- - configurable path for programs (gtar=tar, etc)
-     remote vs local too
+ - zip/unzip backend
+ - lha backend
+ - interactive restore-like shell for types besides dump
+     see notes below
  - support multiple tapes for a single archive
      dump already does this? afio has hooks too.
      tar does, (-M); won't work for compressed?
@@ -28,12 +45,12 @@ Features to add:
      "multibuf" that could replace buffer and handle volumes too.
      must play with them both.
 
+ - configurable path for programs (gtar=tar, etc)
+     remote vs local too
  - table of contents for a tape
      ftape + vtblc has it (needs testing)
      need table of contents for others
      Scott Penrose had some ideas here...
- - interactive restore-like shell for types besides dump
-     see notes below
  - Gnome driver/configurator utility
      I have a "picture" of what I want this to look like
      use glade + libglade perl bindings
@@ -41,9 +58,12 @@ Features to add:
  - make a manual page
      embed in script, use pod2man
  - log files for extract/compare/etc?
+ - extract options to not overwrite existing files
  - remote extract/compare/restore
      possible at all?
-     just install s/w on client w/remote tape device. need config file option
+     just install s/w on client w/remote tape device. need config file
+     option
+ - encryption
  - cd-rom burning (or just .iso type?) for full backups?
 
 Cleanup/fix:
@@ -74,6 +94,9 @@ Use perl readline module
 5) mark things for extraction
 6) reopen archive & extract that list
 
+If using afio, all we need are the block numbers and we can seek directly
+to them and extract.
+
 Help from restore to jog my brain...
 
         ls [arg] - list directory
@@ -88,3 +111,8 @@ Help from restore to jog my brain...
         verbose - toggle verbose flag (useful with ``ls'')
         help or `?' - print this list
 If no `arg' is supplied, the current directory is used
+
+
+Local Variables:
+mode: flyspell
+end:

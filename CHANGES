@@ -3,12 +3,22 @@ $Name$
 
 New Features:
  - minimal Makefile that lets you set config path, bin path, etc. for install
+ - use $verbose to set restore -v for list/extract
+ - can use "compress" now in addition to gzip/bzip2
+ - flag in configuration file afio compression cache size
+ - flag in configuration file for sparse file handling
 
 Bug fixes/cleanup:
- - make better afio control file handling for volume labels
- - forgot to remove tar_verbose and cpio_verbose from conf file
+ - added --atime-preserve to tar switches
  - dates back to string format (easier to read), use numeric only on BSD
+     will work with pre-4.0 fileutils that have touch -t bug
+ - make better afio control file handling for volume labels
+ - use --read-full-blocks for tar
+ - log files and archives to disk use same filename pattern now
+ - do obsolete timestamp removal at end of job not beginning
+ - forgot to remove tar_verbose and cpio_verbose from conf file
  - debug shows real mt command
+ - clean up flag handling some more, use long flags to make things readable
  - sleep at end of backup not done if file or debug
  - if -noerase, move to eod before starting
 
@@ -25,7 +35,7 @@ New features:
      for tar we use -V for a volume label
      for cpio we touch a filename wih the info before backing up
  - config file regular expression for excluding files from backup
-    doesn't work for dump, of course
+     doesn't work for dump, of course
  - config option for afio file size compression threshold
  - config option for afio nocompress file extension list
  - compression for all backup types
@@ -34,7 +44,7 @@ New features:
 
 Bug fixes/cleanup:
  - nuke trailing slashes on given dirs
- - typo! mt defblksize, not mt defsetblk. also, that whole reoutine
+ - typo! mt defblksize, not mt defsetblk. also, that whole routine
      was just broken. fixed.
  - tar was archiving things twice. "find . | tar -c -T -" gives double
       result. revert back to non-find mode for tar, works fine
@@ -121,3 +131,8 @@ Version 0.8
   - clean some duplicated code
   - rpm build, lsm file
   - previously just a local hack I had done for myself
+
+
+Local Variables:
+mode: flyspell
+end:

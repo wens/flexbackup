@@ -2,14 +2,13 @@
 Mainly written by me -
 Edwin Huffstutler <edwinh@computer.org>
 
-John Reynolds <jreynold@primenet.com>
-  FreeBSD testing/other fixes
+The following people have helped me debug/fix things:
 
+John Reynolds <jreynold@primenet.com>
+Rafal Maszkowski <rzm@icm.edu.pl>
+Rick Gaudette <rjg@ECE.NEU.EDU>
 Michael Bartosh <bartosh@apple.tamu.edu>
-  Bug reports for mt stuff
 
 
 $Id$
 $Name$
-
-
