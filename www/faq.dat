@@ -23,22 +23,59 @@ your expression matches what you want to exclude by:<BR><BR> <CODE>cd
 
 <q>I don't want to run backups or remote shells as root
 
-<a>FIXME sudo stuff
+<a>You can do this with 'sudo'.
+<OL>
+<LI>Set up a passphraseless ssh key for a user to run the backups.
+<LI>Set <CODE>$remoteuser</CODE> in the config file to this user.
+<LI>Set <CODE>$path{command} = 'sudo command';</CODE> in the config file.
+Do this for all commands that will need privilege (find, afio/tar/etc, perhaps buffer)
+<LI>Set up an /etc/sudoers file with something like this:<BR><BR>
+<CODE>
+Cmnd_Alias BACKUP = /usr/bin/afio, /usr/bin/find<BR>
+backupuser  ALL = NOPASSWD: BACKUP</CODE>
+</OL>
 
 <c>Backup
 
 <q>Can you explain numeric dump levels?
 
-<a>FIXME
+<a>Level 0 gets everything.  For 1 or higher, files that have been changed
+since the last backup at a <B>lower</B> level are archived. For
+instance, if a level 2 backup was done on Monday, followed by a level 4
+backup on Tuesday, a subsequent level 3 backup on Wednesday would contain
+all files modified or added since the level 2 (Monday) backup.
 
 <P>See also <A
 HREF="http://docs.sun.com/db/doc/805-7228/6j6q7uf18?a=view">these sun
-docs</A> for an example.
+docs</A> for an example with some pictures.
 
-<P>For those not used to dump-style numeric levels, the latest versions of
-flexbackup have added <CODE>-full</CODE>, <CODE>-differential</CODE>,
-<CODE>-incremental</CODE> that get translated into appropriate dump-style
-level numbers.  FIXME definitions
+<P>Traditional Unix 'dump' behavior only allows levels 0-9; flexbackup
+removes this limit if you are using any of the non-dump archive formats.
+
+<P>For those people coming from other platforms that are not used to
+dump-style numeric levels, the latest versions of flexbackup have added
+<CODE>-full</CODE>, <CODE>-differential</CODE>, <CODE>-incremental</CODE>
+that get translated into appropriate dump-style level numbers.
+Definitions:
+<UL>
+<LI>full: everything (duh!)
+<LI>differential: only files that have been changed or added since the last full backup
+<LI>incremental: only the files that have changed or been added to a system
+since doing the last backup (of any type)
+</UL>
+<P>These are simply aliased to numeric levels: full = 0, differential = 1, and
+incremental = (latest backup + 1)
+
+<c>Backup
+
+<q>Do you support multi-tape archives?
+
+<a>If you split filesystems/directories in a "set" across mulitple tapes,
+yes, that is supported.  As of now, having <B>one</B> directory archive
+span multiple tapes is not supported.  True, some of the archiver programs
+can deal with end-of media, but it is hard to generically support.  We'll
+be working on a generic solution for future versions.  For now, split the
+directory up into workable portions, use larger media, or backup to disk...
 
 <c>Backup
 
@@ -53,14 +90,25 @@ flexbackup -fs /dir2 -norewind<BR>
 flexbackup -fs /dir3 -norewind
 </CODE>
 
+<c>Backup
+
+<q>I'm backing up to files on disk, and I don't want the filenames to have
+timestamps in them.
+
+<a>Set <CODE>$staticfiles</CODE> to true in the config file. Archives will
+then have names such as "etc.3.dump.gz" rather than something like
+"home.0.200301212305.afio-bz2". There is a similar parameter for the log
+files, by the way.
+
 <c>Common problems
 
 <q>I get I/O errors or other errors from my tape drive.
 
 <a>Try changing the block size parameter in the configuration file.  The
-default is 10k, but some tape drives like 32 or 64 much better.  Also try
-setting <CODE>$pad_blocks</CODE> to false, or if that doesn't help change
-<CODE>$mt_var_blocksize</CODE> to false.
+default is 10k, but some tape drives like 32 or 64 much better.  If you are
+using buffering, turn it off until you can get things working without
+it.  Also try setting <CODE>$pad_blocks</CODE> to false, or if that doesn't
+help change <CODE>$mt_var_blocksize</CODE> to false.
 
 <P>If you are using an IDE tape drive under Linux, and are still having
 trouble, you might also try the 'ide-scsi' layer with the 'st' module, and
@@ -110,9 +158,28 @@ permit root logins, See the section on use with "sudo".
 
 <c>Common problems
 
-<q>'buffer' complains that it can't run successfully.
+<q>'buffer' complains that it can't run successfully or that it doesn't
+have enough shared memory.
 
-<a>FIXME explain; talk about john's workaround
+<a>Set <CODE>$buffer_megs</CODE> to a lower value and try again.  I usually
+run with it set somewhere between 5-20MB.
+
+<P>On FreeBSD, SysV shared memory can run low using the GENERIC kernel at
+its default value (especially if you are running something like GNOME). You
+can modify your kernel file and change the line<BR><BR>
+<CODE>options SHMMAXPGS=2048</CODE>
+<P>To something really big. You can also change this dynamically at startup by
+putting<BR><BR>
+<CODE>kern.ipc.shmmax={large integer}</CODE>
+<P>in /etc/sysctl.conf. Other BSD's will have very similar mechanisms.
+
+<c>Recovery
+
+<q>How do I find out which archive(s) contain a certain file?
+
+<a>If you don't know in which archive to find a certain file, look at the
+log files.  As long as you have verbose turned on (default), you can just
+'zgrep filename /var/log/flexbackup/*.gz', and that works pretty well.
 
 <c>Recovery
 
@@ -137,7 +204,12 @@ simple "tag" text file.  The rest of the tape is your normal archives.
 
 <q>Why keep the table of contents db on disk rather than on the tape?
 
-<a>FIXME add explanation
+<a><UL>
+<LI>We don't know the table size ahead of time unless we use a hard-limited reserved size.
+<LI>Updating the db at the beginning of the tape will add tape-travel overhead for every backup.
+<LI>a backup->rewind->write start of tape sequence will lose the rest of the contents
+past the first file unless we start to play filemark tricks.
+</UL>
 
 <c>Implementation
 
