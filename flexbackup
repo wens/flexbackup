@@ -2410,7 +2410,7 @@ sub optioncheck {
     &check(\$cfg::atime_preserve,'atime_preserve');
     &check(\$cfg::indexes,'indexes');
     &check(\$cfg::staticfiles,'staticfiles');
-    &check(\$cfg::buffer,'buffer','false buffer mbuffer bfr');
+    &check(\$cfg::buffer,'buffer','false buffer mbuffer');
     &check(\$cfg::buffer_megs,'buffer_megs','exist');
     &check(\$cfg::pad_blocks,'pad_blocks');
     &check(\$cfg::device,'device','exist');
