@@ -112,6 +112,9 @@ if (! &main::GetOptions(\%main::opt,
 			"help",
 			"c=s",
 			"level=s",
+			"incremental",
+			"differential",
+			"full",
 			"fs=s",
 			"extract:s",
 			"files=s",
@@ -2461,43 +2464,57 @@ sub optioncheck {
     }
 
     # Levels
-    if (defined($main::opt{'level'})) {
-	if (($main::opt{'level'} !~ m/^\d+$/) and
-	    ($main::opt{'level'} !~ m/^(full|differential|incremental)$/)) {
-	    push(@main::errors,"-level must be numeric, or full/differential/incremental");
-	}
+    if (defined($main::opt{'level'}) and
+	(defined($main::opt{'incremental'}) or
+	 defined($main::opt{'differential'}) or
+	 defined($main::opt{'full'}))) {
+	push(@main::errors,"Can't use -level with -incremental/-differential/-full");
+    }
 
-	# Check for digits or change full/diff to level number
-	# Incremental + fs=all we have to handle later since it might be
-	# different for each fs
-	if ($main::opt{'level'} =~ m/^\d+$/) {
-	    # Make string variable numeric
-	    $main::level = POSIX::strtod($main::opt{'level'});
+    if (!defined($main::opt{'level'})) {
+	if (defined($main::opt{'incremental'})) {
+	    $main::opt{'level'} = 'incremental';
+	} elsif (defined($main::opt{'differential'})) {
+	    $main::opt{'level'} = 'differential';
+	} elsif (defined($main::opt{'full'})) {
+	    $main::opt{'level'} = 'full';
+	} else {
+	    $main::opt{'level'} = 0;
+	}
+    }
+
+    if (($main::opt{'level'} !~ m/^\d+$/) and
+	($main::opt{'level'} !~ m/^(full|differential|incremental)$/)) {
+	push(@main::errors,"-level must be numeric, or full/differential/incremental");
+    }
+
+    # Check for digits or change full/diff to level number
+    # Incremental + fs=all we have to handle later since it might be
+    # different for each fs
+    if ($main::opt{'level'} =~ m/^\d+$/) {
+	# Make string variable numeric
+	$main::level = POSIX::strtod($main::opt{'level'});
+	if (($cfg::type eq 'dump') and ($main::level > 9)) {
+	    push(@main::errors,"can't use level > 9 and type=dump");
+	}
+    } elsif ($main::opt{'level'} eq "full") {
+	$main::level = 0;
+    } elsif ($main::opt{'level'} eq "differential") {
+	$main::level = 1;
+    } elsif ($main::opt{'level'} eq "incremental") {
+	# If incremental + one fs, we can find the level now.
+	if (defined($main::opt{'fs'}) and ($main::opt{'fs'} ne 'all')) {
+	    $main::level = &get_incremental_level($main::opt{'fs'});
 	    if (($cfg::type eq 'dump') and ($main::level > 9)) {
 		push(@main::errors,"can't use level > 9 and type=dump");
 	    }
-	} elsif ($main::opt{'level'} eq "full") {
-	    $main::level = 0;
-	} elsif ($main::opt{'level'} eq "differential") {
-	    $main::level = 1;
-	} elsif ($main::opt{'level'} eq "incremental") {
-
-	    # If incremental + one fs, we can find the level now.
-	    if (defined($main::opt{'fs'}) and ($main::opt{'fs'} ne 'all')) {
-		$main::level = &get_incremental_level($main::opt{'fs'});
-		if (($cfg::type eq 'dump') and ($main::level > 9)) {
-		    push(@main::errors,"can't use level > 9 and type=dump");
-		}
-	    } else {
-		# If we are doing 'all', have to postpone till later; each
-		# fs might have a different level...
-		undef $main::level;
-		$main::incremental_all = 1;
-	    }
-
+	} else {
+	    # If we are doing 'all', have to postpone till later; each
+	    # fs might have a different level...
+	    undef $main::level;
+	    $main::incremental_all = 1;
 	}
-
-    } # levels
+    }
 
     # Check toc/rmindex flags
     if (defined($main::opt{'toc'}) or defined($main::opt{'rmindex'})) {
@@ -3003,11 +3020,6 @@ sub print_afio_volume_header {
 # Figure out which of rewind/erase/reten we are going to assume
 ######################################################################
 sub set_tape_operation_defaults {
-
-    # Set backup level to 0 if not given
-    if (!defined($main::level)) {
-	$main::level = 0;
-    }
 
     # Assume stuff based on how we are called first
     if (defined($main::opt{'fs'})) {
@@ -3591,6 +3603,3 @@ sub file_list_cmd {
     return($cmd);
 
 }
-
-
-
