@@ -1,6 +1,6 @@
 
 CVSVER := $(shell echo v$(VER) | sed -e 's/\./_/g')
-SITE := $(HOME)/flexbackup
+SITE := $(HOME)/public_html/flexbackup
 RPM  := /usr/src/redhat
 
 commit:
