@@ -1992,7 +1992,7 @@ sub versionstring {
     if ($ver eq '') {
 	$ver = "devel";
     }
-    return($ver);
+    return($ver . " (http://flexbackup.org)");
 
 }
 
