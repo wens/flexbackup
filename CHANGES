@@ -1,7 +1,7 @@
 $Id$
 $Name$
 
-IN CVS but not released
+Version 1.0pre4 (20030121)
 
 Bug Fixes:
   - Try harder to catch pipeline errors in different environments:
