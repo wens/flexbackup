@@ -83,6 +83,8 @@ Features to add:
      for the 'find' for instance and make things more standardized. although
      keeping it simply built out of standard commandline utils is a big plus
      as well...
+ - Just to be stupid: add arj, cab, rar reading (I don't think unix
+     utils for creating those exist).  Add shar, ar, lha for read/write.
  - Make remote machine path overrides possible, that supercede others?
  - Make -extract -files for afio/cpio/zip recurse dirs
       dump/tar already to this. Actually just check that all act the same.
