@@ -29,11 +29,10 @@
 #                                    with the files in your current directory
 #  flexbackup -restore             : as above, but interactive restore
 #                                    (dump type only for now)
-#  flexbackup [operation] file     : if archiving to files rather than a device,
+#  flexbackup [operation] -num <n> : read file number n from tape
+#  flexbackup [operation] <file>   : if archiving to files rather than a device,
 #                                    list/extract/compare/restore options take
 #                                    a filename argument
-#  flexbackup [operation] -num <n> : read file number n from tape
-#
 # INDEX RELATED:
 #  flexbackup -toc                 : list this tape's table of contents
 #  flexbackup -toc all             : list all known table of contents
@@ -50,13 +49,13 @@
 #                                    for configuration
 #  flexbackup [opt] -type <x>      : override $type from config file
 #  flexbackup [opt] -compress <x>  : override $compress from config file
+#  flexbackup [opt] -d 'var=val'   : override config file setting of $var
 #  flexbackup -fs all -noreten     : don't retension for level 0 "all" backups
 #  flexbackup -fs all -noerase     : don't rewind/erase for level 0 "all" backups
 #  flexbackup -fs <x> -erase       : force a rewind/erase before backup
 #  flexbackup -fs <x> -norewind    : don't rewind tape after a single backup
 #  flexbackup [operation] -reten   : force a retension before read
 #  flexbackup [opt] -n             : don't run actual dump or mt commands
-#  flexbackup [opt] -d 'var=val'   : override config file setting of $var
 #  flexbackup -version             : show version
 #
 ######################################################################
@@ -797,7 +796,7 @@ sub backup_afio {
 
     # list of file exenstions to not compress
     if (($cfg::compress !~ /^(false|hardware)$/) and ($cfg::afio_nocompress_types ne "")) {
-	$cmd = "echo \"$cfg::afio_nocompress_types\" > $tmpnocompress";
+	$cmd = "$main::path{printf} \"$cfg::afio_nocompress_types\" > $tmpnocompress";
 	push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
 	$no_compress = "-E $tmpnocompress";
     }
@@ -2249,6 +2248,9 @@ sub maybe_get_filename {
     if (-f "$arg") {
 	$file = $arg;
 	$main::use_file = 1;
+	undef $main::tapedevice;
+	undef $main::remotetapehost;
+	undef $main::remote;
 
     } elsif (defined($main::use_file) and (-f "$cfg::device/$arg")) {
 	$file = $cfg::device . "/" . $arg;
@@ -2292,6 +2294,12 @@ sub maybe_get_filename {
     } elsif ($file =~ m/\.tgz$/) {
 	$cfg::type = "tar";
 	$cfg::compress = "gzip";
+	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
+	&optioncheck();                  # redo to set a few variables over
+
+    } elsif ($file =~ m/\.tbz2?$/) {
+	$cfg::type = "tar";
+	$cfg::compress = "bzip2";
 	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
 	&optioncheck();                  # redo to set a few variables over
 
@@ -2419,7 +2427,7 @@ sub run_or_echo_then_query {
 	&log("(debug) command output would be here");
     }
 
-    if (defined($main::tapedevice)) {
+    if (!defined($main::use_file)) {
 	&line();
 	&mt('generic-query');
     }
@@ -2427,14 +2435,11 @@ sub run_or_echo_then_query {
     &line();
 
     # Maybe rewind (usually false for reads)
-    if ($main::do_rewind_after == 1) {
-	if (defined($main::tapedevice)) {
-	    &log("| Rewinding...");
-	    &mt('rewind');
-	    &line();
-	}
+    if (($main::do_rewind_after == 1) and !defined($main::use_file)) {
+	&log("| Rewinding...");
+	&mt('rewind');
+	&line();
     }
-
 
 }
 
@@ -2498,18 +2503,20 @@ sub setup_before_read {
 
     &line();
 
+    &log("| Logging output to \"$main::log\"");
+
     $main::device = &maybe_get_filename();
 
     &mt("generic-blocksize $main::mt_blksize");
 
     # Maybe retension
-    if (($main::do_reten == 1) and defined($main::tapedevice)) {
+    if (($main::do_reten == 1) and !defined($main::use_file)) {
 	&log('| Retensioning tape...');
 	&mt('retension');
     }
 
     if (defined($main::opt{'num'})) {
-	if (!defined($main::tapedevice)) {
+	if (defined($main::use_file)) {
 	    die("Can't use -num unless reading from tape");
 	} else {
 	    &log("| Positioning tape at file number $main::opt{num}");
@@ -2525,12 +2532,12 @@ sub setup_before_read {
 	}
     }
 
-    if (defined($main::tapedevice)) {
-	&line();
-	&mt('generic-query');
-    }
-
     &line();
+
+    if (!defined($main::use_file)) {
+	&mt('generic-query');
+	&line();
+    }
 
     $cmd = $main::read_cmd . $main::device;
 
@@ -3149,18 +3156,19 @@ sub file_list_cmd {
     my $separator = shift(@_);
 
     if (!defined($separator) or ($separator !~ m/^(null|newline)$/)) {
-        $separator = 'null';
+	$separator = 'null';
     }
 
     my $cmd = '';
     $cmd .= "$main::path{'find'} . $main::mountpoint_flag ";
+    $cmd .= "-depth ";
     $cmd .= "-newer $timestampfile ";
     $cmd .= "$main::exclude_expr ";
 
     if ($separator eq 'newline') {
-        $cmd .= "-print ";
+	$cmd .= "-print ";
     } else {
-        $cmd .= "-print0 ";
+	$cmd .= "-print0 ";
     }
 
     return($cmd);
