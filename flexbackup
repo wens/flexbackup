@@ -2207,7 +2207,13 @@ sub mt {
     if ($cfg::compress eq "hardware") {
 	foreach my $operation (@operations) {
 	    if ($operation =~ m/generic-blocksize/) {
-		push(@operations,'datcompression 2');
+		if ($main::uname =~ /Linux/) {
+		    push(@operations,'compression 1');
+		} elsif ($main::uname =~ /FreeBSD/) {
+		    push(@operations,'comp on');
+		} else {
+		    push(@operations,'compression 1');
+		}
 	    }
 	}
     }
@@ -2230,7 +2236,7 @@ sub mt {
 	    } elsif ($main::uname =~ /AIX/) {
 		$operation = 'status';
 	    } elsif ($main::uname =~ /HP-UX/) {
-		next;
+		$operation = 'status';
 	    } elsif ($main::uname =~ /SunOS/) {
 		$operation = 'status';
 	    } elsif ($main::uname =~ /IRIX/) {
@@ -2279,11 +2285,11 @@ sub mt {
 	    } elsif ($main::uname =~ /FreeBSD/) {
 		$operation = 'erase';
 	    } elsif ($main::uname =~ /OSF1/) {
-		next;
+		$operation = 'erase';
 	    } elsif ($main::uname =~ /AIX/) {
-		next;
+		$operation = 'erase';
 	    } elsif ($main::uname =~ /HP-UX/) {
-		next;
+		$operation = 'erase';
 	    } elsif ($main::uname =~ /SunOS/) {
 		$operation = 'erase';
 	    } elsif ($main::uname =~ /IRIX/) {
@@ -2302,13 +2308,13 @@ sub mt {
 	    } elsif ($main::uname =~ /FreeBSD/) {
 		$operation =~ s/generic-blocksize/blocksize/;
 	    } elsif ($main::uname =~ /OSF1/) {
-		next;
+		$operation =~ s/generic-blocksize/setblk/;
 	    } elsif ($main::uname =~ /AIX/) {
-		next;
+		$operation =~ s/generic-blocksize/setblk/;
 	    } elsif ($main::uname =~ /HP-UX/) {
-		next;
+		$operation =~ s/generic-blocksize/setblk/;
 	    } elsif ($main::uname =~ /SunOS/) {
-		next;
+		$operation =~ s/generic-blocksize/setblk/;
 	    } elsif ($main::uname =~ /IRIX/) {
 		$operation =~ s/generic-blocksize/setblksz/;
 	    } else {
@@ -2327,6 +2333,13 @@ sub mt {
 	} else {
 
 	    my $command;
+
+	    # Override mt operation so user can set for unknown flavors
+	    # or for debugging info, like mt tell -> mt status
+	    if(defined($cfg::mt{$operation})) {
+		$operation = $cfg::mt{$operation};
+		next if ($operation eq 'nop');
+	    }
 
 	    if ($operation =~ /setblk/) {
 		# Try and see which of setblk/defblksize will work
@@ -4696,7 +4709,7 @@ sub test_tape_drive () {
     sleep(10);
 
     &log("| If for some reason this prgram does not exit within a few minutes,");
-    &log("| Hit CTRL-C, and try adjusting \$blksize, \$pad_blocks, or \$mt_var_blksize.");
+    &log("| Hit CTRL-C, and try adjusting \$blksize, \$pad_blocks, or \$mt_blksize.");
     &line();
 
     &newtape();

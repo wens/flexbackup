@@ -6,7 +6,6 @@ Some of these might not happen
 
 Cleanup/fix:
  - Fix stdout/err flow when list/extract/etc
- - Fix mt compression
  - Better cleanup after error in backup
  - Clean up more $main:: vars, split into types or refactor code
  - Whole class of problems like:
@@ -42,11 +41,6 @@ Misc:
 
 
 Features to add:
-
- - Have an mt op. override in the config (tell = status for debugging, platform
-     specific junk).  just act like path stuff does now.
-
-     Will do this post 1.0
 
  - Handle multi-volume backups (original idea w/ 'multibuf' never panned out)
 
