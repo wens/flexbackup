@@ -57,7 +57,7 @@ Features to add:
  - CD-ROM burning (or just .iso type?) for full backups? any level?
       just act like to-file archives, and take those files & write to CD?
       "iso" type with a dirtree copy?  wasted space this way.
-      be able to split archives?
+      be able to split archives into 650MB chunks?
       lots of questions
 
  - If we detect an error and are using tapes, do something intelligent
@@ -90,9 +90,6 @@ Features to add:
  - Spiff up the contributed CGI program?
 
  - Autoloader/mtx support? Need somonewho has one to do this
-
- - Split main program; use separate libs for archiver types that are stored
-   in different files?  downside: install then requires more than just program + conf file.
 
  - Do we want to count on perl (or flexbackup for that matter) being
      installed on remote machines?  We could do some built-in replacements
@@ -129,7 +126,6 @@ Features to add:
    would print you out when the last level 0 backup was done and what the key
    index was.
 
- - Multiple devices at once?  (tape + disk)?
 
 -------------------------------------------------------------
 
