@@ -49,24 +49,25 @@ Backup & Configuration
 <q>
 How do I get remote backups over ssh to work without prompting for a password?
 <a>
-If you're not using SSH, you should be. Switch to SSH and don't use rsh. If you
-are using SSH and still having a problem with it asking for a password, then
-your RSAAuthentication parameters are either incorrect of you have
+If you're not using ssh, you should be. Switch to ssh and don't use rsh. If you
+are using ssh and still having a problem with it asking for a password, then
+your RSAAuthentication parameters are either incorrect or you have
 public/private key problems.
 
-Section 7.2.2 of the SSH FAQ might help:
-
-  http://www.onsight.com/faq/ssh/ssh-faq.html
-
-In a nutshell the value of your ~/.ssh/identity.pub needs to be present in your
-~/.ssh/authorized_keys file for RSA authentication to work. For root accounts
-you might also need to put
-
+Section 7.2.2 of the ssh FAQ might help:<PRE>
+  <A HREF="http://www.onsight.com/faq/ssh/ssh-faq.html">http://www.onsight.com/faq/ssh/ssh-faq.html</A>
+</PRE>
+In a nutshell the value of your <TT>~/.ssh/identity.pub</TT> needs to be present in your
+<TT>~/.ssh/authorized_keys</TT> file for RSA authentication to work. For root accounts
+you might also need to put <PRE>
   PermitRootLogin yes
-
-in your sshd_config file as root is treated with more care than normal user
+</PRE>
+in your sshd_config file, as root is treated with more care than normal user
 accounts. Note: you might choose without-password or forced-commands-only
 instead of yes for more security. See your ssh(1) and sshd(1) man pages.
+<P>
+If you do not want to use passphrase-less ssh keys or don't want to permit
+root logins, See the section on use with "sudo".
 
 <c>
 Backup & Configuration
