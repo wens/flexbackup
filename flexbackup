@@ -2429,7 +2429,7 @@ sub optioncheck {
     &check(\$cfg::atime_preserve,'atime_preserve');
     &check(\$cfg::indexes,'indexes');
     &check(\$cfg::staticfiles,'staticfiles');
-    &check(\$cfg::buffer,'buffer','false buffer');
+    &check(\$cfg::buffer,'buffer','false buffer bfr');
     &check(\$cfg::buffer_megs,'buffer_megs','exist');
     &check(\$cfg::pad_blocks,'pad_blocks');
     &check(\$cfg::device,'device','exist');
@@ -2701,31 +2701,42 @@ sub optioncheck {
     }
 
     # Buffer setup
+    if (($cfg::buffer ne 'false') and ($cfg::buffer_megs !~ m/^\d+$/)) {
+	push(@main::errors,"\$buffer_megs must be set to integer number of megabytes");
+    }
     if ($cfg::buffer eq "buffer") {
 
 	$main::path{'buffer'} = &checkinpath('buffer');
 	push(@main::remoteprogs, $main::path{'buffer'});
-	if ($cfg::buffer_megs =~ m/^\d+$/) {
-	    my $write_flags;
-	    my $read_flags;
-	    my $buftest;
-	    my $out;
-	    my $megs = $cfg::buffer_megs . "m";
 
-	    if (defined($main::tapedevice)) {
-		$write_flags = "-u 100 -t -p 75 $buffer_pad_flag -o ";
-		$read_flags = "-u 100 -t -p 75 $buffer_pad_flag -i ";
-	    } else {
-		$write_flags = "-t -p 75 $buffer_pad_flag -o ";
-		$read_flags = "-t -p 75 $buffer_pad_flag -i ";
-	    }
-	    $main::buffer_cmd = " | $main::path{buffer} -m $megs $buffer_blk_flag";
-	    $main::write_catchpipe_cmd = "$main::path{buffer} -m $megs $buffer_blk_flag $write_flags";
-	    $main::write_cmd = " | " . $main::write_catchpipe_cmd;
-	    $main::read_cmd = "$main::path{buffer} -m $megs $buffer_blk_flag $read_flags";
+	my $write_flags;
+	my $read_flags;
+	my $megs = $cfg::buffer_megs . "m";
+
+	if (defined($main::tapedevice)) {
+	    $write_flags = "-u 100 -t -p 75 $buffer_pad_flag -o ";
+	    $read_flags = "-u 100 -t -p 75 $buffer_pad_flag -i ";
 	} else {
-	    push(@main::errors,"\$buffer_megs must be set to integer number of megabytes");
+	    $write_flags = "-t -p 75 $buffer_pad_flag -o ";
+	    $read_flags = "-t -p 75 $buffer_pad_flag -i ";
 	}
+	$main::buffer_cmd = " | $main::path{buffer} -m $megs $buffer_blk_flag";
+	$main::write_catchpipe_cmd = "$main::path{buffer} -m $megs $buffer_blk_flag $write_flags";
+	$main::write_cmd = " | " . $main::write_catchpipe_cmd;
+	$main::read_cmd = "$main::path{buffer} -m $megs $buffer_blk_flag $read_flags";
+
+    } elsif ($cfg::buffer eq "bfr") {
+
+	$main::path{'bfr'} = &checkinpath('bfr');
+	push(@main::remoteprogs, $main::path{'bfr'});
+
+	my $megs = $cfg::buffer_megs . "M";
+
+	$main::buffer_cmd = " | $main::path{bfr} -b $megs";
+	$main::write_catchpipe_cmd = "$main::path{bfr} -b $megs | $main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=";
+
+	$main::write_cmd = " | " . $main::write_catchpipe_cmd;
+	$main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag if=";
 
     } else {
 
@@ -3687,7 +3698,7 @@ sub setup_before_read {
 	&line();
     }
 
-    $cmd = $main::read_cmd . '"' . $main::device . '"';
+    $cmd = &read_function($main::device);
 
     if (defined($main::remotetapehost)) {
 	$cmd = &maybe_remote_cmd($cmd, $main::remotetapehost);
@@ -3707,6 +3718,23 @@ sub setup_before_read {
 
 }
 
+######################################################################
+# Read from file/device (needed to handle 'bfr' case)
+######################################################################
+sub read_function {
+
+    my $file = shift(@_);
+    my $cmd;
+
+    if ($cfg::buffer eq 'bfr') {
+	$cmd = $main::read_cmd . '"' . $file . '"' . $main::buffer_cmd;
+    } else {
+	$cmd = $main::read_cmd . '"' . $file . '"';
+    }
+
+    return($cmd);
+
+}
 
 ######################################################################
 # Get rid of trailing slash on path or host:/path specs
@@ -4484,6 +4512,11 @@ sub find_changed_files {
 # Actually test to see if we can run buffer. In situations where SysV shared
 # memory is low, or buffer can't run, buffer can fail
 #############################################################################
+
+#
+# FIXME do bfr too
+#
+
 sub test_bufferprog {
 
     my $buffer_prog = shift(@_);
@@ -4694,7 +4727,7 @@ sub newtape () {
 # Test writing a couple files to tape, then read & diff.  To help make
 # sure filemarks, blocks, padding, are working as we need.
 #############################################################################
-sub test_tape_drive () {
+sub test_tape_drive {
 
     my $cmd;
     my $tmp1 = "$cfg::tmpdir/test1.$PROCESS_ID";
@@ -4718,7 +4751,7 @@ sub test_tape_drive () {
     &mt('generic-query');
     &log('');
 
-    &log("Writing test file #1");
+    &log("Writing test file \#1");
     $cmd = "$main::path{cat} $0";
     $cmd = &append_writer_cmd($cmd);
     if (!defined($main::opt{'n'})) {
@@ -4733,7 +4766,7 @@ sub test_tape_drive () {
     &mt('generic-query');
     &log('');
 
-    &log("Writing test file #2");
+    &log("Writing test file \#2");
     $cmd = "$main::path{cat} $0";
     $cmd = &append_writer_cmd($cmd);
     if (!defined($main::opt{'n'})) {
@@ -4757,8 +4790,8 @@ sub test_tape_drive () {
     &mt('generic-query');
     &log('');
 
-    &log("Reading test file #1");
-    $cmd = $main::read_cmd . '"' . $main::device . '"';
+    &log("Reading test file \#1");
+    $cmd = &read_function($main::device);
     if (defined($main::remotetapehost)) {
 	$cmd = &maybe_remote_cmd($cmd, $main::remotetapehost);
 	# Buffer both sides if remote
@@ -4782,8 +4815,8 @@ sub test_tape_drive () {
     &mt('generic-query');
     &log('');
 
-    &log("Reading test file #2");
-    $cmd = $main::read_cmd . '"' . $main::device . '"';
+    &log("Reading test file \#2");
+    $cmd = &read_function($main::device);
     if (defined($main::remotetapehost)) {
 	$cmd = &maybe_remote_cmd($cmd, $main::remotetapehost);
 	# Buffer both sides if remote

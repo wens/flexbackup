@@ -5,6 +5,7 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
+ - Fix buffer test to handle bfr as well
  - Fix stdout/err flow when list/extract/etc
  - Better cleanup after error in backup
  - Clean up more $main:: vars, split into types or refactor code
@@ -25,15 +26,14 @@ Cleanup/fix:
  - Delete deprecated sections
 
 Misc:
+ - Update faq for new items changes since 1.0.1
+ - Add link/package for bfr
  - Make a manual page (AND other enchanced documentation, more than a README)
    someone made a good start or two:
      http://www.law.utulsa.edu:8080/users/bchapman/linuxnotes/flexbackup
      http://myezserver.com/downloads/mitel/howto/flexbackup-howto.html
      http://www.cyber-euskadi.com/howtos/contrib/flexbackup-restore-from-disk-howto.html
      how about french?  http://sgmf.free.fr/flexbackup_doc.html
- - Try bfr? (buffer seems unmaintained; no O_LARGEFILE)
-     Maybe document how to recompile buffer
-     bfr looks like it will work.  will need dd too to block...
  - Try against torture-test list:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
  - Update mt manpages collection
@@ -119,7 +119,7 @@ Features to add:
       a separate program that just manipulates flexbackup
 
  - "rsync" type for when using on-disk?
- 
+
  - Make file-based backups able to use split for smaller archives?
 
 -------------------------------------------------------------

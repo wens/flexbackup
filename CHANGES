@@ -3,6 +3,9 @@ $Name$
 
 Changes:
 
+  - Added 'bfr' program as alternative to 'buffer'.
+    See http://www.glines.org:8000/software/buffer.html
+
   - Added packaging system delta capability (RPM only for now).
 
     If you give "-pkgdelta rpm", after the level/timestamp checks, we
