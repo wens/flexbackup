@@ -30,7 +30,7 @@ tar: tag lsm
 	cd /tmp; echo yes | cvs release -d flexbackup-$(VER)
 
 rpm: tar
-	sudo cp $(SITE)/flexbackup-$(VER).tar.gz $(RPM)/SOURCES
+	sudo cp $(SITE)/tarball/flexbackup-$(VER).tar.gz $(RPM)/SOURCES
 	sudo rpm -ba flexbackup.spec
 	cp -p $(RPM)/RPMS/noarch/flexbackup-$(VER)-1.noarch.rpm $(SITE)/RPMS
 	cp -p $(RPM)/SRPMS/flexbackup-$(VER)-1.src.rpm $(SITE)/RPMS
