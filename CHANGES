@@ -5,8 +5,10 @@ IN CVS but not released
 
 Bug Fixes:
   - Cosmetic - fix missing line in output if no remote and buffer=false
+  - Fix PIPESTATUS trick to not require extra 'seq' utility, just a while loop
   - Using "-toc" gave uninitialized var warning, obvious problem, fixed.
       Eradicated some other spots of code that used $_ too.
+
 
 ----------------------------------------------------------------------
 Version 1.0pre2 (20030118)
@@ -19,7 +21,7 @@ Bug fixes:
   - When reading from given filename, set device to dir so that we don't
       pad blocks by accident if default device is tape
   - Detect shell type for local and any remote hosts
-      Only use bash PIPEEXIT trick if we find bash 2.x
+      Only use bash PIPESTATUS trick if we find bash 2.x
 
 
 ----------------------------------------------------------------------

@@ -13,6 +13,7 @@ Cleanup/fix:
     - Explicitly say we use GNU tar...
  - When level > 9 and using files, -toc sorts it wrong (cosmetic nit)
  - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
+ - Clean up usages of $_ so I dont' mess something up by inserting lines later
  - If comp_log is changed, we don't nuke old logs that normally would be
    overwritten with ourselves if comp_log stayed the same. (cosmetic nit)
  - Try to refactor backup all/single, each fs, >1 tapes, etc.  Duplicated

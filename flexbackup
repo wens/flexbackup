@@ -107,7 +107,7 @@ $main::CONFFILE="/etc/flexbackup.conf";
 #
 # Only to be used if shell is bash 2 something
 #
-$main::bash_pipe_exit = '; x=(${PIPESTATUS[@]}); for index in `seq 0 $((${#x[@]}-1))`; do test ${x[$index]} -eq 0 || exit ${x[$index]} ; done';
+$main::bash_pipe_exit = '; x=(${PIPESTATUS[@]}); i=0; while [ $i -lt ${#x[@]} ]; do [ ${x[$i]} -eq 0 ] || exit ${x[$i]}; i=$(($i+1)); done';
 
 %main::opt = ();
 if (! &main::GetOptions(\%main::opt,
