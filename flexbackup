@@ -4226,7 +4226,7 @@ sub file_list_cmd {
 	}
 	$cmd .= "-print ";
 	if ($main::delta eq 'rpm') {
-	    $cmd = &file_list_rpmdelta($dir, $cmd, $separator);
+	    $cmd = &file_list_rpmdelta($dir, $level, $cmd, $separator);
 	}
 
     } else {
@@ -4242,45 +4242,76 @@ sub file_list_cmd {
 }
 
 #############################################################################
-# Takes normal find date-based command string from above.
-# *Additionally* filters the list so we ONLY will backup any files
+# Additionally filters the list so we only backup any files
 # that are not part of an rpm package OR are changed from the
 # distributed version.
 #############################################################################
 sub file_list_rpmdelta {
 
     my $dir = shift(@_);
+    my $level = shift(@_);
     my $findcmd = shift(@_);
+    my $separator = shift(@_);
+    my %owned;
+    my %changed;
     my @files;
     my $to_backup_list = "$cfg::tmpdir/tobackup.$$";
     my @files_to_backup;
 
-    &log("| Listing to-be-archived files in $dir...");
+    &log("| RPM package delta - may take a while to select files!");
 
+    # FIXME do -n 
+
+    # FIXME do this once per run (if we have multiple local fs's)
+    # Get a hash of all files under this dir that are "owned"
+    &log("| Finding files owned by packages under $dir...");
+    open(LIST,"$main::path{rpm} -q -a -l |") || die;
+    while(<LIST>) {
+        if (m:^$dir/(.*)$:) {
+            $owned{$1} = 1;
+        }
+    }
+    close(LIST);
+
+    # FIXME do this once per run (if we have multiple local fs's. this is very slow!)
+    # If it's an "owned" file, it might have been edited or otherwise changed
+    &log("| Finding changed package files under $dir...");
+    open(LIST,"$main::path{rpm} -V -a |") || die;
+    while(<LIST>) {
+        if (m:^(.*) . $dir/(.*)$:) {
+            $changed{$2} = 1;
+            print "X changed $2\n";
+        }
+    }
+    close(LIST);
+
+    # Use the normal level & timestamp mechanism to get a list of files
+    &log("| Listing level $level to-be-archived for $dir...");
     open(LIST,"cd \"$dir\"; $findcmd |") || die;
     while(<LIST>) {
 	chomp;
+        s:^\./::g;
 	push(@files, $_);
     }
     close(LIST);
 
-    # FIXME changed files (need to do rpm -Va and save)
-    # FIXME list all files first, then check against hash, don't
-    # rpm -qf each one
-
-    &log("| Subtracting files not owned by an RPM package...");
-
+    # Then only keep unowned or owned+changed files
+    &log("| Finding subset of files to archive...");
     foreach my $file (@files) {
-	system("$main::path{rpm} -qf \"$dir/$file\" > /dev/null 2>&1");
-	if ($CHILD_ERROR) {
+        if (!defined($owned{$file}) or defined($changed{$file})) {
 	    push(@files_to_backup, $file);
+            print "X backup $file\n";
 	}
     }
 
+    # Save list to a temp file
     open(LIST,"> $to_backup_list") || die;
     foreach my $file (@files_to_backup) {
-	# FIXME separator
-	print LIST "$file\n";
+	if ($separator eq 'null') {
+            print LIST "$file\n";
+        } else {
+            print LIST "$file\0";
+        }
     }
     close(LIST);
 
@@ -4506,6 +4537,8 @@ sub newtape () {
 # sure filemarks, blocks, padding, are working as we need.
 #############################################################################
 sub test_tape_drive () {
+
+    # FIXME do -n
 
     my $cmd;
     my $tmp1 = "$cfg::tmpdir/test1.$PROCESS_ID";
