@@ -3,8 +3,9 @@ $Name$
 
 
 Bug fixes:
- - afio + null fix in pre6 didn't work on FreeBSD - can't get it to behave
-    there.  Switch back to newline-separated for afio types.
+ - afio + null fix in pre6 didn't work in FreeBSD.  Switch back to
+     newline-separated for afio types for now. Linux, HPUX, Solaris, AIX
+     printf(1) utilities did do \0 = null.  Didn't test others...
 
 ----------------------------------------------------------------------
 Version 1.0pre6 (20030126)

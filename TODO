@@ -22,6 +22,7 @@ Cleanup/fix:
      logic in some spots..
  - Split main program; use separate libs for archiver types that are stored
    in different files?  install then requires more than just program + conf file.
+ - Fix afio w/null (FreeBSD printf can't spit out null char)
 
 Misc:
  - Make a manual page (AND other enchanced documentation, more than a README)
