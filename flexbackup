@@ -81,6 +81,7 @@
 use POSIX;
 use AnyDBM_File;
 use Getopt::Long;
+use Text::Wrap;
 use English;
 use strict;
 
@@ -665,9 +666,28 @@ sub backup {
 	@cmds = &backup_zip($label, $localdir, $title, $level, $remote);
     }
 
-    # Strip multiple spaces
-    foreach (@cmds) {
-	s/\s+/ /g;
+
+
+    # Use pipeline exitcode hook if /bin/sh can't report pipeline status
+    my $s = "$cfg::tmpdir/collectexit.$PROCESS_ID.sh";
+    my $r = "$cfg::tmpdir/pipeexitstatus.$PROCESS_ID";
+    if ($main::shelltype{'localhost'} =~ m/^(unknown|bash1)$/) {
+	unshift(@cmds, "rm -f $r; echo '#!/bin/sh' > $s; echo '\"\$@\"'>> $s; echo '[ \$? = 0 ] || echo \$? >> $r' >> $s; chmod u+x $s");
+	push(@cmds, "[ ! -e $r ]");
+	push(@cmds, "rm -f $s $r");
+
+    }
+
+    foreach my $cmd (@cmds) {
+
+	# Strip multiple spaces
+	$cmd =~ s/\s+/ /g;
+
+	# Replace piped commands with exit status collector if we need to
+	if ($main::shelltype{'localhost'} =~ m/^(unknown|bash1)$/) {
+	    $cmd =~ s:[^\|]\| :\| $s :g;
+	}
+
     }
 
     # Format commands for nice printing
@@ -3201,56 +3221,27 @@ sub set_tape_operation_defaults {
 sub split_and_echo {
 
     my $string = shift(@_);
-    my @chunks;
-    my $line = "";
-    my $linelimit = 76;
+    my $initial_tab;
+    my $subsequent_tab;
 
-    # This looks convolved but it auto-wraps the
-    # command lines down to a nice width for printing...
+    local($Text::Wrap::columns) = 76;
+    local($Text::Wrap::separator) = " \\\n";
 
-    @chunks = split(" ",$string);
-    while (@chunks) {
-	while ($_ = shift(@chunks)) {
-	    if (length($_) < $linelimit ) {
-		# Item is less than $linelimit -
-		# check to see if total line length is over, if so
-		# save it for next line
-		if ((length($line) + length($_)) > $linelimit) {
-		    unshift(@chunks,$_);
-		    last;
-		}
-	    } else {
-		# Single item longer than $linelimit -
-		# wait till we have a blank line
-		if ($line !~ /^ ?$/) {
-		    unshift(@chunks,$_);
-		    last;
-		}
-	    }
-	    # Add this item to the line
-	    $line .= $_ . " ";
-	}
-
-	# Print backslash at end unless the last line
-	if (@chunks) {
-	    $_ = '\\';
-	} else {
-	    $_ = "";
-	}
-
-	# What a mess we went through above, just to print it...
-	if (!defined($main::opt{'n'})) {
-	    &log("| $line" . $_);
-	} else {
-	    # This make it easier to cut-n-paste for debugging commands manually
-	    &log("$line" . $_);
-	}
-
-	# Indent next line(s) by one space
-	$line = " ";
+    # This make it easier to cut-n-paste for debugging commands manually
+    if (defined($main::opt{'n'})) {
+	$initial_tab = " ";
+	$subsequent_tab = "   ";
+    } else {
+	$initial_tab = "| ";
+	$subsequent_tab = "|   ";
     }
-}
 
+    my @lines = wrap($initial_tab, $subsequent_tab, ($string));
+    foreach (@lines) {
+	&log($_);
+    }
+
+}
 
 ######################################################################
 # Create new tape "key" and return it
