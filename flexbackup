@@ -785,35 +785,23 @@ sub backup_tar {
     my $dir = shift(@_);
     my $title = shift(@_);
     my $cmd = '';
-    my $date_flag;
-    my $tmpexclude = "$cfg::tmpdir/exclude.$$";
-    my $exclude_flag = '';
+    my $tmpstamp = "$cfg::tmpdir/refdate.$$";
 
-    # With this one we don't have to put a stampfile on the remote system
-    # since we only need the date string
-    if ($main::level == 0) {
-        &get_last_date($label); # Just to print dates, don't need result
-        $date_flag = "";
-    } else {
-        $_ = &get_last_date($label,'readable');
-        $date_flag = "--newer \"$_\"";
-    }
+    $_ = &get_last_date($label);
 
-    # Have to handle this differently for tar, since we aren't using find in the first place.
-    # find everything that _matches_ the regexp, then use it as an exclude list for tar
-    if (defined($cfg::exclude_expr[0])) {
-        $cmd .= "rm -f $tmpexclude ; ";
-        foreach (@main::not_include_cmds) {
-            $cmd .= "find $dir -xdev $_ >> $tmpexclude ; ";
-        }
-        $exclude_flag = "--exclude-from $tmpexclude";
-    }
+    $cmd .= "touch $main::touch_flag \"$_\" $tmpstamp ; ";
 
+    $cmd .= "cd $dir ; ";
+    $cmd .= "find . -xdev ";
+    $cmd .= "-not -type d ";
+    $cmd .= "-newer $tmpstamp ";
+    $cmd .= "-print | ";
+    $cmd .= "sed -e \"s%^\./%%\" ";
+    $cmd .= "$main::exclude_cmd ";
+    $cmd .= "| ";
     $cmd .= "tar --create ";
-    $cmd .= "--directory $dir ";
+    $cmd .= "--files-from=- ";
     $cmd .= "--one-file-system ";
-    $cmd .= "$date_flag ";
-    $cmd .= "$exclude_flag ";
     $cmd .= "--same-permissions ";
     $cmd .= "--same-order ";
     $cmd .= "--totals ";
@@ -824,13 +812,11 @@ sub backup_tar {
     $cmd .= "$main::tar_recnum_flag ";
     $cmd .= "$main::tar_blk_flag ";
     $cmd .= "--file - ";
-    $cmd .= ". $main::z";
+    $cmd .= "$main::z";
     if ($main::remote and ($cfg::buffer eq "true")) {
         $cmd .= "$main::buffer_cmd";
     }
-    if (defined($cfg::exclude_expr[0])) {
-        $cmd .= " ; rm -f $tmpexclude";
-    }
+    $cmd .= " ; rm -f $tmpstamp";
 
     # Wrap all that together
     $cmd = &maybe_remote_cmd($cmd);
@@ -1469,7 +1455,6 @@ sub optioncheck {
 
     # Exclude regexp for find
     $main::exclude_cmd = '';
-    @main::not_include_cmds = ();
     # Deal with the old non-array setting that may be in the config file
     if (!defined($cfg::exclude_expr[0]) and defined($cfg::exclude_expr)) {
         $cfg::exclude_expr[0] = $cfg::exclude_expr;
@@ -1484,7 +1469,6 @@ sub optioncheck {
                 $_ =~ s/^\*/.*/;
             }
             push(@excl_array, "egrep -v \"$_\"");
-            push(@main::not_include_cmds, "| egrep \"$_\"");
         }
         $main::exclude_cmd = "| " . join(" | ", @excl_array);
     }

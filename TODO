@@ -5,7 +5,7 @@ Flexbackup to-do list
 Some of these might not happen, but figured I should jot them down
 
 Before next release:
- - test incremntal tar, move tar to regular find
+ - fix tar exclude
  - resurrect my old drive and test ftape stuff again
 
  - auto-testing script for all archive types and compression
