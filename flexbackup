@@ -105,7 +105,7 @@ $main::CONFFILE="/etc/flexbackup.conf";
 # failed.  In real 'sh', there is no way to do this, you only get the
 # status of the last command in the pipeline...
 #
-# Only used if $ENV{SHELL} contains "bash"
+# Only to be used if shell is bash 2 something
 #
 $main::bash_pipe_exit = '; x=(${PIPESTATUS[@]}); for index in `seq 0 $((${#x[@]}-1))`; do test ${x[$index]} -eq 0 || exit ${x[$index]} ; done';
 
@@ -675,7 +675,7 @@ sub backup {
     if (!defined($main::opt{'n'})) {
 	foreach $cmd (@cmds) {
 
-	    if ($ENV{SHELL} =~ m/bash/) {
+	    if ($main::shelltype{'localhost'} eq 'bash2') {
 		open(CMD,"($cmd " . $main::bash_pipe_exit . ") 2>&1 |") || die;
 	    } else {
 		open(CMD,"($cmd) 2>&1 |") || die;
@@ -2654,6 +2654,8 @@ sub optioncheck {
 	&test_bufferprog($main::path{'buffer'}, $cfg::buffer_megs, 'localhost');
     }
 
+    &check_shell('localhost');
+
     &check_remote_progs(\%remotehosts, \@remoteprogs);
 
     if (@main::errors) {
@@ -2995,7 +2997,7 @@ sub maybe_remote_cmd {
     }
 
     if (defined($host) and ($host ne '')) {
-	if ($ENV{SHELL} =~ m/bash/) {
+	if ($main::shelltype{$host} eq 'bash2') {
 	    $cmd  = "$main::remoteshell $host " . $quote . $cmd . $main::bash_pipe_exit . $quote;
 	} else {
 	    $cmd  = "$main::remoteshell $host " . $quote . $cmd . $quote;
@@ -3192,11 +3194,6 @@ sub split_and_echo {
     my @chunks;
     my $line = "";
     my $linelimit = 76;
-
-    # Nuke this, it's messy to see in the log
-    if ($ENV{SHELL} =~ m/bash/) {
-	$string =~ s/; x=\(\${PIPESTATUS.*done//;
-    }
 
     # This looks convolved but it auto-wraps the
     # command lines down to a nice width for printing...
@@ -3819,8 +3816,12 @@ sub check_remote_progs {
     my $err = 0;
     my @progs;
 
+    foreach my $host (keys %$remotehost_ref) {
+	&check_shell($host);
+    }
+
     foreach (@$remoteprogs_ref) {
-	# Could be '0' if orginal checkinpath failed on localhost
+	# Could be '0' if original checkinpath failed on localhost
 	if ($_ ne '0') {
 	    push(@progs,"type $_ 2>&1");
 	} else {
@@ -3862,5 +3863,50 @@ sub check_remote_progs {
 	    &test_bufferprog($main::path{'buffer'} ,$cfg::buffer_megs, $host);
 	}
     }
+
+}
+
+#############################################################################
+# Check shell on remote systems
+# (Mainly to see if we should use bash pipe exit trick at this point)
+#############################################################################
+sub check_shell {
+
+    my $host = shift(@_);
+    my $pipecmd;
+
+    print "| Checking shell on $host... ";
+
+    $pipecmd = 'echo tcsh:$tcsh; echo bash:$BASH_VERSION; echo zsh:$ZSH_VERSION; echo ksh:$KSH_VERSION';
+    if ($host eq 'localhost') {
+    } else {
+	$pipecmd = "$main::remoteshell $host '" . $pipecmd . "'";
+    }
+
+    $main::shelltype{$host} = 'unknown';
+
+    if (!(open(PIPE,"$pipecmd 2>&1 |"))) {
+	return;
+    }
+
+    while (<PIPE>) {
+
+	if (m/^(\S+):(\S.+)$/) {
+	    my $shell = $1;
+	    my $ver = $2;
+	    if ($shell eq 'bash') {
+		if ($ver =~ m/^2/) {
+		    $main::shelltype{$host} = 'bash2';
+		} else {
+		    $main::shelltype{$host} = 'bash1';
+		}
+	    } else {
+		$main::shelltype{$host} = $shell;
+	    }
+	}
+    }
+    close (PIPE);
+
+    print "$main::shelltype{$host}\n";
 
 }
