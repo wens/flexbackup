@@ -527,21 +527,23 @@ sub backup {
     my $host;
     my @files;
     my %oldstamps;
+    my $remote;
+    my $tapehost;
 
     &line();
 
 
     if ($localdir =~ s/^(.+):(.+)$/$2/) {
-	$main::remote = $1;
-	chomp($main::tapehost = `hostname`);
-	if (($main::tapehost eq $main::remote)
+	$remote = $1;
+	chomp($tapehost = `hostname`);
+	if (($tapehost eq $remote)
 	    or
-	    ($main::remote =~ /^localhost/)) {
+	    ($remote =~ /^localhost/)) {
 	    die("Remote host and this host are the same! No scooby snack for you!");
 	}
 
     } else {
-	$main::remote = '';
+	undef $remote;
     }
 
     # Remember old stamp files (will remove at end of job)
@@ -628,19 +630,19 @@ sub backup {
 
     &log("| Backup of: $dir");
     if ($cfg::type eq 'dump') {
-	@cmds = &backup_dump($label, $localdir, $level);
+	@cmds = &backup_dump($label, $localdir, $level, $remote);
     } elsif ($cfg::type eq 'afio') {
-	@cmds = &backup_afio($label, $localdir, $title, $level);
+	@cmds = &backup_afio($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'cpio') {
-	@cmds = &backup_cpio($label, $localdir, $title, $level);
+	@cmds = &backup_cpio($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'tar') {
-	@cmds = &backup_tar($label, $localdir, $title, $level);
+	@cmds = &backup_tar($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'star') {
-	@cmds = &backup_star($label, $localdir, $title, $level);
+	@cmds = &backup_star($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'pax') {
-	@cmds = &backup_pax($label, $localdir, $title, $level);
+	@cmds = &backup_pax($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'zip') {
-	@cmds = &backup_zip($label, $localdir, $title, $level);
+	@cmds = &backup_zip($label, $localdir, $title, $level, $remote);
     }
 
     # Strip multiple spaces
@@ -721,9 +723,10 @@ sub backup_dump {
     my $label = shift(@_);
     my $dir = shift(@_);
     my $level = shift(@_);
+    my $remote = shift(@_);
     my $cmd = '';
     my @cmds;
-    my $tmpstamp = "$cfg::tmpdir/refdate.$$";
+    my $stamp = "$cfg::tmpdir/refdate.$$";
     my $date_flag;
 
 
@@ -761,12 +764,14 @@ sub backup_dump {
     $cmd .= "$main::dump_len_flag ";
     $cmd .= "-f - ";
     $cmd .= "$dir $main::z";
-    if ($main::remote and ($cfg::buffer eq "buffer")) {
+
+    # Buffer both sides if remote
+    if (defined($remote) and ($cfg::buffer eq "buffer")) {
 	$cmd .= "$main::buffer_cmd";
     }
 
     # Wrap all that together
-    $cmd = &maybe_remote_cmd($cmd, $main::remote);
+    $cmd = &maybe_remote_cmd($cmd, $remote);
 
     # Append writer stuff
     $cmd = &append_writer_cmd($cmd);
@@ -787,32 +792,36 @@ sub backup_afio {
     my $dir = shift(@_);
     my $title = shift(@_);
     my $level = shift(@_);
+    my $remote = shift(@_);
     my $cmd = '';
     my @cmds;
-    my $tmpstamp = "$cfg::tmpdir/refdate.$$";
+    my $stamp = "$cfg::tmpdir/refdate.$$";
     my $tmplabel = "$cfg::tmpdir/label.$$";
     my $tmpnocompress = "$cfg::tmpdir/nocompress.$$";
     my $remove;
     my $no_compress = '';
 
-    $_ = &get_last_date($label, $level, 'numeric');
-
-    $cmd = "$main::path{touch} -t \"$_\" $tmpstamp";
-    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
+    if (defined($remote)) {
+	$_ = &get_last_date($label, $level, 'numeric');
+	$cmd = "$main::path{touch} -t \"$_\" $stamp";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+    } else {
+	$stamp = &get_last_date($label, $level, 'filename');
+    }
 
     # list of file exenstions to not compress
     if (($cfg::compress !~ /^(false|hardware)$/) and ($cfg::afio_nocompress_types ne "")) {
 	$cmd = "$main::path{printf} \"$cfg::afio_nocompress_types\" > $tmpnocompress";
-	push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
 	$no_compress = "-E $tmpnocompress";
     }
 
     $cmd = "$main::path{printf} \"Volume Label:\\n$title\\n\\n\" > $tmplabel";
-    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
+    push(@cmds, &maybe_remote_cmd($cmd, $remote));
 
     $cmd = "cd $dir && ";
     $cmd .= "(echo //--$tmplabel flexbackup.volume_header_info && ";
-    $cmd .= &file_list_cmd($dir,$tmpstamp,'null');
+    $cmd .= &file_list_cmd($dir, $stamp, 'null', $remote);
     $cmd .= ") | ";
 
     $cmd .= "$main::path{afio} -o -0 ";
@@ -824,24 +833,30 @@ sub backup_afio {
     $cmd .= "$main::afio_bnum_flag ";
     $cmd .= "$main::afio_blk_flag ";
     $cmd .= "-";
-    if ($main::remote and ($cfg::buffer eq "buffer")) {
+
+    # Buffer both sides if remote
+    if (defined($remote) and ($cfg::buffer eq "buffer")) {
 	$cmd .= "$main::buffer_cmd";
-    }
-    $remove = "$tmpstamp $tmplabel";
-    if ($no_compress ne '') {
-	$remove .= " $tmpnocompress";
     }
 
     # Wrap all that together
-    $cmd = &maybe_remote_cmd($cmd, $main::remote);
+    $cmd = &maybe_remote_cmd($cmd, $remote);
 
     # Append writer stuff
     $cmd = &append_writer_cmd($cmd);
 
     push(@cmds, $cmd);
 
+    $remove = "$tmplabel";
+    if (defined($remote)) {
+	$remove .= " $stamp";
+    }
+    if ($no_compress ne '') {
+	$remove .= " $tmpnocompress";
+    }
+
     $cmd = "$main::path{rm} -f $remove";
-    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
+    push(@cmds, &maybe_remote_cmd($cmd, $remote));
 
     return(@cmds);
 
@@ -856,24 +871,29 @@ sub backup_cpio {
     my $dir = shift(@_);
     my $title = shift(@_);
     my $level = shift(@_);
+    my $remote = shift(@_);
     my $cmd = '';
     my @cmds;
-    my $tmpstamp = "$cfg::tmpdir/refdate.$$";
+    my $stamp = "$cfg::tmpdir/refdate.$$";
+    my $remove;
 
-    $_ = &get_last_date($label, $level, 'numeric');
-
-    $cmd = "$main::path{touch} -t \"$_\" $tmpstamp";
-    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
+    if (defined($remote)) {
+	$_ = &get_last_date($label, $level, 'numeric');
+	$cmd = "$main::path{touch} -t \"$_\" $stamp";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+    } else {
+	$stamp = &get_last_date($label, $level, 'filename');
+    }
 
     # Kludge a title by replacing / with - in the title
     # then touch a file in the dir we are going to back up.
     $title =~ s%/%-%g;
     $title =~ s% %_%g;
     $cmd = "$main::path{touch} \"$dir/$title\"";
-    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
+    push(@cmds, &maybe_remote_cmd($cmd, $remote));
 
     $cmd = "cd $dir && ";
-    $cmd .= &file_list_cmd($dir,$tmpstamp,'null');
+    $cmd .= &file_list_cmd($dir, $stamp, 'null', $remote);
     $cmd .= "| ";
 
     $cmd .= "$main::path{cpio} -o ";
@@ -883,20 +903,26 @@ sub backup_cpio {
     $cmd .= "$main::cpio_blk_flag ";
     $cmd .= "$main::z";
 
-    if ($main::remote and ($cfg::buffer eq "buffer")) {
+    # Buffer both sides if remote
+    if (defined($remote) and ($cfg::buffer eq "buffer")) {
 	$cmd .= "$main::buffer_cmd";
     }
 
     # Wrap all that together
-    $cmd = &maybe_remote_cmd($cmd, $main::remote);
+    $cmd = &maybe_remote_cmd($cmd, $remote);
 
     # Append writer stuff
     $cmd = &append_writer_cmd($cmd);
 
     push(@cmds, $cmd);
 
-    $cmd = "$main::path{rm} -f $tmpstamp \"$dir/$title\"";
-    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
+    $remove = "\"$dir/$title\"";
+    if (defined($remote)) {
+	$remove .= " $stamp";
+    }
+
+    $cmd = "$main::path{rm} -f $remove";
+    push(@cmds, &maybe_remote_cmd($cmd, $remote));
 
     return(@cmds);
 
@@ -911,17 +937,21 @@ sub backup_tar {
     my $dir = shift(@_);
     my $title = shift(@_);
     my $level = shift(@_);
+    my $remote = shift(@_);
     my $cmd = '';
     my @cmds;
-    my $tmpstamp = "$cfg::tmpdir/refdate.$$";
+    my $stamp = "$cfg::tmpdir/refdate.$$";
 
-    $_ = &get_last_date($label, $level, 'numeric');
-
-    $cmd = "$main::path{touch} -t \"$_\" $tmpstamp";
-    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
+    if (defined($remote)) {
+	$_ = &get_last_date($label, $level, 'numeric');
+	$cmd = "$main::path{touch} -t \"$_\" $stamp";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+    } else {
+	$stamp = &get_last_date($label, $level, 'filename');
+    }
 
     $cmd = "cd $dir && ";
-    $cmd .= &file_list_cmd($dir,$tmpstamp,'null');
+    $cmd .= &file_list_cmd($dir, $stamp, 'null', $remote);
     $cmd .= "| ";
 
     $cmd .= "$main::path{tar} --create ";
@@ -940,20 +970,23 @@ sub backup_tar {
     $cmd .= "--file - ";
     $cmd .= "$main::z";
 
-    if ($main::remote and ($cfg::buffer eq "buffer")) {
+    # Buffer both sides if remote
+    if (defined($remote) and ($cfg::buffer eq "buffer")) {
 	$cmd .= "$main::buffer_cmd";
     }
 
     # Wrap all that together
-    $cmd = &maybe_remote_cmd($cmd, $main::remote);
+    $cmd = &maybe_remote_cmd($cmd, $remote);
 
     # Append writer stuff
     $cmd = &append_writer_cmd($cmd);
 
     push(@cmds, $cmd);
 
-    $cmd = "$main::path{rm} -f $tmpstamp";
-    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
+    if (defined($remote)) {
+	$cmd = "$main::path{rm} -f $stamp";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+    }
 
     return(@cmds);
 
@@ -968,17 +1001,21 @@ sub backup_star {
     my $dir = shift(@_);
     my $title = shift(@_);
     my $level = shift(@_);
+    my $remote = shift(@_);
     my $cmd = '';
     my @cmds;
-    my $tmpstamp = "$cfg::tmpdir/refdate.$$";
+    my $stamp = "$cfg::tmpdir/refdate.$$";
 
-    $_ = &get_last_date($label, $level, 'numeric');
-
-    $cmd = "$main::path{touch} -t \"$_\" $tmpstamp";
-    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
+    if (defined($remote)) {
+	$_ = &get_last_date($label, $level, 'numeric');
+	$cmd = "$main::path{touch} -t \"$_\" $stamp";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+    } else {
+	$stamp = &get_last_date($label, $level, 'filename');
+    }
 
     $cmd = "cd $dir && ";
-    $cmd .= &file_list_cmd($dir,$tmpstamp,'newline');
+    $cmd .= &file_list_cmd($dir, $stamp, 'newline', $remote);
     $cmd .= "| ";
 
     $cmd .= "$main::path{star} -c ";
@@ -999,16 +1036,23 @@ sub backup_star {
     $cmd .= "file=- ";
     $cmd .= "$main::z";
 
+    # Buffer both sides if remote
+    if (defined($remote) and ($cfg::buffer eq "buffer")) {
+	$cmd .= "$main::buffer_cmd";
+    }
+
     # Wrap all that together
-    $cmd = &maybe_remote_cmd($cmd, $main::remote);
+    $cmd = &maybe_remote_cmd($cmd, $remote);
 
     # Append writer stuff
     $cmd = &append_writer_cmd($cmd);
 
     push(@cmds, $cmd);
 
-    $cmd = "$main::path{rm} -f $tmpstamp";
-    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
+    if (defined($remote)) {
+	$cmd = "$main::path{rm} -f $stamp";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+    }
 
     return(@cmds);
 
@@ -1023,24 +1067,29 @@ sub backup_pax {
     my $dir = shift(@_);
     my $title = shift(@_);
     my $level = shift(@_);
+    my $remote = shift(@_);
     my $cmd = '';
     my @cmds;
-    my $tmpstamp = "$cfg::tmpdir/refdate.$$";
+    my $stamp = "$cfg::tmpdir/refdate.$$";
+    my $remove;
 
-    $_ = &get_last_date($label, $level, 'numeric');
-
-    $cmd = "$main::path{touch} -t \"$_\" $tmpstamp";
-    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
+    if (defined($remote)) {
+	$_ = &get_last_date($label, $level, 'numeric');
+	$cmd = "$main::path{touch} -t \"$_\" $stamp";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+    } else {
+	$stamp = &get_last_date($label, $level, 'filename');
+    }
 
     # Kludge a title by replacing / with - in the title
     # then touch a file in the dir we are going to back up.
     $title =~ s%/%-%g;
     $title =~ s% %_%g;
     $cmd = "$main::path{touch} \"$dir/$title\"";
-    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
+    push(@cmds, &maybe_remote_cmd($cmd, $remote));
 
     $cmd = "cd $dir && ";
-    $cmd .= &file_list_cmd($dir,$tmpstamp,'newline');
+    $cmd .= &file_list_cmd( $dir, $stamp, 'newline', $remote);
     $cmd .= "| ";
 
     $cmd .= "$main::path{pax} -w ";
@@ -1051,20 +1100,26 @@ sub backup_pax {
     $cmd .= "$main::pax_blk_flag ";
     $cmd .= "$main::z";
 
-    if ($main::remote and ($cfg::buffer eq "buffer")) {
+    # Buffer both sides if remote
+    if (defined($remote) and ($cfg::buffer eq "buffer")) {
 	$cmd .= "$main::buffer_cmd";
     }
 
     # Wrap all that together
-    $cmd = &maybe_remote_cmd($cmd, $main::remote);
+    $cmd = &maybe_remote_cmd($cmd, $remote);
 
     # Append writer stuff
     $cmd = &append_writer_cmd($cmd);
 
     push(@cmds, $cmd);
 
-    $cmd = "$main::path{rm} -f $tmpstamp \"$dir/$title\"";
-    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
+    $remove = "\"$dir/$title\"";
+    if (defined($remote)) {
+	$remove .= " $stamp";
+    }
+
+    $cmd = "$main::path{rm} -f $remove";
+    push(@cmds, &maybe_remote_cmd($cmd, $remote));
 
     return(@cmds);
 
@@ -1079,25 +1134,30 @@ sub backup_zip {
     my $dir = shift(@_);
     my $title = shift(@_);
     my $level = shift(@_);
+    my $remote = shift(@_);
     my $cmd = '';
     my @cmds;
-    my $tmpstamp = "$cfg::tmpdir/refdate.$$";
+    my $stamp = "$cfg::tmpdir/refdate.$$";
     my $tmpzip = "$cfg::tmpdir/tmp$$.zip";
+    my $remove;
 
-    $_ = &get_last_date($label, $level, 'numeric');
-
-    $cmd = "$main::path{touch} -t \"$_\" $tmpstamp";
-    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
+    if (defined($remote)) {
+	$_ = &get_last_date($label, $level, 'numeric');
+	$cmd = "$main::path{touch} -t \"$_\" $stamp";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+    } else {
+	$stamp = &get_last_date($label, $level, 'filename');
+    }
 
     # Kludge a title by replacing / with - in the title
     # then touch a file in the dir we are going to back up.
     $title =~ s%/%-%g;
     $title =~ s% %_%g;
     $cmd = "$main::path{touch} \"$dir/$title\"";
-    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
+    push(@cmds, &maybe_remote_cmd($cmd, $remote));
 
     $cmd = "cd $dir && ";
-    $cmd .= &file_list_cmd($dir,$tmpstamp,'newline');
+    $cmd .= &file_list_cmd($dir, $stamp, 'newline', $remote);
     $cmd .= "| ";
 
     $cmd .= "$main::path{zip} -@ ";
@@ -1109,24 +1169,31 @@ sub backup_zip {
     $cmd .= "$tmpzip";
 
     # Wrap all that together
-    $cmd = &maybe_remote_cmd($cmd, $main::remote);
+    $cmd = &maybe_remote_cmd($cmd, $remote);
     push(@cmds,$cmd);
 
     $cmd = "cat $tmpzip ";
-    if ($main::remote and ($cfg::buffer eq "buffer")) {
+
+    # Buffer both sides if remote
+    if (defined($remote) and ($cfg::buffer eq "buffer")) {
 	$cmd .= "$main::buffer_cmd";
     }
 
     # Wrap all that together
-    $cmd = &maybe_remote_cmd($cmd, $main::remote);
+    $cmd = &maybe_remote_cmd($cmd, $remote);
 
     # Append writer stuff
     $cmd = &append_writer_cmd($cmd);
 
     push(@cmds, $cmd);
 
-    $cmd = "$main::path{rm} -f $tmpstamp \"$dir/$title\" $tmpzip";
-    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
+    $remove = "$tmpzip \"$dir/$title\"";
+    if (defined($remote)) {
+	$remove .= " $stamp";
+    }
+
+    $cmd = "$main::path{rm} -f $remove";
+    push(@cmds, &maybe_remote_cmd($cmd, $remote));
 
     return(@cmds);
 
@@ -1260,7 +1327,7 @@ sub extract_routine {
 	}
 
     } elsif ($cfg::type eq 'afio') {
-	$cmd .= "$main::path{'afio'} -i ";
+	$cmd .= "$main::path{afio} -i ";
 	if (defined($main::opt{'files'})) {
 	    $cmd .= "-w $newlist ";
 	}
@@ -1357,12 +1424,12 @@ sub compare_routine {
 
     $cmd = &setup_before_read();
     if ($cfg::type eq 'dump') {
-	$cmd .= "$main::path{'restore'} -C ";
+	$cmd .= "$main::path{restore} -C ";
 	$cmd .= "$main::dump_blk_flag ";
 	$cmd .= "-f -";
 
     } elsif ($cfg::type eq 'afio') {
-	$cmd .= "$main::path{'afio'} -r ";
+	$cmd .= "$main::path{afio} -r ";
 	$cmd .= "-z ";
 	$cmd .= "-D $0 ";
 	$cmd .= "$main::afio_unz_flag ";
@@ -1374,7 +1441,7 @@ sub compare_routine {
 	die("cpio not capable of comparing files");
 
     } elsif ($cfg::type eq 'tar') {
-	$cmd .= "$main::path{'tar'} --diff ";
+	$cmd .= "$main::path{tar} --diff ";
 	$cmd .= "--totals ";
 	$cmd .= "$main::tar_blk_flag ";
 	$cmd .= "$main::tar_sparse_flag ";
@@ -1383,7 +1450,7 @@ sub compare_routine {
 	$cmd .= "--file -";
 
     } elsif ($cfg::type eq 'star') {
-	$cmd .= "$main::path{'star'} -diff ";
+	$cmd .= "$main::path{star} -diff ";
 	$cmd .= "$main::star_fifo_flag ";
 	$cmd .= "$main::star_blk_flag ";
 	$cmd .= "$main::star_sparse_flag ";
@@ -1411,7 +1478,7 @@ sub restore_routine {
     my $cmd = &setup_before_read();
 
     if ($cfg::type eq 'dump') {
-	$cmd .= "$main::path{'restore'} -i ";
+	$cmd .= "$main::path{restore} -i ";
 	$cmd .= "$main::dump_verb_flag ";
 	$cmd .= "$main::dump_blk_flag ";
 	$cmd .= "-f -";
@@ -1469,6 +1536,7 @@ sub get_label {
 # from the last dump of lower level
 #   in YYYYMMDDhhmm.ss format if arg 'numeric'
 #   in ctime format if if arg 'ctime'
+#   timestamp reference file if arg 'filename'
 ######################################################################
 sub get_last_date {
 
@@ -1530,6 +1598,8 @@ sub get_last_date {
 	return($numeric_val);
     } elsif ($format eq 'ctime') {
 	return($string_val);
+    } elsif ($format eq 'filename') {
+	return($targetfile);
     } else {
 	return($string_val);
     }
@@ -2114,7 +2184,6 @@ sub optioncheck {
 	if ($cfg::buffer_megs =~ m/^\d+$/) {
 	    my $read_flags;
 	    my $megs = $cfg::buffer_megs . "m";
-	    $main::buffer_cmd = " | $main::path{buffer} -m $megs $buffer_blk_flag";
 	    $main::buffer_nopipe_cmd = "$main::path{buffer} -m $megs $buffer_blk_flag";
 	    if (defined($main::tapedevice)) {
 		$main::buffer_write_flags = "-u 100 -t -p 75 $buffer_pad_flag -o ";
@@ -2131,12 +2200,13 @@ sub optioncheck {
     } else {
 
 	$main::path{'dd'} = &checkinpath('dd');
-	$main::buffer_cmd = " | $main::path{dd} $main::dd_blk_flag $main::dd_pad_flag";
 	$main::buffer_nopipe_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag";
 	$main::buffer_write_flags = "of=";
 	$main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag if=";
 
     }
+
+    $main::buffer_cmd = " | " . $main::buffer_nopipe_cmd;
 
     # Check we can find rsh or ssh
     $main::path{$cfg::remoteshell} = &checkinpath($cfg::remoteshell);
@@ -2583,7 +2653,6 @@ sub maybe_get_filename {
 	$main::use_file = 1;
 	undef $main::tapedevice;
 	undef $main::remotetapehost;
-	undef $main::remote;
 
     } elsif (defined($main::use_file) and (-f "$cfg::device/$arg")) {
 	$file = $cfg::device . "/" . $arg;
@@ -2877,6 +2946,7 @@ sub setup_before_read {
 
     if (defined($main::remotetapehost)) {
 	$cmd = &maybe_remote_cmd($cmd, $main::remotetapehost);
+	# Buffer both sides if remote
 	if ($cfg::buffer eq "buffer") {
 	    $cmd .= "$main::buffer_cmd";
 	}
@@ -3489,15 +3559,25 @@ sub file_list_cmd {
     my $dir = shift(@_);
     my $timestampfile = shift(@_);
     my $separator = shift(@_);
+    my $remote = shift(@_);
 
     if (!defined($separator) or ($separator !~ m/^(null|newline)$/)) {
 	$separator = 'null';
     }
 
     my $cmd = '';
-    $cmd .= "$main::path{'find'} . $main::mountpoint_flag ";
+    $cmd .= "$main::path{find} . $main::mountpoint_flag ";
     $cmd .= "-depth ";
+
     $cmd .= "-newer $timestampfile ";
+
+    # If local, we can use the flexbackup timetamp native and ctime
+    # can be used.  Remote, we'll be creating one with touch -t...
+    # ctime can't be touched backwards
+    if (!defined($remote)) {
+	$cmd .= "-or -cnewer $timestampfile ";
+    }
+
     $cmd .= "$main::exclude_expr ";
 
     if ($separator eq 'newline') {
