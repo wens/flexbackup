@@ -14,6 +14,7 @@ Changes:
 
 Bugfixes/cleanup:
   - Truncate tar label to 99 chars
+  - Fix FreeBSD find prune regex
   - Fix if on-disk backups, and "-rmfile all", the index for the keyfile
     was removed but not the keyfile itself
   - use $:: rather than $main:: for globals, its shorter...

@@ -6,14 +6,13 @@ Description:
 A flexible backup tool
 Features:
    o Easy to configure
-   o Uses dump, afio, tar, cpio, star, zip, or pax
+   o Uses dump, afio, GNU tar, cpio, star, pax, or zip archivers
    o Full and numbered levels of incremental backup (acts like "dump")
-   o Compression and buffering for all backup types
-   o Handles multivolume backups
-   o Backup, extract, compare, list modes
-   o Simple table of contents so you know what archives are on each tape
+   o Compression and buffering options for all backup types
    o Does remote filesystems (over rsh/ssh; no special service)
-   o Works with tape drives or on-disk files
+   o Can backup only files not owned by rpm, or changed from rpm version
+   o Writes to tapes, on-disk archive files, or on-disk directory trees
+   o Keeps a table of contents so you know archives are on each tape
    o Nice log files
 Keywords: backup dump restore afio tar cpio pax ftape
 Author: edwinh+flexbackup@edwinh.org (Edwin Huffstutler)

@@ -28,14 +28,12 @@ Misc:
      could be mt erase, could be dd index hang (-test-tape-drive)
  - add faq re: pkg delta how it works
 
- - Update README/spec/lsm description text for new features since 1.0.3
+ - fix description text in sf project, freshmeat
      sets
      pruning
      pkgdelta
      filelist
      copy
-
- - fix description text in sf project, freshmeat
 
  - Add faq on files changing underneath tar? sql db dump?
  - Create mbuffer rpm (if I can make it work)

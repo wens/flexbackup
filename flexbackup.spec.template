@@ -20,15 +20,15 @@ A flexible backup tool
 
 Features:
    o Easy to configure
-   o Uses dump, afio, tar, zip, star, pax, or cpio with the flick of a switch
-   o Full (0) and numbered levels of incremental backup (acts like "dump")
-   o Backup, extract, compare, list modes
-   o Compression and buffering for all backup types
-   o Keeps a table of contents so you know whats on each tape
+   o Uses dump, afio, GNU tar, cpio, star, pax, or zip archivers
+   o Full and numbered levels of incremental backup (acts like "dump")
+   o Compression and buffering options for all backup types
    o Does remote filesystems (over rsh/ssh; no special service)
-   o Works with tape drives or on-disk files
+   o Can backup only files not owned by rpm, or changed from rpm version
+   o Writes to tapes, on-disk archive files, or on-disk directory trees
+   o Keeps a table of contents so you know archives are on each tape
    o Nice log files
-
+                                                                                      
 
 %prep
 %setup -q
@@ -58,6 +58,9 @@ rm -rf $RPM_BUILD_ROOT
 %config(noreplace) /etc/flexbackup.conf
 
 %changelog
+* Thu Jul  3 2003 Edwin Huffstutler <edwinh@hercules.my-net> 
+- update description
+
 * Tue Feb 18 2003 Edwin Huffstutler <edwinh@hercules.my-net>
 - config file is noreplace
 
