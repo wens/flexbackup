@@ -1973,6 +1973,13 @@ sub maybe_get_filename {
         &log("| Auto-set to type=$cfg::type compress=$cfg::compress");
         &optioncheck(); # redo to set a few variables over
 
+    } elsif ($file =~ m/\.taz$/) {
+        $cfg::type = "tar";
+        $cfg::compress = "compress";
+        &line();
+        &log("| Auto-set to type=$cfg::type compress=$cfg::compress");
+        &optioncheck(); # redo to set a few variables over
+
     } elsif ($file =~ m/\.rpm$/) {
         $cfg::type = "cpio";
         $cfg::compress = "false";
