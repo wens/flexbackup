@@ -18,12 +18,12 @@ tag: version commit
 
 	cvs tag -F $(CVSVER)
 
-lsm:
+lsm: version
 	cp flexbackup.lsm.template flexbackup.lsm
 	perl -pi -e 's/VERSION/$(VER)/' flexbackup.lsm
 	perl -pi -e 's/DATE/$(DATE)/' flexbackup.lsm
 
-tar: tag
+tar: version tag
 	cd /tmp; cvs export -r $(CVSVER) flexbackup; mv flexbackup flexbackup-$(VER)
 	cd /tmp/flexbackup-$(VER); mv Makefile.dist Makefile
 	cd /tmp/flexbackup-$(VER); mv flexbackup.spec.template flexbackup.spec
@@ -33,7 +33,7 @@ tar: tag
 	cp /tmp/flexbackup-$(VER)/CHANGES /tmp/flexbackup-$(VER)/README /tmp/flexbackup-$(VER)/TODO $(SITE)
 	rm -rf /tmp/flexbackup-$(VER)
 
-rpm: tar
+rpm: version tar
 	rpmbuild -ta $(SITE)/tarball/flexbackup-$(VER).tar.gz
 	cp -p $(RPM)/RPMS/noarch/flexbackup-$(VER)-1.noarch.rpm $(SITE)/RPMS
 	cp -p $(RPM)/SRPMS/flexbackup-$(VER)-1.src.rpm $(SITE)/RPMS
