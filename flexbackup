@@ -3289,6 +3289,10 @@ sub split_and_echo {
     my $subsequent_tab;
 
     local($Text::Wrap::columns) = 76;
+    
+    # Older perl's don't have this var. Use twice to shut up
+    # -w in that case.  Output almost the same...
+    local($Text::Wrap::separator) = " \\\n";
     local($Text::Wrap::separator) = " \\\n";
 
     # This make it easier to cut-n-paste for debugging commands manually
