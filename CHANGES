@@ -4,10 +4,12 @@ $Name$
 NOT YET RELEASED but in CVS
 
 Bug fixes:
- - atime preserve option to tar/star/afio modifies the ctime of the
-     files. Using ctime checks then says everything is newer, no matter
-     what the level. Make atime preserve a global option defaulting to
-     false; if true turn off ctime checks.
+  - atime preserve option to tar/star/afio modifies the ctime of the
+      files. Using ctime checks then says everything is newer, no matter
+      what the level. Make atime preserve a global option defaulting to
+      false; if true turn off ctime checks
+  - When reading from given filename, set device to dir so that we don't
+      pad blocks by accident if default device is tape
 
 ----------------------------------------------------------------------
 Version 1.0pre1 (20030118)
