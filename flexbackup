@@ -77,6 +77,9 @@ $OUTPUT_AUTOFLUSH = 1;
 
 package main;
 
+# Set the traditional UNIX system locale behavior (touch doesn't read LANG)
+my $loc = POSIX::setlocale( &POSIX::LC_ALL, "C" );
+
 # See if afio is calling us as a control script
 if ($ARGV[0] =~ /flexbackup.volume_header_info/) {
     &print_afio_volume_header();
@@ -647,20 +650,20 @@ sub backup_afio {
 
     $_ = &get_last_date($label);
 
-    $cmd .= "touch $main::touch_flag \"$_\" $tmpstamp ; ";
+    $cmd .= "touch $main::touch_flag \"$_\" $tmpstamp && ";
 
     # list of file exenstions to not compress
     if (($cfg::compress !~ /^(false|hardware)$/) and ($cfg::nocompress_types ne "")) {
-        $cmd .= "echo \"$cfg::nocompress_types\" > $tmpnocompress ; ";
+        $cmd .= "echo \"$cfg::nocompress_types\" > $tmpnocompress && ";
         $no_compress = "-E $tmpnocompress";
     }
 
-    $cmd .= "printf \"\\nVolume Label:\\n$title\\n\\n\" > $tmplabel ; ";
+    $cmd .= "printf \"\\nVolume Label:\\n$title\\n\\n\" > $tmplabel && ";
 
-    $cmd .= "cd $dir ; ";
+    $cmd .= "cd $dir && ";
     $cmd .= "(echo //--$tmplabel flexbackup.volume_header_info && ";
     $cmd .= "find . $main::mountpoint_flag ";
-    $cmd .= "-newer $tmpstamp ";
+    $cmd .= "-cnewer -or -newer $tmpstamp ";
     $cmd .= "-print | ";
     $cmd .= "sed -e \"s%^\./%%\" ";
     $cmd .= "$main::exclude_cmd ";
@@ -681,7 +684,7 @@ sub backup_afio {
     if ($no_compress ne '') {
         $remove .= " $tmpnocompress";
     }
-    $cmd .= " ; rm -f $remove";
+    $cmd .= " && rm -f $remove";
 
     # Wrap all that together
     $cmd = &maybe_remote_cmd($cmd);
@@ -706,17 +709,17 @@ sub backup_cpio {
 
     $_ = &get_last_date($label);
 
-    $cmd .= "touch $main::touch_flag \"$_\" $tmpstamp ; ";
+    $cmd .= "touch $main::touch_flag \"$_\" $tmpstamp && ";
 
     # Kludge a title for by replacing / with - in the title
     # then touch a file in the dir we are going to back up.
     $title =~ s%/%-%g;
     $title =~ s% %_%g;
-    $cmd .= "touch \"$dir/$title\" ; ";
+    $cmd .= "touch \"$dir/$title\" && ";
 
-    $cmd .= "cd $dir ; ";
+    $cmd .= "cd $dir && ";
     $cmd .= "find . $main::mountpoint_flag ";
-    $cmd .= "-newer $tmpstamp ";
+    $cmd .= "-cnewer -or -newer $tmpstamp ";
     $cmd .= "-print | ";
     $cmd .= "sed -e \"s%^\./%%\" ";
     $cmd .= "$main::exclude_cmd ";
@@ -730,7 +733,7 @@ sub backup_cpio {
     if ($main::remote and ($cfg::buffer eq "buffer")) {
         $cmd .= "$main::buffer_cmd";
     }
-    $cmd .= " ; rm -f $tmpstamp \"$dir/$title\"";
+    $cmd .= " && rm -f $tmpstamp \"$dir/$title\"";
 
     # Wrap all that together
     $cmd = &maybe_remote_cmd($cmd);
@@ -755,12 +758,11 @@ sub backup_tar {
 
     $_ = &get_last_date($label);
 
-    $cmd .= "touch $main::touch_flag \"$_\" $tmpstamp ; ";
+    $cmd .= "touch $main::touch_flag \"$_\" $tmpstamp && ";
 
-    $cmd .= "cd $dir ; ";
+    $cmd .= "cd $dir && ";
     $cmd .= "find . $main::mountpoint_flag ";
-    $cmd .= "! -type d ";
-    $cmd .= "-newer $tmpstamp ";
+    $cmd .= "-cnewer -or -newer $tmpstamp ";
     $cmd .= "-print | ";
     $cmd .= "sed -e \"s%^\./%%\" ";
     $cmd .= "$main::exclude_cmd ";
@@ -782,7 +784,7 @@ sub backup_tar {
     if ($main::remote and ($cfg::buffer eq "buffer")) {
         $cmd .= "$main::buffer_cmd";
     }
-    $cmd .= " ; rm -f $tmpstamp";
+    $cmd .= " && rm -f $tmpstamp";
 
     # Wrap all that together
     $cmd = &maybe_remote_cmd($cmd);
@@ -812,13 +814,13 @@ sub backup_zip {
     # then touch a file in the dir we are going to back up.
     $title =~ s%/%-%g;
     $title =~ s% %_%g;
-    $cmd .= "touch \"$dir/$title\" ; ";
+    $cmd .= "touch \"$dir/$title\" && ";
 
-    $cmd .= "touch $main::touch_flag \"$_\" $tmpstamp ; ";
+    $cmd .= "touch $main::touch_flag \"$_\" $tmpstamp && ";
 
-    $cmd .= "cd $dir ; ";
+    $cmd .= "cd $dir && ";
     $cmd .= "find . $main::mountpoint_flag ";
-    $cmd .= "-newer $tmpstamp ";
+    $cmd .= "-cnewer -or -newer $tmpstamp ";
     $cmd .= "-print | ";
     $cmd .= "sed -e \"s%^\./%%\" ";
     $cmd .= "$main::exclude_cmd ";
@@ -834,7 +836,7 @@ sub backup_zip {
     if ($main::remote and ($cfg::buffer eq "buffer")) {
         $cmd .= "$main::buffer_cmd";
     }
-    $cmd .= " ; rm -f $tmpstamp \"$dir/$title\"";
+    $cmd .= " && rm -f $tmpstamp \"$dir/$title\"";
 
     # Wrap all that together
     $cmd = &maybe_remote_cmd($cmd);
@@ -901,10 +903,10 @@ sub list_routine {
 
     } elsif ($cfg::type eq 'zip') {
         my $tmpfile = "$cfg::tmpdir/zip.$$";
-        $cmd .= "cat > $tmpfile ; ";
+        $cmd .= "cat > $tmpfile && ";
         $cmd .= "unzip -l ";
         $cmd .= "$main::zip_verb_flag ";
-        $cmd .= "$tmpfile ; ";
+        $cmd .= "$tmpfile && ";
         $cmd .= "rm -f $tmpfile";
 
     }
@@ -1000,7 +1002,7 @@ sub extract_routine {
 
     } elsif ($cfg::type eq 'zip') {
         my $tmpfile = "$cfg::tmpdir/zip.$$";
-        $cmd .= "cat > $tmpfile ; ";
+        $cmd .= "cat > $tmpfile && ";
         $cmd .= "unzip ";
         $cmd .= "$main::zip_verb_flag ";
         $cmd .= "$tmpfile ";
@@ -1281,11 +1283,10 @@ sub mt {
     my $out;
 
     # Set hardware compression when we do the blocksize
-    # Can someone who has a drive that does this tell me if this works???
     if ($cfg::compress eq "hardware") {
         foreach (@operations) {
             if ($_ =~ m/generic-blocksize/) {
-                push(@operations,'compression 1');
+                push(@operations,'datcompression 2');
             }
         }
     }
@@ -1514,7 +1515,7 @@ sub optioncheck {
     }
 
     # Check device (or dir)
-    $main::ftape = 0 ;
+    $main::ftape = 0;
     if (-c $realdev) {
 
         # Check for ftape driver

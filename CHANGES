@@ -4,7 +4,7 @@ $Name$
 Now hosted on sourceforge.net!  Still migrating stuff over. mailling lists:
  - flexbackup-announce list where I will send only new release info
  - flexbackup-devel list which is open for help/suggestions
- 
+
 New Features:
  - added multibuf.  if you use this instead of "buffer" we can now deal
       with end-of-media type multivolume backups.  (multibuf came from KBackup)
@@ -12,6 +12,10 @@ New Features:
       you can't do multiple files, but otherwise it works fine
 
 Bug fixes:
+ - use "&&" rather than ";" in between commands
+ - use "-cnewer -or -newer" rather than "-newer"
+ - set locale so touch works
+ - tar - take off "! -type d" since we have --no recursion
  - log/backup files now use yyyymmddhhmm.ss times in the
    filenames. Previously you could get messed up if you ran two backups
       on the same day; files would clobber themselves
