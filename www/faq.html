@@ -24,14 +24,18 @@
       mean to say ".*" instead of "*", and ".?" instead of "?".  Also,
       leave OFF the first part of a path that is the filesystem you
       are archiving;  the exclude epxressions only match sub-paths of
-      the backup directory.
+      the backup directory. Test to see if your expression matches what
+      you want to exlude by:
+      <PRE>
+      cd &lt;topdir&gt;
+      find . -regex "&lt;expression&gt;"
+      </PRE>
       </BLOCKQUOTE>
 
   <LI><I>
       How do I archive multiple filesytems at once without redefining $filesystems
       in the configuration file?
       </I>
-
       <BLOCKQUOTE>
       Do this:
       <PRE>
@@ -45,12 +49,11 @@
       The disk totally died.  How do I get flexbackups' archives off the
       tapes on a mchine without the flexbackup script installed?
       </I>
-
       <BLOCKQUOTE>
       Something like this, if using compression with
       tar/cpio/dump:
       <PRE>
-      dd if=/dev/tapedevice bs=64k | gzip -dc | tar xvf -
+      dd if=/dev/tapedevice bs=10k | gzip -dc | tar xvf -
       </PRE>
       replace "tar xvf -" with "restore -i -f -" or whatever. Skip the gzip
       pipe if you aren't using compression.  afio is a bit more compex, but
@@ -58,9 +61,15 @@
       </BLOCKQUOTE>
 
   <LI><I>
+      This index stuff is a useless mess/I can't get it to work!
+      </I>
+      <BLOCKQUOTE>
+      Set $indexes = 'false' in the config.
+      </BLOCKQUOTE>
+
+ <LI><I>
       I don't have the index files! (disk died, different machine, etc)
       </I>
-
       <BLOCKQUOTE>
       This is OK, you can still extract/restore/etc. The index files are
       for human convenience only.  Just skip the first file on the tape,
