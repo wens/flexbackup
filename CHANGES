@@ -1,22 +1,25 @@
 $Id$
 $Name$
 
-Version 1.0.2 ()
+Version 1.0.2 (20030219)
 
 Changes:
  - Added '-test-tape-drive' switch that just makes sure blocks, filemarks,
    and padding work as expected and we can read,write,compare.  If people
    can't get that running, then the problem is somewhere else...
-	  
+
  - Allow mt command override in the config file: mt{'old'} = 'new'.  Useful
-   if there is a new platform-specific combination, you want status
-   vs. tell output, etc...
+   if there is a new platform-specific combination, you want 'status'
+   vs. 'tell' output in the log, etc...
 
 Bug fixes:
  - If remote tape device, don't check for writable local device
  - Fix pattern-match so "sudo -u username command" works
    (Tweak sudo comment in config file and faq as well)
- - Update mt op used for hardware compression
+
+Cleanup:
+ - Update mt op used for hardware compression (if anyone uses it)
+ - Cleanup more uses of $_
 
 ----------------------------------------------------------------------
 Version 1.0.1 (20030202)
