@@ -4,11 +4,13 @@ $Name$
 IN CVS but not released
 
 Bug Fixes:
-  - Cosmetic - fix missing line in output if no remote and buffer=false
   - Fix PIPESTATUS trick to not require extra 'seq' utility, just a while loop
   - Using "-toc" gave uninitialized var warning, obvious problem, fixed.
       Eradicated some other spots of code that used $_ too.
 
+Cleanup:
+  - Cosmetic - fix missing line in output if no remote and buffer=false
+  - Remove duplicated index delete code
 
 ----------------------------------------------------------------------
 Version 1.0pre2 (20030118)
