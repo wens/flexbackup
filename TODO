@@ -32,6 +32,7 @@ Features:
  - cd-rom burning (or just .iso type?) for full backups?
 
 Cleanup/fix:
+ - mt takes an array of commands.  clean up calls to it.
  - use -print0 and make cpio,tar,afio use null terminated lists
  - resurrect my old drive and test ftape stuff again
  - check that dump dir exists
