@@ -44,7 +44,7 @@ mkdir -p $RPM_BUILD_ROOT/usr/share/man/man1
 mkdir -p $RPM_BUILD_ROOT/usr/share/man/man5
 mkdir -p $RPM_BUILD_ROOT/var/lib/flexbackup
 mkdir -p $RPM_BUILD_ROOT/var/log/flexbackup
-make install PREFIX=$RPM_BUILD_ROOT/usr
+make install PREFIX=$RPM_BUILD_ROOT/usr CONFFILE=$RPM_BUILD_ROOT/etc/fexbackup.conf
 
 %clean
 rm -rf $RPM_BUILD_ROOT
