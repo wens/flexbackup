@@ -2,6 +2,7 @@
 CVSVER := $(shell echo v$(VER) | sed -e 's/\./_/g')
 SITE := $(HOME)/public_html/flexbackup
 RPM  := /usr/src/redhat
+DATE := $(shell date)
 
 commit:
 	cvs commit
@@ -9,6 +10,9 @@ commit:
 all: tar rpm webdoc
 
 tag: version commit
+	perl -pi -e 's/^Version:        .*/Version:        $(VER)/' flexbackup.lsm
+	perl -pi -e 's/^Entered-date:   .*/Entered-date:   $(DATE)/' flexbackup.lsm
+	cvs commit -m "" flexbackup.lsm
 	cvs tag -F $(CVSVER)
 
 tar: tag

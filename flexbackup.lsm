@@ -17,10 +17,12 @@ Features:
 Keywords:       backup dump restore afio tar cpio ftape
 Author:         edwinh@computer.org (Edwin Huffstutler)
 Maintained-by:  edwinh@computer.org (Edwin Huffstutler)
-Primary-site:   members.home.net /edwinh/flexbackup/
-Alternate-site:
+Primary-site:   members.home.net /edwinh/flexbackup
+                16776 flexbackup-0.9.2.tar.gz
+Alternate-site: metalab.unc.edu /pub/linux/system/backup
+                16776 flexbackup-0.9.2.tar.gz
 Original-site:
-Platforms:      IDE/SCSI tapes under Linux/FreeBSD
+Platforms:      IDE/SCSI tape drive
                 Linux ftape devices
 Copying-policy: GPL
 End
