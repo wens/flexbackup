@@ -58,6 +58,9 @@ Features to add:
  - A "no blocking at all" option
  - Log tape sizes (output of buffer or dd or mt tell can be used?)
  - Handle multi-volume backups (original idea never panned out)
+      Maybe figure out which archivers support & try to add
+      won't work with pipelines probably
+      needs testing
  - Arbitrary "groups" that act sort of like "all"
  - Extract options to not overwrite existing files
  - CD-ROM burning (or just .iso type?) for full backups? any?
