@@ -2,6 +2,13 @@ $Id$
 $Name$
 
 ----------------------------------------------------------------------
+Version 1.0.5 (20030621)
+
+Bug fixes:
+  - Doh!  index key creation broken for to-disk backups as a result of
+    1.0.4 changes.  Fixed.
+
+----------------------------------------------------------------------
 Version 1.0.4 (20030618)
 
 Bug fixes:

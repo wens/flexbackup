@@ -3144,15 +3144,21 @@ sub maybe_remote_cmd {
 sub append_writer_cmd {
 
     my $cmd = shift(@_);
+    my $dev = shift(@_);
+
+    # Possibly override device
+    if (!defined($dev)) {
+	$dev = $main::device;
+    }
 
     if (!defined($main::remotetapehost)) {
 
-	$cmd .= $main::write_cmd . '"' . $main::device . '"' ;
+	$cmd .= $main::write_cmd . '"' . $dev . '"' ;
 
     } else {
 
 	$cmd .= "$main::buffer_cmd | ";
-	$cmd .= &maybe_remote_cmd($main::write_catchpipe_cmd . $main::device, $main::remotetapehost);
+	$cmd .= &maybe_remote_cmd($main::write_catchpipe_cmd . $dev, $main::remotetapehost);
     }
 
     return($cmd);
@@ -3399,7 +3405,7 @@ sub new_tape_key {
 
     &log("| Creating index key $key");
     $string = "$main::path{printf} \'$key\\nThis is a flexbackup index key\\n\' ";
-    $string = &append_writer_cmd($string);
+    $string = &append_writer_cmd($string, $dev);
     if (defined($main::opt{'n'})) {
 	&log("(debug) $string");
     } else {
