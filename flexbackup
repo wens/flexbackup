@@ -631,12 +631,12 @@ sub backup {
 	@cmds = &backup_dump($label, $localdir, $level);
     } elsif ($cfg::type eq 'afio') {
 	@cmds = &backup_afio($label, $localdir, $title, $level);
+    } elsif ($cfg::type eq 'cpio') {
+	@cmds = &backup_cpio($label, $localdir, $title, $level);
     } elsif ($cfg::type eq 'tar') {
 	@cmds = &backup_tar($label, $localdir, $title, $level);
     } elsif ($cfg::type eq 'star') {
 	@cmds = &backup_star($label, $localdir, $title, $level);
-    } elsif ($cfg::type eq 'cpio') {
-	@cmds = &backup_cpio($label, $localdir, $title, $level);
     } elsif ($cfg::type eq 'pax') {
 	@cmds = &backup_pax($label, $localdir, $title, $level);
     } elsif ($cfg::type eq 'zip') {
@@ -847,7 +847,6 @@ sub backup_afio {
 
 }
 
-
 ######################################################################
 # Return command to backup a directory using cpio
 ######################################################################
@@ -882,62 +881,6 @@ sub backup_cpio {
     $cmd .= "-H $cfg::cpio_format ";
     $cmd .= "$main::cpio_verb_flag ";
     $cmd .= "$main::cpio_blk_flag ";
-    $cmd .= "$main::z";
-
-    if ($main::remote and ($cfg::buffer eq "buffer")) {
-	$cmd .= "$main::buffer_cmd";
-    }
-
-    # Wrap all that together
-    $cmd = &maybe_remote_cmd($cmd, $main::remote);
-
-    # Append writer stuff
-    $cmd = &append_writer_cmd($cmd);
-
-    push(@cmds, $cmd);
-
-    $cmd = "$main::path{rm} -f $tmpstamp \"$dir/$title\"";
-    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
-
-    return(@cmds);
-
-}
-
-######################################################################
-# Return command to backup a directory using pax
-######################################################################
-sub backup_pax {
-
-    my $label = shift(@_);
-    my $dir = shift(@_);
-    my $title = shift(@_);
-    my $level = shift(@_);
-    my $cmd = '';
-    my @cmds;
-    my $tmpstamp = "$cfg::tmpdir/refdate.$$";
-
-    $_ = &get_last_date($label, $level, 'numeric');
-
-    $cmd = "$main::path{touch} -t \"$_\" $tmpstamp";
-    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
-
-    # Kludge a title by replacing / with - in the title
-    # then touch a file in the dir we are going to back up.
-    $title =~ s%/%-%g;
-    $title =~ s% %_%g;
-    $cmd = "$main::path{touch} \"$dir/$title\"";
-    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
-
-    $cmd = "cd $dir && ";
-    $cmd .= &file_list_cmd($dir,$tmpstamp,'newline');
-    $cmd .= "| ";
-
-    $cmd .= "$main::path{pax} -w ";
-    $cmd .= "-d ";
-    $cmd .= "-s %^./%% ";
-    $cmd .= "-x $cfg::pax_format ";
-    $cmd .= "$main::pax_verb_flag ";
-    $cmd .= "$main::pax_blk_flag ";
     $cmd .= "$main::z";
 
     if ($main::remote and ($cfg::buffer eq "buffer")) {
@@ -1017,6 +960,117 @@ sub backup_tar {
 }
 
 ######################################################################
+# Return command to backup a directory using star
+######################################################################
+sub backup_star {
+
+    my $label = shift(@_);
+    my $dir = shift(@_);
+    my $title = shift(@_);
+    my $level = shift(@_);
+    my $cmd = '';
+    my @cmds;
+    my $tmpstamp = "$cfg::tmpdir/refdate.$$";
+
+    $_ = &get_last_date($label, $level, 'numeric');
+
+    $cmd = "$main::path{touch} -t \"$_\" $tmpstamp";
+    push(@cmds, &maybe_remote_cmd($cmd));
+
+    $cmd = "cd $dir && ";
+    $cmd .= &file_list_cmd($dir,$tmpstamp,'newline');
+    $cmd .= "| ";
+
+    $cmd .= "$main::path{star} -c ";
+    $cmd .= "list=- ";
+    $cmd .= "-p ";
+    $cmd .= "-D ";
+    $cmd .= "-B ";
+    $cmd .= "-dirmode ";
+    $cmd .= "VOLHDR=\"$title\" ";
+    $cmd .= "H=$cfg::star_format ";
+    $cmd .= "$main::star_fifo_flag ";
+    $cmd .= "$main::star_acl_flag ";
+    $cmd .= "$main::star_atime_flag ";
+    $cmd .= "$main::star_verb_flag ";
+    $cmd .= "$main::star_sparse_flag ";
+    $cmd .= "$main::star_blocknum_flag ";
+    $cmd .= "$main::star_blk_flag ";
+    $cmd .= "file=- ";
+    $cmd .= "$main::z";
+
+    # Wrap all that together
+    $cmd = &maybe_remote_cmd($cmd);
+
+    # Append writer stuff
+    $cmd = &append_writer_cmd($cmd);
+
+    push(@cmds, $cmd);
+
+    $cmd = "$main::path{rm} -f $tmpstamp";
+    push(@cmds, &maybe_remote_cmd($cmd));
+
+    return(@cmds);
+
+}
+
+######################################################################
+# Return command to backup a directory using pax
+######################################################################
+sub backup_pax {
+
+    my $label = shift(@_);
+    my $dir = shift(@_);
+    my $title = shift(@_);
+    my $level = shift(@_);
+    my $cmd = '';
+    my @cmds;
+    my $tmpstamp = "$cfg::tmpdir/refdate.$$";
+
+    $_ = &get_last_date($label, $level, 'numeric');
+
+    $cmd = "$main::path{touch} -t \"$_\" $tmpstamp";
+    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
+
+    # Kludge a title by replacing / with - in the title
+    # then touch a file in the dir we are going to back up.
+    $title =~ s%/%-%g;
+    $title =~ s% %_%g;
+    $cmd = "$main::path{touch} \"$dir/$title\"";
+    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
+
+    $cmd = "cd $dir && ";
+    $cmd .= &file_list_cmd($dir,$tmpstamp,'newline');
+    $cmd .= "| ";
+
+    $cmd .= "$main::path{pax} -w ";
+    $cmd .= "-d ";
+    $cmd .= "-s %^./%% ";
+    $cmd .= "-x $cfg::pax_format ";
+    $cmd .= "$main::pax_verb_flag ";
+    $cmd .= "$main::pax_blk_flag ";
+    $cmd .= "$main::z";
+
+    if ($main::remote and ($cfg::buffer eq "buffer")) {
+	$cmd .= "$main::buffer_cmd";
+    }
+
+    # Wrap all that together
+    $cmd = &maybe_remote_cmd($cmd, $main::remote);
+
+    # Append writer stuff
+    $cmd = &append_writer_cmd($cmd);
+
+    push(@cmds, $cmd);
+
+    $cmd = "$main::path{rm} -f $tmpstamp \"$dir/$title\"";
+    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
+
+    return(@cmds);
+
+}
+
+######################################################################
 # Return command to backup a directory using zip
 ######################################################################
 sub backup_zip {
@@ -1079,61 +1133,6 @@ sub backup_zip {
 }
 
 ######################################################################
-# Return command to backup a directory using star
-######################################################################
-sub backup_star {
-
-    my $label = shift(@_);
-    my $dir = shift(@_);
-    my $title = shift(@_);
-    my $level = shift(@_);
-    my $cmd = '';
-    my @cmds;
-    my $tmpstamp = "$cfg::tmpdir/refdate.$$";
-
-    $_ = &get_last_date($label, $level, 'numeric');
-
-    $cmd = "$main::path{touch} -t \"$_\" $tmpstamp";
-    push(@cmds, &maybe_remote_cmd($cmd));
-
-    $cmd = "cd $dir && ";
-    $cmd .= &file_list_cmd($dir,$tmpstamp,'newline');
-    $cmd .= "| ";
-
-    $cmd .= "$main::path{star} -c ";
-    $cmd .= "list=- ";
-    $cmd .= "-p ";
-    $cmd .= "-D ";
-    $cmd .= "-B ";
-    $cmd .= "-dirmode ";
-    $cmd .= "VOLHDR=\"$title\" ";
-    $cmd .= "H=$cfg::star_format ";
-    $cmd .= "$main::star_fifo_flag ";
-    $cmd .= "$main::star_acl_flag ";
-    $cmd .= "$main::star_atime_flag ";
-    $cmd .= "$main::star_verb_flag ";
-    $cmd .= "$main::star_sparse_flag ";
-    $cmd .= "$main::star_blocknum_flag ";
-    $cmd .= "$main::star_blk_flag ";
-    $cmd .= "file=- ";
-    $cmd .= "$main::z";
-
-    # Wrap all that together
-    $cmd = &maybe_remote_cmd($cmd);
-
-    # Append writer stuff
-    $cmd = &append_writer_cmd($cmd);
-
-    push(@cmds, $cmd);
-
-    $cmd = "$main::path{rm} -f $tmpstamp";
-    push(@cmds, &maybe_remote_cmd($cmd));
-
-    return(@cmds);
-
-}
-
-######################################################################
 # List the files in an archive
 ######################################################################
 sub list_routine {
@@ -1168,6 +1167,11 @@ sub list_routine {
 	$cmd .= "$main::afio_blk_flag ";
 	$cmd .= "-";
 
+    } elsif ($cfg::type eq 'cpio') {
+	$cmd .= "$main::path{cpio} -t ";
+	$cmd .= "$main::cpio_verb_flag ";
+	$cmd .= "$main::cpio_blk_flag";
+
     } elsif ($cfg::type eq 'tar') {
 	$cmd .= "$main::path{tar} --list ";
 	$cmd .= "--totals ";
@@ -1187,11 +1191,6 @@ sub list_routine {
 	$cmd .= "$main::star_blk_flag ";
 	$cmd .= "-B ";
 	$cmd .= "file=-";
-
-    } elsif ($cfg::type eq 'cpio') {
-	$cmd .= "$main::path{cpio} -t ";
-	$cmd .= "$main::cpio_verb_flag ";
-	$cmd .= "$main::cpio_blk_flag";
 
     } elsif ($cfg::type eq 'pax') {
 	$cmd .= "$main::path{pax} ";
@@ -1275,6 +1274,16 @@ sub extract_routine {
 	$cmd .= "$main::afio_blk_flag ";
 	$cmd .= "-";
 
+    } elsif ($cfg::type eq 'cpio') {
+	$cmd .= "$main::path{cpio} -i ";
+	if (defined($main::opt{'files'})) {
+	    $cmd .= "-E $newlist ";
+	}
+	$cmd .= "-m ";
+	$cmd .= "-d ";
+	$cmd .= "$main::cpio_verb_flag ";
+	$cmd .= "$main::cpio_blk_flag";
+
     } elsif ($cfg::type eq 'tar') {
 	$cmd .= "$main::path{tar} --extract ";
 	if (defined($main::opt{'files'})) {
@@ -1304,16 +1313,6 @@ sub extract_routine {
 	$cmd .= "-B ";
 	$cmd .= "file=-";
 
-    } elsif ($cfg::type eq 'cpio') {
-	$cmd .= "$main::path{cpio} -i ";
-	if (defined($main::opt{'files'})) {
-	    $cmd .= "-E $newlist ";
-	}
-	$cmd .= "-m ";
-	$cmd .= "-d ";
-	$cmd .= "$main::cpio_verb_flag ";
-	$cmd .= "$main::cpio_blk_flag";
-
     } elsif ($cfg::type eq 'pax') {
 	$cmd .= "$main::path{pax} -r ";
 	$cmd .= "$main::pax_verb_flag ";
@@ -1331,8 +1330,6 @@ sub extract_routine {
 	}
 	$cmd .= "; ";
 	$cmd .= "$main::path{rm} -f $tmpfile";
-
-    }
 
     &run_or_echo_then_query($cmd);
 
@@ -1372,6 +1369,9 @@ sub compare_routine {
 	$cmd .= "$main::afio_blk_flag ";
 	$cmd .= "-";
 
+    } elsif ($cfg::type eq 'cpio') {
+	die("cpio not capable of comparing files");
+
     } elsif ($cfg::type eq 'tar') {
 	$cmd .= "$main::path{'tar'} --diff ";
 	$cmd .= "--totals ";
@@ -1392,9 +1392,6 @@ sub compare_routine {
 
     } elsif ($cfg::type eq 'pax') {
 	die("pax not capable of comparing files");
-
-    } elsif ($cfg::type eq 'cpio') {
-	die("cpio not capable of comparing files");
 
     } elsif ($cfg::type eq 'zip') {
 	die("zip not capable of comparing files");
@@ -1419,22 +1416,22 @@ sub restore_routine {
 	$cmd .= "-f -";
 
     } elsif ($cfg::type eq 'afio') {
-	die("Interactive restore for $cfg::type not implemented yet");
+	die("Interactive restore for $cfg::type not implemented");
 
     } elsif ($cfg::type eq 'cpio') {
-	die("Interactive restore for $cfg::type not implemented yet");
+	die("Interactive restore for $cfg::type not implemented");
 
     } elsif ($cfg::type eq 'tar') {
-	die("Interactive restore for $cfg::type not implemented yet");
-
-    } elsif ($cfg::type eq 'zip') {
-	die("Interactive restore for $cfg::type not implemented yet");
+	die("Interactive restore for $cfg::type not implemented");
 
     } elsif ($cfg::type eq 'star') {
-	die("Interactive restore for $cfg::type not implemented yet");
+	die("Interactive restore for $cfg::type not implemented");
+
+    } elsif ($cfg::type eq 'zip') {
+	die("Interactive restore for $cfg::type not implemented");
 
     } elsif ($cfg::type eq 'pax') {
-	die("Interactive restore for $cfg::type not implemented yet");
+	die("Interactive restore for $cfg::type not implemented");
 
     }
 
@@ -1867,7 +1864,7 @@ sub optioncheck {
 
     # First check if things are defined in the config file
     # Checks exist, true/false, or one of options
-    &check(\$cfg::type,'type','dump afio tar cpio zip star pax');
+    &check(\$cfg::type,'type','dump afio cpio tar star pax zip');
     &check(\$cfg::compress,'compress','gzip bzip2 compress false hardware');
     &check(\$cfg::compr_level,'compr_level','exist');
     &check(\$cfg::verbose,'verbose');
@@ -1893,9 +1890,14 @@ sub optioncheck {
     &check(\$cfg::prefix,'prefix','exist');
     &check(\$cfg::sprefix,'sprefix','exist');
 
+    &check(\$cfg::dump_length,'dump_length','exist');
+    &check(\$cfg::dump_use_dumpdates,'dump_use_dumpdates');
+
     &check(\$cfg::afio_echo_block,'afio_echo_block');
     &check(\$cfg::afio_compress_cache_size,'afio_compress_cache_size','exist');
     &check(\$cfg::afio_compress_threshold,'afio_compress_threshold','exist');
+
+    &check(\$cfg::cpio_format,'cpio_format','bin odc newc crc tar ustar hpbin hpodc');
 
     &check(\$cfg::tar_echo_record_num,'tar_echo_record_num');
     &check(\$cfg::tar_atime_preserve,'tar_atime_preserve');
@@ -1905,11 +1907,6 @@ sub optioncheck {
     &check(\$cfg::star_format,'star_format','tar star gnutar ustar pax xstar xustar exustar suntar');
     &check(\$cfg::star_atime_preserve,'star_atime_preserve');
     &check(\$cfg::star_echo_block_num,'star_echo_block_num');
-
-    &check(\$cfg::dump_length,'dump_length','exist');
-    &check(\$cfg::dump_use_dumpdates,'dump_use_dumpdates');
-
-    &check(\$cfg::cpio_format,'cpio_format','bin odc newc crc tar ustar hpbin hpodc');
 
     &check(\$cfg::pax_format,'pax_format','cpio bcpio sv4cpio sv4crc tar ustar');
 
@@ -2050,18 +2047,18 @@ sub optioncheck {
     my $buffer_blk_flag = "-s " . $cfg::blksize . "k";
     # dd blocksize needs k appended
     $main::dd_blk_flag = "ibs=" . $cfg::blksize . "k obs=" . $cfg::blksize . "k";
-    # afio blocksize needs k appended
-    $main::afio_blk_flag = "-b " . $cfg::blksize . "k";
     # dump blocksize just in k like the config file
     $main::dump_blk_flag = "-b $cfg::blksize";
+    # afio blocksize needs k appended
+    $main::afio_blk_flag = "-b " . $cfg::blksize . "k";
+    # cpio blocks are in bytes
+    $main::cpio_blk_flag = $cfg::blksize * 1024;
+    $main::cpio_blk_flag = "-C $main::cpio_blk_flag";
     # tar blocks are in 512-byte units
     # long name is really --blocking-factor but changed from --block-size
     # only in recent versions.  just use the short flag.
     $main::tar_blk_flag =  $cfg::blksize * 2;
     $main::tar_blk_flag = "-b $main::tar_blk_flag";
-    # cpio blocks are in bytes
-    $main::cpio_blk_flag = $cfg::blksize * 1024;
-    $main::cpio_blk_flag = "-C $main::cpio_blk_flag";
     # star blocks are in 512-byte units
     $main::star_blk_flag =  $cfg::blksize * 2;
     $main::star_blk_flag = "blocks=$main::star_blk_flag";
@@ -2163,38 +2160,55 @@ sub optioncheck {
 
     # Verbose flag
     if ($cfg::verbose eq "true") {
-	$main::afio_verb_flag = "-v";
 	$main::dump_verb_flag = "-v";
+	$main::afio_verb_flag = "-v";
+	$main::cpio_verb_flag = "-v";
 	$main::tar_verb_flag = "--verbose";
 	$main::star_verb_flag = "-v";
-	$main::cpio_verb_flag = "-v";
-	$main::zip_verb_flag = "-v";
 	$main::pax_verb_flag = "-v";
+	$main::zip_verb_flag = "-v";
     } else {
-	$main::afio_verb_flag = "";
 	$main::dump_verb_flag = "";
+	$main::afio_verb_flag = "";
+	$main::cpio_verb_flag = "";
 	$main::tar_verb_flag = "";
 	$main::star_verb_flag = "";
-	$main::cpio_verb_flag = "";
-	$main::zip_verb_flag = "-q";
 	$main::pax_verb_flag = "";
+	$main::zip_verb_flag = "-q";
     }
 
     # Sparse flag
     if ($cfg::sparse eq "true") {
 	$main::afio_sparse_flag = "";
+	$main::cpio_sparse_flag = "";
 	$main::tar_sparse_flag = "--sparse";
 	$main::star_sparse_flag = "-sparse";
-	$main::cpio_sparse_flag = "";
     } else {
 	$main::afio_sparse_flag = "-j";
+	$main::cpio_sparse_flag = "";
 	$main::tar_sparse_flag = "";
 	$main::star_sparse_flag = "";
-	$main::cpio_sparse_flag = "";
     }
 
     # Type-specific setup
-    if ($cfg::type eq 'afio') {
+    if ($cfg::type eq 'dump') {
+
+	$main::path{'dump'} = &checkinpath('dump');
+	$main::path{'restore'} = &checkinpath('restore');
+
+	# Length of tape
+	if ($cfg::dump_length !~ m/^\d+$/) {
+	    push(@main::errors,"\$dump_length must be set to integer number of kilobytes");
+	}
+
+	# If length set to 0 will will try autosize
+	if ($cfg::dump_length == 0) {
+	    $main::dump_len_flag = "-a";
+	} else {
+	    $main::dump_len_flag = "-B $cfg::dump_length";
+	}
+
+    } elsif ($cfg::type eq 'afio') {
 
 	$main::path{'afio'} = &checkinpath('afio');
 
@@ -2249,22 +2263,9 @@ sub optioncheck {
 	    }
 	}
 
-    } elsif ($cfg::type eq 'dump') {
+    } elsif ($cfg::type eq 'cpio') {
 
-	$main::path{'dump'} = &checkinpath('dump');
-	$main::path{'restore'} = &checkinpath('restore');
-
-	# Length of tape
-	if ($cfg::dump_length !~ m/^\d+$/) {
-	    push(@main::errors,"\$dump_length must be set to integer number of kilobytes");
-	}
-
-	# If length set to 0 will will try autosize
-	if ($cfg::dump_length == 0) {
-	    $main::dump_len_flag = "-a";
-	} else {
-	    $main::dump_len_flag = "-B $cfg::dump_length";
-	}
+	$main::path{'cpio'} = &checkinpath('cpio');
 
     } elsif ($cfg::type eq 'tar') {
 
@@ -2320,10 +2321,6 @@ sub optioncheck {
 	} else {
 	    $main::star_acl_flag = "";
 	}
-
-    } elsif ($cfg::type eq 'cpio') {
-
-	$main::path{'cpio'} = &checkinpath('cpio');
 
     } elsif ($cfg::type eq 'pax') {
 
@@ -2620,7 +2617,7 @@ sub maybe_get_filename {
 	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
 	&optioncheck();                  # redo to set a few variables over
 
-    } elsif ($file =~ m/\.(afio|dump|cpio|tar|star|pax|zip)$/) {
+    } elsif ($file =~ m/\.(dump|afio|cpio|tar|star|pax|zip)$/) {
 	$cfg::type = $1;
 	$cfg::compress = "false";
 	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
