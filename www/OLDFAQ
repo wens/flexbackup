@@ -1,0 +1,131 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML> <HEAD>
+<TITLE>Flexbackup FAQ</TITLE>
+</HEAD>
+
+<BODY BGCOLOR="#FFFFFF">
+<H1>Flexbackup FAQ</H1>
+
+
+<OL>
+  <!-- autogen start -->
+  <LI><A HREF="#1">Help me understand numeric dump levels</A>
+  <!-- autogen end -->
+</OL>
+
+<HR>
+
+<OL>
+
+  <LI><B><A NAME="1">
+      Help me understand numeric dump levels
+      </B><A><P>
+      TODO, but  very needed FAQ.
+      See <A HREF="http://docs.sun.com/db/doc/805-7228/6j6q7uf18?a=view">
+      sun docs</A> for an example. <BR><BR>
+
+      For those not used to dump-style numeric levels, the latest versions
+      of flexbackup have added
+      <tt>-level [full|differential|incremental]</tt>
+      that get translated into appropriate dump-style level numbers.
+
+<! -------------------------------------------------->
+  <LI><B>
+      I keep getting only one backup per tape when I do "-fs all"!
+      </B>
+      <BLOCKQUOTE>
+      Use the non-rewinding device.
+      </BLOCKQUOTE>
+<! -------------------------------------------------->
+  <LI><B>
+      How do I get remote backups over ssh to work without prompting for a passwrd?
+      </B>
+      <BLOCKQUOTE>
+      ...point to some ssh FAQ somewhere...
+      </BLOCKQUOTE>
+<! -------------------------------------------------->
+  <LI><B>
+      Backups seem to work ok, but I can't get extracting/listing to work.
+      </B>
+      <BLOCKQUOTE>
+      Usually a matter of tape positioning.  Use 'mt rewind; mt fsf
+      &lt;n&gt;' to get to the right file number on the tape, or use the
+      "-num" switch with "-list|extract|compare|restore" to have flexbackup
+      do it for you.  If you are using flexbackup's indexes, remember that
+      file number 0 is a header,
+      </BLOCKQUOTE>
+<! -------------------------------------------------->
+  <LI><B>
+      I can't get the $exclude_expr stuff to work!
+      </B>
+      <BLOCKQUOTE>
+      Use regular expressions, not wildcards (aka globs).  See a perl, sed,
+      or grep reference, or "man 7 regex".  Simplistically, you probably
+      mean to say ".*" instead of "*", and ".?" instead of "?".  Also,
+      leave OFF the first part of a path that is the filesystem you
+      are archiving;  the exclude epxressions only match sub-paths of
+      the backup directory. Test to see if your expression matches what
+      you want to exlude by:
+      <PRE>
+      cd &lt;topdir&gt;
+      find . -regex "&lt;expression&gt;"
+      </PRE>
+      </BLOCKQUOTE>
+<! -------------------------------------------------->
+  <LI><B>
+      How do I archive multiple filesytems to tape at once without rewinding
+      in between, and without redefining "all" $filesystems
+      in the configuration file?
+      </B>
+      <BLOCKQUOTE>
+      Do this:
+      <PRE>
+      flexbackup -fs /dir1 -norewind
+      flexbackup -fs /dir2 -norewind
+      flexbackup -fs /dir3 -norewind
+      </PRE>
+      </BLOCKQUOTE>
+<! -------------------------------------------------->
+  <LI><B>
+      The disk totally died.  How do I get flexbackups' archives off the
+      tapes on a machine without the flexbackup script installed?
+      </B>
+      <BLOCKQUOTE>
+      Something like this, if using compression with
+      tar/cpio/dump:
+      <PRE>dd if=/dev/tapedevice bs=10k | gzip -dc | tar xvf -</PRE>
+      replace "tar xvf -" with "restore -i -f -" or whatever. Skip the gzip
+      pipe if you aren't using compression.  afio is a bit more compex, but
+      read the manpage...
+      </BLOCKQUOTE>
+<! -------------------------------------------------->
+  <LI><B>
+      This index stuff is a useless mess/I can't get it to work!
+      </B>
+      <BLOCKQUOTE>
+      It isn't necessary. Set $indexes = 'false' in the config, and just
+      use written labels on the tapes...
+      </BLOCKQUOTE>
+<! -------------------------------------------------->
+  <LI><B>
+      Why keep the index db on disk rather than on the tape?
+      </B>
+      <BLOCKQUOTE>
+      ...fill in later...
+      </BLOCKQUOTE>
+<! -------------------------------------------------->
+  <LI><B>
+      I don't have the index files! (disk died, different machine, etc)
+      </B>
+      <BLOCKQUOTE>
+      This is OK, you can still extract/restore/etc. The index files are
+      for human convenience only.  Just skip the first file on the tape,
+      it's a simple "tag" text file.  The rest of the tape is your normal archives.
+      </BLOCKQUOTE>
+<! -------------------------------------------------->
+
+
+</OL>
+
+<HR>
+
