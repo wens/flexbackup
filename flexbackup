@@ -2410,7 +2410,7 @@ sub optioncheck {
     &check(\$cfg::atime_preserve,'atime_preserve');
     &check(\$cfg::indexes,'indexes');
     &check(\$cfg::staticfiles,'staticfiles');
-    &check(\$cfg::buffer,'buffer','false buffer mbuffer');
+    &check(\$cfg::buffer,'buffer','false buffer mbuffer bfr');
     &check(\$cfg::buffer_megs,'buffer_megs','exist');
     &check(\$cfg::pad_blocks,'pad_blocks');
     &check(\$cfg::device,'device','exist');
@@ -2685,6 +2685,7 @@ sub optioncheck {
 	my $write_flags;
 	my $read_flags;
 	my $megs = $cfg::buffer_megs . "m";
+	my $bufcmd = "$main::path{buffer} -m $megs $buffer_blk_flag";
 
 	if (defined($main::tapedevice)) {
 	    $write_flags = "-u 100 -t -p 75 $buffer_pad_flag -o ";
@@ -2693,46 +2694,45 @@ sub optioncheck {
 	    $write_flags = "-t -p 75 $buffer_pad_flag -o ";
 	    $read_flags = "-t -p 75 $buffer_pad_flag -i ";
 	}
-	$main::buffer_cmd = " | $main::path{buffer} -m $megs $buffer_blk_flag";
-	$main::write_cmd = "$main::path{buffer} -m $megs $buffer_blk_flag $write_flags";
-	$main::read_cmd = "$main::path{buffer} -m $megs $buffer_blk_flag $read_flags";
+	$main::buffer_cmd = " | $bufcmd";
+	$main::write_cmd = "$bufcmd $write_flags";
+	$main::read_cmd = "$bufcmd $read_flags";
 
     } elsif ($cfg::buffer eq "mbuffer") {
 
 	$main::path{'mbuffer'} = &checkinpath('mbuffer');
 	push(@main::remoteprogs, $main::path{'mbuffer'});
 
-	my $write_flags;
-	my $read_flags;
 	my $megs = $cfg::buffer_megs . "M";
+	my $bufcmd = "$main::path{mbuffer} -m $megs $buffer_blk_flag";
 
-	if (defined($main::tapedevice)) {
-	    $write_flags = "-q -f -u 100 -p 75 -o ";
-	    $read_flags = "-u 100 -p 75 -i ";
-	} else {
-	    $write_flags = "-q -f -p 75 -o ";
-	    $read_flags = "-p 75 -i ";
-	}
-	$main::buffer_cmd = " | $main::path{mbuffer} -t -q -m $megs $buffer_blk_flag";
-	$main::write_cmd = "$main::path{mbuffer} -m $megs $buffer_blk_flag $write_flags";
-	$main::read_cmd = "$main::path{mbuffer} -m $megs $buffer_blk_flag $read_flags";
+	$main::buffer_cmd = " | $bufcmd -q";
+	$main::write_cmd = "$bufcmd | $main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=";
+	$main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag if=";
+
+    } elsif ($cfg::buffer eq "bfr") {
+
+	$main::path{'bfr'} = &checkinpath('bfr');
+	push(@main::remoteprogs, $main::path{'bfr'});
+
+	my $megs = $cfg::buffer_megs . "m";
+	my $bufcmd = "$main::path{bfr} -b $megs";
+
+	$main::buffer_cmd = " | $bufcmd";
+	$main::write_cmd = "$bufcmd | $main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=";
+	$main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag if=";
 
     } else {
 
-	# If buffer is disabled, use dd/cat (depending on if blocking turned off)
-
+	# If buffering disabled, use dd or cat depending on if blocking turned off on not
 	if ($cfg::blksize eq '0') {
-
 	    $main::buffer_cmd = "";
 	    $main::write_cmd = "$main::path{cat} > ";
 	    $main::read_cmd = "$main::path{cat} ";
-
 	} else {
-
 	    $main::buffer_cmd = "";
 	    $main::write_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=";
 	    $main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag if=";
-
 	}
 
     }
@@ -3731,8 +3731,12 @@ sub read_function {
     my $file = shift(@_);
     my $cmd;
 
-    $cmd = $main::read_cmd . '"' . $file . '"';
-
+    # bfr/mbuffer need a blocking dd read ahead of them
+    if ($cfg::buffer =~ m/^(bfr|mbuffer)$/) {
+	$cmd = $main::read_cmd . '"' . $file . '"' . $main::buffer_cmd;
+    } else {
+	$cmd = $main::read_cmd . '"' . $file . '"';
+    }
     return($cmd);
 
 }
@@ -4735,7 +4739,7 @@ sub test_tape_drive {
     my $cmd;
     my $tmp1 = "$cfg::tmpdir/test1.$PROCESS_ID";
     my $tmp2 = "$cfg::tmpdir/test2.$PROCESS_ID";
-    my $tmp3 = "$cfg::tmpdir/test2.$PROCESS_ID";
+    my $tmp3 = "$cfg::tmpdir/test3.$PROCESS_ID";
     my $fail = 0;
     my $configfile;
 
@@ -4839,7 +4843,7 @@ sub test_tape_drive {
 	# Buffer both sides if remote
 	$cmd .= $main::buffer_cmd;
     }
-    # if pad blocks was true we have nulls at the end (won't be in this script otherwise)
+    # if pad blocks was true we have nulls at the end (won't be in config file otherwise)
     if ($cfg::pad_blocks eq 'true') {
 	$cmd .= " | $main::path{tr} -d '\\0' > $tmp2";
     } else {
@@ -4901,7 +4905,7 @@ sub test_tape_drive {
     }
 
     unlink $tmp1;
-    #unlink $tmp2;
+    unlink $tmp2;
     unlink $tmp3;
 
     if ($fail != 0) {
