@@ -8,6 +8,8 @@ Wonder of wonders... I'm actually using this again.  The guy who registered
 flexbackup.org never picked up the files or updates his page so I'm
 flipping pointers back to sf.net I guess.
 
+I'm mainly just using on-disk files now - will try to keep tape operation
+tested.
 
 Changes:
   - changed the index delete flags worked, it was too confusing overloading
@@ -24,7 +26,8 @@ Changes:
   - removed zip archive support.  They just don't like to work with
       stdout/stdin like other unix tools and are a pain to special case.
   - "-newtape" when using files will rm the files in the dir
-
+  - support non $PATH or hardcoded locations to commands in config file:
+         $path{'program'} = /path/to/program;
 
 Bug Fixes:
   - doh - can't use find -cnewer & a reference file with touch -d together
@@ -37,6 +40,9 @@ Bug Fixes:
   - was using numeric sort when listing alphanumeric files
   - "-num" invalid when using files
   - newer cpio didn't like sparse in --create mode
+  - errors in command chain weren't detected. now separate some of the
+    steps; remote still hosed up
+
 
 ----------------------------------------------------------------------
 Version 0.9.8.3 (20020824)
