@@ -17,7 +17,7 @@ Features:
    o Compression and buffering options for all backup types
    o Keeps a table of contents so you know archives are on each tape
    o Does remote filesystems (over rsh/ssh; no special service)
-   o Writes to tape drives, or on-disk archive files / directory trees
+   o Writes to tapes, on-disk archive files, or on-disk directory trees
    o Nice log files
 
 Software needed:
