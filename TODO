@@ -5,6 +5,8 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
+ - Consolidate use_file, use_pipe, etc to single string var.
+ - Fix remote tape drive + mt uname conditionals are local
  - Clean up more $main:: vars, split into types or refactor code
  - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
  - If comp_log is changed, we don't nuke old logs that normally would be
@@ -31,25 +33,22 @@ Misc:
 Features to add:
 
   - Remote directores for to-disk backups
-  - Remote device via Net::FTP ?
 
-  - A shorter summary status that's better than doing
-         egrep "(error|of set|Backup of|written)"
-    of logfile.  Needs to handle all configurations....
+  - Remote device via Net::FTP ?
 
   - Handle multi-volume backups (original idea w/ 'multibuf' never panned out)
 
       Found "multivol" program.
       Ack.  still not workable.  need edits to multivol...
 
-      mbuffer can do this?  Bah.  Does not cooperate with nullpadding.
-      won't work over remote, needs terminal attached.
+      mbuffer can do this?  Bah. Won't work over remote, needs terminal
+      attached.  Testing hooks in now for local.
 
-      I might just give up on this as backups-to-disk don't have this
-      problem.  Tapes just haven't kept capacity with using spare disks in
-      other machines, for example.
+  - Make package delta work with debian pkgs or others
 
- - Make package delta work with debian pkgs or others
+  - A shorter summary status that's better than doing
+         egrep "(error|of set|Backup of|written)"
+    of logfile.  Needs to handle all configurations....
 
  - CD-ROM burning (or just .iso type?) for full backups? any level?
       just act like to-file archives, and take those files & write to CD?
