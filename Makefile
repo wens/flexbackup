@@ -51,8 +51,8 @@ rsync:
 
 upload: version lsm
 	test -e $(SITE)/tarball/flexbackup-$(VER).tar.gz
-	ncftpput ibiblio.org /incoming/Linux $(SITE)/tarball/flexbackup-$(VER).tar.gz
-	ncftpput ibiblio.org /incoming/Linux flexbackup.lsm
+	ncftpput ibiblio.org /incoming/linux $(SITE)/tarball/flexbackup-$(VER).tar.gz
+	ncftpput ibiblio.org /incoming/linux flexbackup.lsm
 	ncftpput incoming.redhat.com /libc6 $(SITE)/RPMS/flexbackup-$(VER)-1.noarch.rpm
 	ncftpput incoming.redhat.com /libc6 $(SITE)/RPMS/flexbackup-$(VER)-1.src.rpm
 
