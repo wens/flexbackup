@@ -375,7 +375,7 @@ sub backup_routine {
             $main::comp_cmd .= "compress -f $main::log";
         }
         &line("logonly");
-        print "| Compressing log file ($main::log.$logext)\n";
+        print "| Compressing log ($main::log.$logext)\n";
         system("$main::comp_cmd");
         if ($CHILD_ERROR) {
             warn("error compressing log file\n");
@@ -1478,7 +1478,7 @@ sub optioncheck {
     $main::cpio_blk_flag = "--io-size $main::cpio_blk_flag";
 
     # Generic compression (afio/zip archives will do their own flags)
-    if ($cfg::compress =~ m/^(gzip|bzip2)$/) {
+    if ($cfg::compress eq "gzip") {
         &checkinpath($cfg::compress);
         if ($cfg::compr_level !~ m/^[123456789]$/) {
             push(@main::errors,"\$compr_level must be set to 1-9");
@@ -1486,6 +1486,15 @@ sub optioncheck {
             $main::z = " | $cfg::compress -$cfg::compr_level";
         }
         $main::unz = "$cfg::compress -dq | ";
+
+    } elsif ($cfg::compress eq "bzip2") {
+        &checkinpath($cfg::compress);
+        if ($cfg::compr_level !~ m/^[123456789]$/) {
+            push(@main::errors,"\$compr_level must be set to 1-9");
+        } else {
+            $main::z = " | $cfg::compress -$cfg::compr_level";
+        }
+        $main::unz = "$cfg::compress -d | ";
 
     } elsif ($cfg::compress eq "compress") {
         &checkinpath($cfg::compress);
@@ -1593,9 +1602,13 @@ sub optioncheck {
         # Compress flag for afio must be handled differently
         if ($cfg::compress =~ m/^(gzip|bzip2|compress)$/) {
 
-            if ($cfg::compress =~ m/^(gzip|bzip2)$/) {
+            if ($cfg::compress eq "gzip") {
                 $main::afio_z_flag = "-P $cfg::compress -Q -$cfg::compr_level -Z";
                 $main::afio_unz_flag = "-P $cfg::compress -Q -d -Q -q -Z";
+
+            } elsif ($cfg::compress eq "bzip2") {
+                $main::afio_z_flag = "-P $cfg::compress -Q -$cfg::compr_level -Z";
+                $main::afio_unz_flag = "-P $cfg::compress -Q -d -Z";
 
             } elsif ($cfg::compress eq "compress") {
                 $main::afio_z_flag = "-P $cfg::compress -Q -c -Z";
