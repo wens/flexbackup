@@ -1,10 +1,23 @@
 $Id$
 $Name$
 
-Development version 1.1.0
+Development version 1.1.1
 
-Changes:
+Changes beyond stable release:
 
+  - Different way to spec the filesystems. This lets us have arbitrarily
+    named backup "sets".
+
+    Config file:
+      $set{'tag1'} = "/dir1 /dir2 ...";
+      $set{'tag2'} = "/dir3 host:/dir4 ...";
+
+    Flags:	
+      "-dir <dir>" backs up one directory tree (old "-fs <dir>")
+      "-set <tag>" backs up a named set.  Useful new feature.
+      "-set all" acts like old "-fs all".  If using tapes & level 0, each
+      set is a different tape (acts like the old numeric index to @filesystems)
+  
   - Added packaging system delta capability (RPM only for now).
 
     If you give "-pkgdelta rpm", after the level/timestamp checks, we

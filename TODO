@@ -5,8 +5,7 @@ Flexbackup to-do list
 Some of these might not happen
 
 Currently:
- - Check for mt blksize = factor of blksize
- - other FIXMEs in code
+ - FIXMEs in code
 
  - mbuffer testing w/ device (need mt_blksize not to be 0?)
  - try 2+ gig as well
