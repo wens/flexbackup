@@ -331,26 +331,9 @@ sub backup_routine {
     &log("| Rewinding...");
     &mt('rewind');
     &update_toc();
-    &line();
 
     # Print out new contents
     &contents();
-
-    # compress log file
-    if ($cfg::comp_log ne 'false') {
-        &line("logonly");
-        if ($cfg::comp_log eq "gzip") {
-            $logext = "gz";
-        } else {
-            $logext = "bz2";
-        }
-        print "| Compressing log file ($main::log.$logext)\n";
-        system("$cfg::comp_log -f $main::log");
-        if ($CHILD_ERROR) {
-            warn("error compressing log file\n");
-        }
-        undef $main::log;
-    }
 
     # Actually remove the old logs files now that we are done
     foreach (sort keys %oldlogs) {
@@ -359,7 +342,24 @@ sub backup_routine {
         unlink("$_") or warn("Can't remove $_: $OS_ERROR\n");
     }
 
+    # compress log file
+    if ($cfg::comp_log ne 'false') {
+        if ($cfg::comp_log eq "gzip") {
+            $logext = "gz";
+        } else {
+            $logext = "bz2";
+        }
+        &line("logonly");
+        print "| Compressing log file ($main::log.$logext)\n";
+        system("$cfg::comp_log -f $main::log");
+        if ($CHILD_ERROR) {
+            warn("error compressing log file\n");
+        }
+        undef $main::log;
+    }
+
     &line();
+
     exit(0);
 
 }
