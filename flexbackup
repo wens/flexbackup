@@ -641,14 +641,14 @@ sub backup {
 	    $filename .= "." . $main::date . "." . $cfg::type;
 	}
 
-        # Some types need the filename modified
+	# Some types need the filename modified
 	if ($cfg::type eq 'ar') {
 	    $filename =~ s/ar$/a/;
 	} elsif ($cfg::type eq 'copy') {
 	    $filename =~ s/\.copy$//;
 	}
 
-        # Note compression setting in filename
+	# Note compression setting in filename
 	if ($cfg::type =~ m/^(tar|dump|cpio|star|pax|ar|shar|filelist)$/) {
 	    if ($cfg::compress eq "gzip") {
 		$filename .= ".gz";
@@ -673,7 +673,7 @@ sub backup {
 	    }
 	}
 
-        # Overwirte device var to be the archive filename
+	# Overwirte device var to be the archive filename
 	$main::device = $cfg::device . "/" . $label . "." . $filename;
 
     }
@@ -896,11 +896,11 @@ sub backup {
 		}
 		# If file, rm botched file regardless of index
 		if (defined($main::use_file)) {
-                    if ($cfg::type eq 'copy') {
-                        system("rm -rf $main::device");
-                    } else {
-                        unlink($main::device);
-                    }
+		    if ($cfg::type eq 'copy') {
+			system("rm -rf $main::device");
+		    } else {
+			unlink($main::device);
+		    }
 		}
 
 		if(defined($catchexit)) {
@@ -4083,9 +4083,8 @@ sub new_tape_key {
     }
 
     &log("| Creating index key $key");
-    $string = "$main::path{printf} \'$key\\nThis is a flexbackup index key\\n\' | ";
-    $string .=  "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=$dev";
-
+    $string = "$main::path{printf} \'$key\\nThis is a flexbackup index key\\n\' ";
+    $string .= &append_writer_cmd($string);
     if (defined($main::debug)) {
 	&log("(debug) $string");
     } else {

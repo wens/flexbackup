@@ -2,7 +2,7 @@ $Id$
 $Name$
 
 ----------------------------------------------------------------------
-Version TBD
+Version 1.1.7 (20030615)
 
   - added "copy" type that just mirrors the files into a directory tree
     if archiving to disk
@@ -13,6 +13,7 @@ Version TBD
 
 Bugfixes/cleanup:
   - use --ignore-failed-read for tar
+  - remote tape drive device didn't create index key correctly
   - typo in star flags
   - tweak quiet flags
 
