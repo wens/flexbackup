@@ -2803,9 +2803,8 @@ sub optioncheck {
     # Subtree pruning
     foreach my $fs (keys %cfg::prune) {
 	$fs = &nuke_trailing_slash($fs);
-	foreach my $dir (split(/\s+/,$cfg::prune{$fs})) {
-	    $dir = &nuke_trailing_slash($dir);
-	    $main::prune{$fs}{"./$dir/*"} = 1;
+	foreach my $expr (split(/\s+/,$cfg::prune{$fs})) {
+	    $main::prune{$fs}{$expr} = 1;
 	}
     }
 
@@ -4347,8 +4346,11 @@ sub file_list_cmd {
     } else {
 	$prunekey = $dir;
     }
-    foreach my $key (keys %{$main::prune{$prunekey}}) {
-	$cmd .= "! -path \"$key\" ";
+
+    if (defined(%{$main::prune{$prunekey}})) {
+	$cmd .= '! -regex "\./\(';
+	$cmd .= join('\|', keys %{$main::prune{$prunekey}});
+	$cmd .= '\)/.*" ';
     }
 
     if (defined($otherarg)) {

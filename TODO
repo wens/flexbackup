@@ -5,8 +5,6 @@ Flexbackup to-do list
 Some of these might not happen
 
 Currently in progress:
- - Try prune spec using regex
-
  - Check old release for use_file + -erase.  nukes db entry for keyfile
    check -newtape
    (devel too as well)
