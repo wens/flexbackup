@@ -10,6 +10,8 @@ Changes:
    cpio's.  You need rsync 2.5.6 for this to work!
  - Added lzop support
  - Recognize .deb files as ar archives
+ - Spinning bar indicator for long-running pkg delta operations if
+   output is a terminal
  - Skip proc/devpts/devfs/tmpfs for traverse_fs=local or all
 
 Bug fixes/cleanup:
