@@ -58,6 +58,8 @@ Misc:
      filelist
      mt_blksize
      example for -wday use
+     onefile
+     -files -> -flist
  - Create mbuffer rpm. Add link/rpm for mbuffer
  - Do bfr again, maybe was blocking problem?
  - Make a manual page (AND other enchanced documentation, more than a README)

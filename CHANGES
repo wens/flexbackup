@@ -51,6 +51,8 @@ Changes beyond stable release:
   - test-tape-drive now diffs 3 files, one in the middle is different
     (will catch people using rewind-on-close device)
 
+  - "-extract -files" -> "-extract -flist" to hopefully avoid confusion
+
   - Added support for lha, shar, and ar archives just to be stupid
 
 Cleanup:

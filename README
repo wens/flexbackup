@@ -79,7 +79,7 @@ directory:
 
 Extract files listed in "restorelist" from an on-disk file:
 
-   flexbackup -extract home.0.19990930.afio -files restorelist
+   flexbackup -extract home.0.19990930.afio -flist restorelist
 
 List what backups are on this tape:
 
