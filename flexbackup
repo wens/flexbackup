@@ -3863,13 +3863,17 @@ sub check_shell {
 
     print "| Checking shell on $host... ";
 
-    $pipecmd = 'echo tcsh:$tcsh; echo bash:$BASH_VERSION; echo zsh:$ZSH_VERSION; echo ksh:$KSH_VERSION; set x = 1 && test $x && echo csh:yes';
+    $pipecmd = 'set x = 1 && test $x && echo csh:yes; echo tcsh:$tcsh; echo bash:$BASH_VERSION; echo zsh:$ZSH_VERSION; echo ksh:$KSH_VERSION';
     if ($host eq 'localhost') {
     } else {
 	$pipecmd = "$main::remoteshell $host '" . $pipecmd . "'";
     }
 
     $main::shelltype{$host} = 'unknown';
+
+    if (defined($main::opt{'n'})) {
+	print "| (debug) $pipecmd\n";
+    }
 
     if (!(open(PIPE,"$pipecmd 2>&1 |"))) {
 	return;
@@ -3889,11 +3893,13 @@ sub check_shell {
 	    } else {
 		$main::shelltype{$host} = $shell;
 	    }
-            last;
 	}
     }
     close (PIPE);
 
-    print "$main::shelltype{$host}\n";
-
+    if (($main::shelltype{$host} eq 'unknown') and ($main::uname !~ m/Linux/)) {
+	print "$main::shelltype{$host} (probably Bourne Shell)\n";
+    } else {
+	print "$main::shelltype{$host}\n";
+    }
 }
