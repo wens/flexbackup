@@ -72,10 +72,10 @@ Extract all files from current tape position into current directory:
 
    flexbackup -extract
 
-Compare afio archive at current tape position with the /home
-filesystem on machine "otherhost":
+Compare afio archive at current tape position with the current
+directory:
 
-   flexbackup -compare otherhost:/home -type afio
+   flexbackup -compare -type afio
 
 Notes:
  Level 0 backups of "all" assume a new tape - will trigger
