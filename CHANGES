@@ -1,6 +1,7 @@
 Version 0.9
   - initial release to the public
   - incrementals w/ afio cpio tar done (remote fs too!)
+  - timstamp only after sucessful backup, but use the pre-backup time
 
 Version 0.8 
   - redone with "use strict"

@@ -2,19 +2,19 @@ Flexbackup todo list as of version $Name$
 
 Some of these might not happen, but I write them down anyway
 
- - rm timestamp for failed dump
- - optionscheck for only one mode
  - FreeBSD checks out ok (hi john)
  - announce
      freshmeat, linux-tape, comp.os.linux.announce
      submit to metalab & redhat-contrib
 
  - resurrect my old drive and test ftape stuff again
- - why is tar mode busted?
- - what if you try to do inncrementals and no level 0 exists?
+ - why is tar mode hosed?  backups seem to go ok.
+     compare,extract etc not right.
+ - what if you try to do incrementals and no level 0 exists?
  - log files for extract?
  - does restore compare subdirectories of mountpoints correctly?
- - exclude regexp's
+ - configuratbel exclude regexp's
+     can dump do this?
  - interactive restore-like shell for types besides dump
      maybe also a "list of files" restore
  - extract of remote volumes

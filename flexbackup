@@ -44,7 +44,6 @@
 use Getopt::Long;
 use English;
 use strict;
-use diagnostics;
 
 # No output buffering
 $OUTPUT_AUTOFLUSH = 1;
@@ -121,9 +120,6 @@ if (defined($global::opt{'restore'})) {
     } else {
 	die("-toc only implemented for ftape under Linux\n");
     }
-
-} else {
-    print "Nothing to do!\n";
 
 }
 
@@ -355,11 +351,6 @@ sub backup {
     }
 
     &line();
-    my $stamp = &get_label($dir);
-    &log("Timestamp $cfg::stampdir/$cfg::sprefix.$stamp.$global::level");
-    system("touch $cfg::stampdir/$cfg::sprefix.$stamp.$global::level");
-
-    &line();
     &log("Running \"$string\"");
 
     # If we started with level 0 and all, we know the file number,
@@ -374,18 +365,30 @@ sub backup {
         &log("Backup will be file number $global::nextfile");
     }
 
+    # Just get the date for now; dont' write the timestamp
+    # Until after the backup has run
+    my $date_at_start_of_this_backup;
+    chomp($date_at_start_of_this_backup = `date`);
+
     # Enough fooling around... run it
     &line();
     system("$string 2>&1 | tee -a $global::log");
     if ($?) {
-	&log("Error from $type backup, exiting....\n");
+	&log("ERROR from $type backup, exiting....\n");
 	exit(1);
     }
 
-    # tar is causing me fits...  mt right after archive operations is giving i/o errors
+    # tar is causing me fits; mt right after archive operations is giving i/o errors
     if ($type eq 'tar') {
         sleep 5;
     }
+
+    # Create timestamp file, but use date from before the backup started
+    # so next time we will catch files that might have been toucehd during the run
+    my $stamp = &get_label($dir);
+    &log("Timestamp $cfg::stampdir/$cfg::sprefix.$stamp.$global::level");
+    system("touch -d \"$date_at_start_of_this_backup\" $cfg::stampdir/$cfg::sprefix.$stamp.$global::level");
+    &line();
 
     # Show where we are on the tape
     &line();
@@ -906,6 +909,24 @@ sub optioncheck {
         if ($global::opt{'level'} !~ m/^\d$/) {
             die("-level must be 0 through 9 only\n");
         }
+    }
+
+    # mode
+    my (@modelist) = qw(fs list extract compare restore toc);
+    my @modes;
+    my $modecount = 0;
+    foreach (@modelist) {
+        if (defined($global::opt{$_})) {
+            $modecount++;
+            push(@modes,$_);
+        }
+    }
+    if ($modecount > 1) {
+        $_ = join(" -",@modes);
+        die("Can't specify more than one mode (given \"-$_\")\n");
+    }
+    if ($modecount == 0) {
+        die("Nothing to do!\n");
     }
 
 }
