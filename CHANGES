@@ -2,6 +2,14 @@ $Id$
 $Name$
 
 ----------------------------------------------------------------------
+In CVS but not released
+
+Changes:
+ 
+Bug fixes/cleanup:
+ - "copy" type doesn't use -0 flag to cpio (not available everywhere)
+
+----------------------------------------------------------------------
 Version 1.2.1 (20031010)
 
 Changes:
