@@ -41,6 +41,7 @@ lsm: tag
 	cd /tmp; echo yes | cvs release -d flexbackup-$(VER)
 	./sizelsm.perl $(SITE) $(VER)
 	cvs commit -m "" flexbackup.lsm
+	cvs tag -F $(CVSVER) flexbackup.lsm
 
 version:
 	test -n "$(VER)"
