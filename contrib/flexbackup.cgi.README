@@ -1,4 +1,6 @@
-Sent in by Andrew McRory <amacc@iron-bridge.net>
+
+[ Sent in by Andrew McRory <amacc@iron-bridge.net>
+  meant as a web-frontend for hosting/ISP/appliance/firewall use ]
 
 flexbackup.cgi is in a "mostly finished" state
 It will run backups manually, and will schedule backups in cron but I wouldn't
