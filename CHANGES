@@ -2,12 +2,12 @@ $Id$
 $Name$
 
 New Features:
+ - table-of-contents support - tells you which backups are on which tapes.
+     uses a simple "key" on the tape plus on-disk database files
  - added "traverse mountpoints" config option for non-dump types
      can skip nfs mounts or really do everything
  - added config option to turn off assumption that level zero "all"
      should erase the tape
- - table-of-contents support - tells you which backups are on which tapes.
-     uses a simple "key" on the tape plus on-disk database files
 
 Bug fixes:
  - add "conv=sync" to dd flags so it will pad blocks
@@ -18,15 +18,16 @@ Bug fixes:
  - using $ in exclude expressions broke remote backups if the user's
      login shell was csh/tcsh due to it's insane syntax quirks.  Worked
      around it putting a trailing $ outside the second level quotes
- - works on OSF/1
+ - works on OSF/1 boxes
 
 Cleanup:
- - autodetect Linux ftape device, eliminates configuration
  - remove ftape table of contents now that I have a generic one
+ - autodetect Linux ftape device, eliminates configuration
  - change time format slightly for consistency
  - cleaned up handling of reten/erase/rewind options
- - tape position display under FreeBSD is just mt rdhpos,
-     not mt status (lots of useless info)
+ - tape position display under FreeBSD is just "mt rdhpos",
+   under others is "mt tell"
+   ("mt status" cluttered things w/ lots of useless info)
 
 ----------------------------------------------------------------------
 Version 0.9.6 (19991003)
