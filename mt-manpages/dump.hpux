@@ -1,0 +1,264 @@
+
+
+
+dump(1M)						 dump(1M)
+
+
+NNAAMMEE
+       dump,  rdump  -	incremental  file  system  dump, local or
+       across network
+
+SSYYNNOOPPSSIISS
+       [_o_p_t_i_o_n [_a_r_g_u_m_e_n_t ...]  _f_i_l_e_s_y_s_t_e_m]
+
+       [_o_p_t_i_o_n [_a_r_g_u_m_e_n_t ...]  _f_i_l_e_s_y_s_t_e_m]
+
+DDEESSCCRRIIPPTTIIOONN
+       The _d_u_m_p and _r_d_u_m_p commands  copy  to  magnetic	tape  all
+       files  in  the  _f_i_l_e_s_y_s_t_e_m  that have been changed after a
+       certain date.  This information is derived from the  files
+       _/_v_a_r_/_a_d_m_/_d_u_m_p_d_a_t_e_s  and	_/_e_t_c_/_f_s_t_a_b.  _o_p_t_i_o_n specifies the
+       date and other options about the dump.  _o_p_t_i_o_n consists of
+       characters  from	 the set _0_1_2_3_4_5_6_7_8_9_b_d_f_n_s_u_W_w. The _d_u_m_p and
+       _r_d_u_m_p commands work only on file systems of type	 _h_f_s.  If
+       the  given  file system is not of type _h_f_s, _d_u_m_p and _r_d_u_m_p
+       will abort after printing an error message.
+
+   OOppttiioonnss
+	      _0-_9	This number is	the  "dump  level".   All
+			files modified since the last date stored
+			in file _/_v_a_r_/_a_d_m_/_d_u_m_p_d_a_t_e_s for	the  same
+			file  system  at  lesser  levels  will be
+			dumped.	 If no date is determined by  the
+			level,	the beginning of time is assumed.
+			Thus, the option _0 causes the entire file
+			system to be dumped.
+
+	      The blocking factor is taken from the next argument
+			(default is 10 if not specified).   Block
+			size  is  defined  as  the logical record
+			size times  the	 blocking  factor.   _d_u_m_p
+			writes	logical	 records  of  1024 bytes.
+			When dumping to tapes with  densities  of
+			6250  BPI  or greater without using the _b
+			option, the default  blocking  factor  is
+			32.
+
+	      The density of the tape (expressed in BPIs)
+			is taken from the next _a_r_g_u_m_e_n_t.  This is
+			used in calculating the	 amount	 of  tape
+			used per reel.	The default value of 1600
+			assumes a reel tape.
+
+	      Place the dump on the next
+			_a_r_g_u_m_e_n_t file instead of  the  tape.   If
+			the name of the file is _-, _d_u_m_p writes to
+			the standard output.  When  using  _r_d_u_m_p,
+			this  option should be specified, and the
+			next argument supplied should be  of  the
+			form
+
+
+
+
+								1
+
+
+
+
+
+dump(1M)						 dump(1M)
+
+
+	      Whenever	_d_u_m_p  and  _r_d_u_m_p  require operator atten
+			tion, notify all users in group	 _o_p_e_r_a_t_o_r
+			by  means  similar  to	that described by
+			_w_a_l_l(1).
+
+	      The size of the dump tape is specified in feet.
+			The number of feet is taken from the next
+			_a_r_g_u_m_e_n_t.   When  the  specified  size is
+			reached, _d_u_m_p and _r_d_u_m_p wait for reels to
+			be  changed.  The default tape size value
+			of 2300 feet assumes a reel tape.
+
+	      If the dump completes successfully,
+			write on file _/_v_a_r_/_a_d_m_/_d_u_m_p_d_a_t_e_s the date
+			when the dump started.	This file records
+			a separate date for each file system  and
+			each   dump   level.	The   format   of
+			_/_v_a_r_/_a_d_m_/_d_u_m_p_d_a_t_e_s is  user-readable  and
+			consists  of  one  free-format record per
+			line: file system name, increment  level,
+			and  dump  date in _c_t_i_m_e(3C) format.  The
+			file _/_v_a_r_/_a_d_m_/_d_u_m_p_d_a_t_e_s can be edited  to
+			change any of the fields if necessary.
+
+	      For each file system in
+			_/_v_a_r_/_a_d_m_/_d_u_m_p_d_a_t_e_s, print the most recent
+			dump date  and	level,	indicating  which
+			file  systems should be dumped.	 If the _W
+			option is  set,	 all  other  options  are
+			ignored and _d_u_m_p exits immediately.
+
+	      Operates like
+			_W, but prints only file systems that need
+			to be dumped.
+
+       If no arguments are given, _o_p_t_i_o_n is assumed to be  and	a
+       default file system is dumped to the default tape.
+
+       Sizes are based on 1600-BPI blocked tape; the raw magnetic
+       tape device must be used to approach these densities.   Up
+       to  32  read  errors on the file system are ignored.  Each
+       reel requires a new process;  thus  parent  processes  for
+       reels  already  written	remain	until  the entire tape is
+       written.
+
+       The _r_d_u_m_p  command  creates  a  server,	_/_u_s_r_/_s_b_i_n_/_r_m_t  or
+       _/_e_t_c_/_r_m_t, on the remote machine to access the tape device.
+
+       _d_u_m_p and _r_d_u_m_p require operator intervention  for  any  of
+       the following conditions:
+
+		end of tape,
+		end of dump,
+		tape-write error,
+
+
+
+								2
+
+
+
+
+
+dump(1M)						 dump(1M)
+
+
+		tape-open error, or
+		disk-read  error  (if errors exceed threshold of
+		 32).
+
+       In addition to alerting all operators  implied  by  the	_n
+       option,	_d_u_m_p and _r_d_u_m_p interact with the control terminal
+       operator by posing questions requiring _y_e_s or  _n_o  answers
+       when  it	 can no longer proceed or if something is grossly
+       wrong.
+
+       Since making a full dump involves  considerable	time  and
+       effort,	_d_u_m_p and _r_d_u_m_p each establish a checkpoint at the
+       start of each tape volume.  If, for  any	 reason,  writing
+       that volume fails, _d_u_m_p and _r_d_u_m_p will, with operator per
+       mission, restart from the checkpoint after  the	old  tape
+       has  been  rewound  and	removed	 and  a new tape has been
+       mounted.
+
+       _d_u_m_p and _r_d_u_m_p  periodically  report  information  to  the
+       operator,  including typically low estimates of the number
+       of blocks to write, the number of tapes it  will	 require,
+       the  time  needed  for  completion, and the time remaining
+       until tape change.  The output is verbose to inform  other
+       users that the terminal controlling _d_u_m_p and _r_d_u_m_p is busy
+       and will be for some time.
+
+   AAcccceessss CCoonnttrrooll LLiissttss ((AACCLLss))
+       The optional entries of a file's access control list (ACL)
+       are not backed up with _d_u_m_p and _r_d_u_m_p. Instead, the file's
+       permission bits are backed up  and  any	information  con
+       tained in its optional ACL entries is lost (see _a_c_l(5)).
+
+EEXXAAMMPPLLEESS
+       In the following example, assume that the file system _/_m_n_t
+       is to be attached to the file tree at the root  directory,
+       (_/).  This example causes the entire file system (_/_m_n_t) to
+       be dumped on _/_d_e_v_/_r_m_t_/_c_0_t_0_d_0_B_E_S_T and  specifies	that  the
+       density of the tape is 6250 BPI.
+
+
+WWAARRNNIINNGGSS
+       _d_u_m_p will not backup a file system containing large files.
+
+       Tapes created from  file	 systems  containing  files  with
+       UID/GIDs	 greater than 60,000 will have a new magic number
+       in the header to prevent	 older	versions  of  _r_e_s_t_o_r_e(1M)
+       from incorrectly restoring ownerships for these files.
+
+AAUUTTHHOORR
+       _d_u_m_p  and  _r_d_u_m_p were developed by the University of Cali
+       fornia, Berkeley.
+
+FFIILLEESS
+
+
+
+
+								3
+
+
+
+
+
+dump(1M)						 dump(1M)
+
+
+       Default file system to dump from.
+       Default tape unit to dump to.
+       New format-dump-date record.
+       Dump table: file systems and frequency.
+       Used to find group	       _o_p_e_r_a_t_o_r.
+
+SSEEEE AALLSSOO
+       restore(1M), rmt(1M), fstab(4), acl(5).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+								4
+
+
