@@ -31,8 +31,6 @@ Misc:
 
 
 Features to add:
- - static filenames when using disk (same fs, same level overwrite)?
-     0.9.8 patch from Michael Matsumura <michael@limit.org>
  - remote tape drive (rmt) support
      0.9.8 patch from Caleb Crome <caleb@crome.org>
  - non-root use (remote too)

@@ -1,7 +1,28 @@
 $Id$
 $Name$
 
+Version 0.9.9.5 (20030110)
+
+Bug fixes:
+ - Old bug: stamp files from the various parts of 'all' were not getting
+    marked as 'old' correctly for removal (we were looking for "all.<level>")
+
+Changes:
+ - Static filenames option when using disk (same fs, same level overwrite)
+     based on 0.9.8 patch from Michael Matsumura <michael@limit.org>
+     split into $staticlogs / $staticfiles config options
+ - $nocompress_types -> $afio_nocompress_types since that's the only one
+   that uses it
+
+----------------------------------------------------------------------
 Version 0.9.9.4 (20030110)
+
+Bug fixes:
+ - DOH! we *were* doing levels slightly wrong.
+    use < rather than <= for comparing levels.
+    popped out of investigating incremental and differential requests
+    Now we act like dumplevels should
+ - This also changes what we regard as "old" logs/stamps as a result
 
 Changes:
  - Several requests were in old email for differential/incremental...
@@ -26,13 +47,6 @@ Changes:
       incremental = <latest backup> + 1  [broken for fs=all at this stage]
 
  - Support for > 9 levels (for all types but 'dump')
-
-Bug fixes:
- - DOH! we *were* doing levels slightly wrong.
-    use < rather than <= for comparing levels.
-    popped out of investigating incremental and differential requests
-    Now we act like dumplevels should
- - This also changes what we regard as "old" logs/stamps as a result
 
 ----------------------------------------------------------------------
 Version 0.9.9.3 (20030109)
