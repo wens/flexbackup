@@ -24,10 +24,10 @@ tar: version tag
 	cd /tmp/flexbackup-$(VER); mv flexbackup.spec.template flexbackup.spec
 	cd /tmp/flexbackup-$(VER); perl -pi -e 's/%define version.*/%define version $(VER)/' flexbackup.spec
 	tar -C /tmp -z -c -v -X tar.exclude -f $(SITE)/tarball/flexbackup-$(VER).tar.gz flexbackup-$(VER)
-        cp /tmp/flexbackup-$(VER)/CHANGES $(SITE)/CHANGES.dev
-        cp /tmp/flexbackup-$(VER)/TODO $(SITE)/TODO.dev
+	cp /tmp/flexbackup-$(VER)/CHANGES $(SITE)/CHANGES.dev
+	cp /tmp/flexbackup-$(VER)/TODO $(SITE)/TODO.dev
 	./flexbackup -h > $(SITE)/usage.dev.txt
-        cp ./flexbackup.conf $(SITE)/flexbackup.conf.dev.txt
+	cp ./flexbackup.conf $(SITE)/flexbackup.conf.dev.txt
 	rm -rf /tmp/flexbackup-$(VER)
 
 rpm: version tar
