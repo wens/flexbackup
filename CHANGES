@@ -20,6 +20,10 @@ Cleanup:
      tar == gtar but still want to do normal path-search)
  - $nocompress_types -> $afio_nocompress_types since that's the only one
    that uses it
+ - A few cosmetic fixes:
+     fix double dash-line on last line of logfile
+     make logging routines suable for screen/log/both
+     fix so -n won't nuke old files either
 
 ----------------------------------------------------------------------
 Version 0.9.9.4 (20030110)
