@@ -1,6 +1,17 @@
 $Id$
 $Name$
 
+Version TBD
+
+Changes:
+  - A "no blocking at all" option. Set $blksize=0 in the config file.
+  - Added support for "zip" as valid archive compression type
+  - Added support for "zip" as valid log compression type
+
+Cleanup:
+  - Redid the way buffer/read/write strings were constructed to make more sense
+
+----------------------------------------------------------------------
 Version 0.9.9.7 (20030115)
 
 Changes: (just so we can say it supports *everything* for archive formats)

@@ -48,8 +48,8 @@ upload: version lsm
 	test -e www/tarball/flexbackup-$(VER).tar.gz
 	ncftpput ibiblio.org /incoming/Linux www/tarball/flexbackup-$(VER).tar.gz
 	ncftpput ibiblio.org /incoming/Linux flexbackup.lsm
-	ncftpput incoming.redhat.com /noarch www/RPMS/flexbackup-$(VER)-1.noarch.rpm
-	ncftpput incoming.redhat.com /noarch www/RPMS/flexbackup-$(VER)-1.src.rpm
+	ncftpput incoming.redhat.com /libc6 www/RPMS/flexbackup-$(VER)-1.noarch.rpm
+	ncftpput incoming.redhat.com /libc6 www/RPMS/flexbackup-$(VER)-1.src.rpm
 
 version:
 	test -n "$(VER)"

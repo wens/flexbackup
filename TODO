@@ -5,11 +5,11 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
+ - Check buffer avail mem thing from John?
+ - Check for existence of remote executables? (John had something)
  - Clean up more $main:: vars, split into types or refactor code
  - bash PIPESTATUS trick fails if remote filesystem and shell there!=bash
      and shell local==bash. bah.
- - Check buffer avail mem thing from John
- - Check for existence of remote executables? (John had something)
  - Whole class of problems like:
     - Use dump combined flags (for older dumps that want abc not -a -b -c)
     - Not all finds have the -fstype flag (from $traverse_fs)
@@ -19,8 +19,9 @@ Cleanup/fix:
  - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
  - Split main program; use separate libs for archiver types that are stored
    in different files?  install then requires more than just program + conf file.
- - zip -z for label
- 
+ - if comp_log is changed, we don't nuke old logs that normally would be
+   overwritten with ourselves if comp_log stayed the same. (cosmetic nit)
+
 Misc:
  - Make a manual page (AND other enchanced documentation, more than a README)
    someone made a good start or two:
@@ -36,17 +37,42 @@ Misc:
 
 
 Features to add:
- - A "no blocking at all" option
- - smbtar?
+ - Some "level" that uses rpm, verifies all packages, and just backs
+      up any file not in a package OR changed from a package. and the rpm list.
+      once the above works make it work for debian packages
+
+      Will do this post 1.0
+
+ - Handle multi-volume backups (original idea w/ 'multibuf' never panned out)
+
+      Found "multivol" program solution!  It also used a slightly different
+      labelling, but the idea was sort of the same as mine, with small key at
+      the start of the tape.
+
+      Will do this post 1.0
+
+      Otherwise, maybe figure out which archivers support & try to add
+      won't work with pipelines probably - TEST
+      use short write detection, or do we need to spec tape length?
+      needs testing
+       dump - depends on flavor
+       afio: -s size
+       cpio -M? uses short write detection for length?
+       tar -M & -L?
+       star tsize=
+       pax -B
+       zip nope
+      will hose indexes - no index on second volume
+      what about read/restore?
+
+- smbtar?
      doable - overload type 'tar'. smbtar triggers with a fs spec of something like
                smb:user:pass@host/share:dir
      smbtar has "files newer than" option, test
      don't want password echoed
      no exclude from find
      top level of shares only?
- - Some "level" that uses rpm, verifies all packages, and just backs
-      up any file not in a package OR changed from a package. and the rpm list.
-      once the above works make it work for debian packages
+
  - Non-root use (remote too)
     document sudo workaround from Alex
     maybe works using the path overrides I put in?
@@ -69,20 +95,6 @@ Features to add:
       see notes below
  - Log tape sizes (output of buffer or dd or mt tell can be used?)
  - Extract options to not overwrite existing files
- - Handle multi-volume backups (original idea never panned out)
-      Maybe figure out which archivers support & try to add
-      won't work with pipelines probably - TEST
-      use short write detection, or do we need to spec tape length?
-      needs testing
-       dump - depends on flavor
-       afio: -s size
-       cpio -M? uses short write detection for length?
-       tar -M & -L?
-       star tsize=
-       pax -B
-       zip nope
-      will hose indexes - no index on second volume
-      what about read/restore?
  - Arbitrary "groups" that act sort of like "all"
  - Store the index db on the tapes?
       But we don't know the size ahead of time unless hard-limited resperved size.

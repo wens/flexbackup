@@ -11,7 +11,7 @@ make rsync
 
 get flexbackup.org synced
 
-make all VER=x.x.x
+make upload VER=x.x.x
   uploads files to sunsite
   uploads files to rh contrib
   
