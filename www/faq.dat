@@ -1,7 +1,8 @@
 
 <c>Configuration
 
-<q>On my system, "tar" is not GNU tar. On my system, "dump" is "ufsdump".
+<q>On my system, "tar" is not GNU tar, but is installed as "gtar". On my
+system, "dump" is "ufsdump".
 
 <a>Use the path overrides at the end of the config file. A couple examples
 are given there, such as: <CODE>$path{'dump'} = 'ufsdump';</CODE>.  You can
