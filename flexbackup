@@ -1146,6 +1146,9 @@ sub get_last_date {
     # Find last stamp file
     opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $OS_ERROR");
     my @files = readdir(DIR);
+    ###
+    ### FIXME this should be a full loop, compared, no last.
+    ### will break when levels > one digit
     foreach $file (reverse sort @files) {
 	next if ($file !~ m/^$cfg::sprefix$label\.([0-9])$/);
 	if ($1 < $main::level) {
