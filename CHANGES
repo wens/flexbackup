@@ -5,16 +5,21 @@ $Name$
 Version 1.2.0 ()
 
 Changes:
+  - Merge devel -> stable
   - Added -pipe option to archive single directory to stdout,
-    or list/extract/compre archive from stdin
+    or list/extract/compare archive from stdin
+  - No null padding necessary for reads, even with $pad_blocks true - only
+    needed for writes.  Should take harmless warnings way from gzip,tar,
+    and others when reading
   - Added -nodefaults option for debug
   - Allow compression for filelist type
-  - Merge devel -> stable
-
 
 Bugfixes/cleanup:
+  - Fix FreeBSD find w/ prune regex
   - Truncate tar label to 99 chars
-  - Fix FreeBSD find prune regex
+  - Error if -num flag with backup write mode or using file
+  - Error if -erase with archive read mode or using file
+  - Fix afio volume header print filehandle
   - Fix if on-disk backups, and "-rmfile all", the index for the keyfile
     was removed but not the keyfile itself
   - use $:: rather than $main:: for globals, its shorter...

@@ -5,12 +5,7 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
-
- - Check fix for find -E -regex '.*(a|b)' with FreeBSD
-
- Blocked pending me having a work tape drive again:
-  - Need to pad for reads?  test all types.
-  - Test mbuffer more ; possibly remove
+ - test mbuffer
 
  - Better cleanup after error in backup
  - Clean up more $main:: vars, split into types or refactor code

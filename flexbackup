@@ -2553,6 +2553,7 @@ sub optioncheck {
     my $buffer_blk_flag;
     my $buffer_write_pad_flag;
     my $buffer_read_pad_flag;
+
     my $mbuffer_blk_flag;
     my $mbuffer_write_pad_flag;
     my $mbuffer_read_pad_flag;
@@ -2910,14 +2911,18 @@ sub optioncheck {
     # Block padding
     if (($cfg::pad_blocks eq "true") and defined($::tapedevice)) {
 	$::dd_write_pad_flag = "conv=noerror,sync";
-	$::dd_read_pad_flag = "conv=noerror,sync";
+	$::dd_read_pad_flag = "conv=noerror";
 	$buffer_write_pad_flag = "-B";
-	$buffer_read_pad_flag = "-B";
+	$buffer_read_pad_flag = "";
+	$mbuffer_write_pad_flag = "";
+	$mbuffer_read_pad_flag = "";
     } else {
 	$::dd_write_pad_flag = "conv=noerror";
 	$::dd_read_pad_flag = "conv=noerror";
 	$buffer_write_pad_flag = "";
 	$buffer_read_pad_flag = "";
+	$mbuffer_write_pad_flag = "";
+	$mbuffer_read_pad_flag = "";
     }
 
     # Buffer setup
@@ -2961,11 +2966,9 @@ sub optioncheck {
 	    push(@::remoteprogs, $::path{'mbuffer'});
 
 	    my $megs = $cfg::buffer_megs . "M";
-	    my $bufcmd = "$::path{mbuffer} -m $megs -p $cfg::buffer_fill_pct $mbuffer_blk_flag";
+	    my $bufcmd = "$::path{mbuffer} -q -m $megs -p $cfg::buffer_fill_pct $mbuffer_blk_flag ";
 
-	    # FIXME keep testing this
-	    # FIXME sleep setup just like buffer
-	    $::buffer_cmd = " | $bufcmd -q";
+	    $::buffer_cmd = " | $bufcmd";
 	    $::write_cmd = "$bufcmd | $::path{dd} $::dd_blk_flag $::dd_write_pad_flag of=";
 	    $::read_cmd = "$::path{dd} $::dd_blk_flag $::dd_read_pad_flag if=";
 
@@ -3447,14 +3450,30 @@ sub optioncheck {
 	}
     }
 
-    # Index database
+    # Tie index database
     if (($::mode !~ m/^(list|extract|restore|compare|test-tape-drive)$/) and
 	($cfg::indexes eq "true")) {
 	tie(%::index,"AnyDBM_File",$cfg::index,O_CREAT|O_RDWR,0640) or
 	    push(@::errors,"Can't tie DB $cfg::index");
     }
 
-    # Test
+    # Sanity check some accessory tape flags
+    if (($::mode =~ m/^(list|extract|restore|compare)$/) and defined($::opt{'erase'})) {
+	push(@::errors,"-erase can't be used in -$::mode mode");
+    }
+    if (($::mode =~ m/^(set|dir|newtape)$/) and defined($::opt{'num'})) {
+	push(@::errors,"-num Can't be used in -$::mode mode");
+    }
+    if (defined($::use_file)) {
+	if (defined($::opt{'num'})) {
+	    push(@::errors,"Can't use -num unless reading from tape");
+	}
+	if (defined($::opt{'erase'}) or defined($::opt{'rewind'}) or defined($::opt{'reten'})) {
+	    push(@::errors,"Can't use -erase/-rewind/-reten unless using a tape");
+	}
+    }
+
+    # Testing
     if (defined($::debug)) {
 	&log('(debug) no backup or mt commands will be executed');
 	&log('(debug) no old stamps or old log files will be removed');
@@ -3991,12 +4010,8 @@ sub setup_before_read {
     }
 
     if (defined($::opt{'num'})) {
-	if (defined($::use_file)) {
-	    die("Can't use -num unless reading from tape");
-	} else {
-	    &log("| Positioning tape at file number $::opt{num}");
-	    &mt("rewind","fsf $::opt{num}");
-	}
+	&log("| Positioning tape at file number $::opt{num}");
+	&mt("rewind","fsf $::opt{num}");
     } else {
 	if (defined($::use_pipe)) {
 	    &log("| Reading from stdin (type=$cfg::type compress=$cfg::compress)");
@@ -4095,7 +4110,7 @@ sub nuke_trailing_slash {
 ######################################################################
 sub print_afio_volume_header {
     # for now just echo our stdin
-    print $::msg "\n";
+    print STDOUT "\n";
     while(<STDIN>) {
 	print;
     }
@@ -4701,7 +4716,12 @@ sub file_list_cmd {
     }
 
     my $cmd = '';
-    $cmd .= "$::path{find} . ";
+    # FreeBSD wants -E to enable extended regex
+    if ($::uname =~ /FreeBSD/) {
+	$cmd .= "$::path{find} -E . ";
+    } else {
+	$cmd .= "$::path{find} . ";
+    }
 
     my $prunekey;
     if (defined($remote)) {
@@ -4711,17 +4731,17 @@ sub file_list_cmd {
     }
 
     if (defined(%{$::prune{$prunekey}})) {
-	# FreeBSD needs -E and no backslashes around the (|) chars
-        if ($::uname =~ /FreeBSD/) { 
-            $cmd .= '-E -regex "\./(';
-            $cmd .= join('|', keys %{$::prune{$prunekey}});
-            $cmd .= ')/.*" ';
-        } else {
-            $cmd .= '-regex "\./\(';
-            $cmd .= join('\|', keys %{$::prune{$prunekey}});
-            $cmd .= '\)/.*" ';
-        }
-        $cmd .= '-prune -o ';
+	# FreeBSD needs -E (above) and no backslashes around the (|) chars
+	if ($::uname =~ /FreeBSD/) {
+	    $cmd .= '-regex "\./(';
+	    $cmd .= join('|', keys %{$::prune{$prunekey}});
+	    $cmd .= ')/.*" ';
+	} else {
+	    $cmd .= '-regex "\./\(';
+	    $cmd .= join('\|', keys %{$::prune{$prunekey}});
+	    $cmd .= '\)/.*" ';
+	}
+	$cmd .= '-prune -o ';
     } else {
 	# Can't use find -depth with -prune (see single unix spec etc)
 	# (not toally required anyway, only if you are archiving dirs you
