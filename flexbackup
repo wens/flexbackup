@@ -4711,11 +4711,17 @@ sub file_list_cmd {
     }
 
     if (defined(%{$::prune{$prunekey}})) {
-	# FIXME don't join , use separate -regex -o flags
-	# So freebsd find will work?  Bug john.
-	$cmd .= '-regex "\./\(';
-	$cmd .= join('\|', keys %{$::prune{$prunekey}});
-	$cmd .= '\)/.*" -prune -o ';
+	# FreeBSD needs -E and no backslashes around the (|) chars
+        if ($::uname =~ /FreeBSD/) { 
+            $cmd .= '-E -regex "\./(';
+            $cmd .= join('|', keys %{$::prune{$prunekey}});
+            $cmd .= ')/.*" ';
+        } else {
+            $cmd .= '-regex "\./\(';
+            $cmd .= join('\|', keys %{$::prune{$prunekey}});
+            $cmd .= '\)/.*" ';
+        }
+        $cmd .= '-prune -o ';
     } else {
 	# Can't use find -depth with -prune (see single unix spec etc)
 	# (not toally required anyway, only if you are archiving dirs you
