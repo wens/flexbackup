@@ -1,7 +1,11 @@
 $Id$
 $Name$
 
+Version 0.9.8.3 (20020824)
+
+Revive the tree
 Move support info/web site so this isn't stagnant anymore
+Check in what I had pending
 
 New Features:
  - works for block devices (like floppies).  Turns the indexing off since
