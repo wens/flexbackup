@@ -3141,8 +3141,10 @@ sub optioncheck {
     # Subtree pruning
     foreach my $fs (keys %cfg::prune) {
 	$fs = &nuke_trailing_slash($fs);
-	foreach my $expr (&split_list($cfg::prune{$fs})) {
-	    $::prune{$fs}{$expr} = 1;
+	if (defined ($cfg::prune{$fs})) {
+	    foreach my $expr (&split_list($cfg::prune{$fs})) {
+		$::prune{$fs}{$expr} = 1;
+	    }
 	}
     }
 
