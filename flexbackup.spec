@@ -44,7 +44,10 @@ mkdir -p $RPM_BUILD_ROOT/etc
 mkdir -p $RPM_BUILD_ROOT/usr/bin
 mkdir -p $RPM_BUILD_ROOT/var/lib/flexbackup
 mkdir -p $RPM_BUILD_ROOT/var/log/flexbackup
-make install
+make fb.install
+install -m 0644 flexbackup.conf $RPM_BUILD_ROOT/etc/flexbackup.conf
+install -m 0755 fb.install $RPM_BUILD_ROOT/usr/bin/flexbackup
+
 
 %clean
 rm -rf $RPM_BUILD_ROOT
