@@ -2,19 +2,17 @@
 Mainly written by me -
 Edwin Huffstutler <edwinh@computer.org>
 
-The following people have helped me debug/fix things:
+Other people have helped me debug/fix things.
 
 John Reynolds <jreynold@primenet.com>
- FreeBSD compatibility, other additions
+   FreeBSD compatibility, other additions
 
-Rick Gaudette <rjg@ECE.NEU.EDU>
- pre-4.0 fileutils touch -t problem
+Misc help and suggestions:
+  sethalx <alx@taylor.org>
+  Rick Gaudette <rjg@ECE.NEU.EDU>
+  Rafal Maszkowski <rzm@icm.edu.pl>
+  Michael Bartosh <bartosh@apple.tamu.edu>
 
-Rafal Maszkowski <rzm@icm.edu.pl>
- one-way ssh/rsh hint
-
-Michael Bartosh <bartosh@apple.tamu.edu>
- mt debugging
 
 $Id$
 $Name$

@@ -1,6 +1,19 @@
 $Id$
 $Name$
 
+New Features:
+ - added "traverse mountpoints" option for non-dump types
+     can skip nfs mounts or really do everything
+
+Bug fixes/cleanup:
+ - don't use `date ..`, but POSIX::strftime() instead
+     incremental backups on FreeBSD were busted (no date -r)
+ - change time format slightly for consistency
+ - cleaned up handling of reten/erase/rewind options
+ - tape position display under FreeBSD is just mt rdhpos,
+     not mt status (lots of useless info)
+
+----------------------------------------------------------------------
 Version 0.9.6 (19991003)
 
 New Features:

@@ -35,11 +35,11 @@
 #                                    for configuration
 #  flexbackup [opt] -type <x>      : override $type from config file
 #  flexbackup [opt] -compress <x>  : override $compress from config file
-#  flexbackup [operation] -reten   : force a retension before any operation
 #  flexbackup -fs all -noreten     : don't retension for level 0 "all" backups
 #  flexbackup -fs all -noerase     : don't rewind/erase for level 0 "all" backups
 #  flexbackup -fs <x> -erase       : force a rewind/erase before backup
 #  flexbackup -fs <x> -norewind    : don't rewind tape after a single backup
+#  flexbackup [operation] -reten   : force a retension before read
 #  flexbackup [opt] -n             : don't run actual dump or mt commands
 #  flexbackup [opt] -d 'var=val'   : override config file setting of $var
 #  flexbackup -version             : show version
@@ -62,10 +62,10 @@
 #
 ######################################################################
 
+use POSIX qw(strftime);
 use Getopt::Long;
 use English;
 use strict;
-require 'ctime.pl';
 
 # No output buffering
 $OUTPUT_AUTOFLUSH = 1;
@@ -95,11 +95,9 @@ if (! &main::GetOptions(\%main::opt,
                         "toc",
                         "type=s",
                         "compress=s",
-                        "noreten",
-                        "noerase",
-                        "norewind",
-                        "erase",
-                        "reten",
+                        "erase!",
+                        "rewind!",
+                        "reten!",
                         "version",
                         "n",
                         "d=s%"
@@ -116,8 +114,8 @@ if (defined($main::opt{'help'})) {
 
 # Version
 if (defined($main::opt{'version'})) {
-    print ('$Id$ ');
-    print "\nflexbackup version " . &versionstring() . "\n";
+    print "flexbackup version " . &versionstring() . "\n";
+    print '$Id$ ' . "\n";
     exit(0);
 }
 
@@ -131,6 +129,9 @@ chomp($main::uname = `uname -s`);
 
 # Sanity check
 &optioncheck();
+
+# See about rewind/erse/reten flags
+&set_tape_operation_defaults();
 
 # Get current date string
 $main::date = &current_time("short");
@@ -237,51 +238,36 @@ sub backup_routine {
     #
     ##########################
     # Spew some info
-    $_ = &current_time();
-    &log("| Current time: $_");
     &log("| Doing level $main::level backup of $main::opt{fs} using $cfg::type");
 
     if ($main::opt{'fs'} eq 'all') {
 
         foreach $list (@cfg::filesystems) {
 
-            if ($main::level == 0) {
+            # Maybe retension
+            if ($main::do_reten == 1) {
+                &log('| Retensioning tape...');
+                &mt('retension');
+            }
 
-                &log("| Tape \#$tapecounter filesystems = $list");
-
-                # All
-                # Level zero - rewind and erase a new tape
-                if (!defined($main::opt{'noreten'})) {
-                    &log('| Retensioning tape...');
-                    &mt('retension');
-                }
-                if (!defined($main::opt{'noerase'})) {
-                    $main::nextfile = 0;
-                    &log('| Rewinding & erasing tape...');
-                    &mt('rewind','erase');
-                } else {
-                    $main::nextfile = &contents();
-                    &log('| Making sure tape is at end of data...');
-                    &mt('generic-eod');
-		}
-
+            # Maybe rewind/erase
+            if ($main::do_erase == 1) {
+                $main::nextfile = 0;
+                &log('| Rewinding & erasing tape...');
+                &mt('rewind','erase');
             } else {
+                $main::nextfile = &contents();
+                &log('| Making sure tape is at end of data...');
+                &mt('generic-eod');
+            }
 
-                &log("| Filesystems = $list");
+            # Multiple tapes are only for level 0
+            if ($main::level == 0) {
+                &log("| Tape \#$tapecounter");
+            }
 
-                # All
-                # Incremental backup - list what's on it, then go to end of tape
-                if (!defined($main::opt{'erase'})) {
-                    $main::nextfile = &contents();
-                    &log('| Making sure tape is at end of data...');
-                    &mt('generic-eod');
-                } else {
-                    $main::nextfile = 0;
-                    &log('| Rewinding & erasing tape...');
-                    &mt('rewind','erase');
-                }
-
-            }                   # end level == 0 (inside foreach fs, inside all)
+            # Print what "all" means
+            &log("| Filesystems = $list");
 
             # Show tape position
             &line();
@@ -301,12 +287,15 @@ sub backup_routine {
             if ($main::level == 0) {
                 if ($tapecounter < $main::num_tapes) {
 
-                    # Rewind
-                    &line();
-                    &log("| Rewinding...");
-                    &mt('rewind');
+                    # Maybe rewind (usually true)
+                    if ($main::do_rewind_after == 1) {
+                        &log("| Rewinding...");
+                        &mt('rewind');
+                        &line();
+                    }
+
                     &update_toc();
-                    &line();
+                    &contents();
 
                     $tapecounter++;
                     if (!defined($main::use_file)) {
@@ -326,12 +315,15 @@ sub backup_routine {
     } else {
 
         # Just one filesystem
-        if (defined($main::opt{'reten'})) {
+
+        # Maybe retension
+        if ($main::do_reten == 1) {
             &log('| Retensioning tape...');
-            &mt("retension");
+            &mt('retension');
         }
 
-        if (defined($main::opt{'erase'})) {
+        # Maybe rewind/erase
+        if ($main::do_erase == 1) {
             $main::nextfile = 0;
             &log('| Rewinding & erasing tape...');
             &mt('rewind','erase');
@@ -348,17 +340,15 @@ sub backup_routine {
 
     } # end all or single fs
 
-    # Rewind unless the user doesn't want that....
-    # JR Fri Oct  1 22:54:34 MST 1999
-    unless (defined($main::opt{'norewind'})) {
-        &line();
+    # Maybe rewind (usually true)
+    if ($main::do_rewind_after == 1) {
         &log("| Rewinding...");
         &mt('rewind');
-        &update_toc();
-
-        # Print out new contents
-        &contents();
+        &line();
     }
+
+    &update_toc();
+    &contents();
 
     # Actually remove the old log and stamp files now that we are done
     foreach (sort keys %oldstamps) {
@@ -509,8 +499,7 @@ sub backup {
     $main::date_at_start = &current_time();
 
     # Label for this archive
-    $host = `hostname`;
-    chomp($host);
+    chomp($host = `hostname`);
     $_ = "+" . $cfg::compress;
     $_ =~ s/\+false//;
     $title = "level $main::level $dir $main::date_at_start $cfg::type" . "$_ flexbackup on $host";
@@ -531,9 +520,6 @@ sub backup {
 
     &log("| Backup of: $dir");
     if ($cfg::type eq 'dump') {
-        if (defined($cfg::exclude_expr[0])) {
-            &log("| Note: \$exclude_expr is ignored for dump");
-        }
 	@cmds = &backup_dump($label,$localdir);
     } elsif ($cfg::type eq 'afio') {
 	@cmds = &backup_afio($label,$localdir,$title);
@@ -575,8 +561,8 @@ sub backup {
     # Create timestamp file, but use date from before the backup started
     # so next time we will catch files that might have been toucehd during the run
     $_ = &current_time();
-    &log("| Backup start: $main::date_at_start $cfg::sprefix$label.$main::level");
-    &log("| Current time: $_");
+    &log("| Backup start: $main::date_at_start");
+    &log("| Backup end:   $_");
     system("touch $main::touch_flag \"$main::date_at_start\" $cfg::stampdir/$cfg::sprefix$label.$main::level");
 
     # Got errors unless I paused before trying to access the tape right way...
@@ -600,6 +586,14 @@ sub backup_dump {
     my $cmd = '';
     my $tmpstamp = "$cfg::tmpdir/refdate.$$";
     my $date_flag;
+
+    # Warnings
+    if (defined($cfg::exclude_expr[0])) {
+        &log("| Note: \$exclude_expr is ignored for dump");
+    }
+    if ($cfg::traverse_fs eq "true") {
+        &log("| Note: \$traverse_fs is always false for dump");
+    }
 
     # With this one we don't have to put a stampfile on the remote system
     # since we only need the date string
@@ -665,7 +659,7 @@ sub backup_afio {
 
     $cmd .= "cd $dir ; ";
     $cmd .= "(echo //--$tmplabel flexbackup.volume_header_info && ";
-    $cmd .= "find . -xdev ";
+    $cmd .= "find . $main::mountpoint_flag ";
     $cmd .= "-newer $tmpstamp ";
     $cmd .= "-print | ";
     $cmd .= "sed -e \"s%^\./%%\" ";
@@ -721,7 +715,7 @@ sub backup_cpio {
     $cmd .= "touch \"$dir/$title\" ; ";
 
     $cmd .= "cd $dir ; ";
-    $cmd .= "find . -xdev ";
+    $cmd .= "find . $main::mountpoint_flag ";
     $cmd .= "-newer $tmpstamp ";
     $cmd .= "-print | ";
     $cmd .= "sed -e \"s%^\./%%\" ";
@@ -764,7 +758,7 @@ sub backup_tar {
     $cmd .= "touch $main::touch_flag \"$_\" $tmpstamp ; ";
 
     $cmd .= "cd $dir ; ";
-    $cmd .= "find . -xdev ";
+    $cmd .= "find . $main::mountpoint_flag ";
     $cmd .= "! -type d ";
     $cmd .= "-newer $tmpstamp ";
     $cmd .= "-print | ";
@@ -773,7 +767,6 @@ sub backup_tar {
     $cmd .= "| ";
     $cmd .= "tar --create ";
     $cmd .= "--files-from=- ";
-    $cmd .= "--one-file-system ";
     $cmd .= "--same-permissions ";
     $cmd .= "--same-order ";
     $cmd .= "--totals ";
@@ -824,7 +817,7 @@ sub backup_zip {
     $cmd .= "touch $main::touch_flag \"$_\" $tmpstamp ; ";
 
     $cmd .= "cd $dir ; ";
-    $cmd .= "find . -xdev ";
+    $cmd .= "find . $main::mountpoint_flag ";
     $cmd .= "-newer $tmpstamp ";
     $cmd .= "-print | ";
     $cmd .= "sed -e \"s%^\./%%\" ";
@@ -1145,6 +1138,7 @@ sub get_last_date {
     my $return_val;
     my $lastlevel = 0;
     my $targetfile = '';
+    my $mtime;
 
     # Find last stamp file
     opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $OS_ERROR");
@@ -1164,20 +1158,12 @@ sub get_last_date {
     # or use the epoch for level 0
     if ($main::level == 0) {
         $numeric_val = '197001010000.00';
-        # Need a slightly different format for dump -T
-        if (($cfg::type eq "dump") and ($cfg::dump_use_dumpdates eq "false")) {
-            $string_val = "Thu Jan 01 00:00:00 1970";
-        } else {
-            $string_val = "Thu Jan  1 00:00:00 MST 1970";
-        }
+        $string_val = "Thu Jan 01 00:00:00 1970";
+
     } elsif ($targetfile ne '') {
-        if (($cfg::type eq "dump") and ($cfg::dump_use_dumpdates eq "false")) {
-            # Need a format w/o the timezone field for dump -T
-            chomp($string_val = `date -r $targetfile '+%a %b %d %H:%M:%S %Y'`);
-        } else {
-            chomp($string_val = `date -r $targetfile`);
-        }
-        chomp($numeric_val = `date -r $targetfile +%Y%m%d%H%M.%S`);
+        $mtime = (stat($targetfile))[9];
+        $string_val = strftime("%a %b %d %H:%M:%S %Y", localtime($mtime));
+        $numeric_val = strftime("%Y%m%d%H%M.%S", localtime($mtime));
 
     } else {
         die("Can't do a level $main::level backup - no level 0 timestamp found");
@@ -1301,9 +1287,11 @@ sub mt {
 
     foreach $operation (@operations) {
 
-        # mt & ftmt slightly different
+        # BSD mt, GNU mt, & ftmt slightly different
         if ($operation eq 'generic-query') {
-            if ($cfg::ftape eq 'true') {
+            if ($main::uname =~ /BSD/) {
+                $operation = 'rdhpos';
+            } elsif ($cfg::ftape eq 'true') {
                 $operation = 'getsize';
             } else {
                 $operation = 'status';
@@ -1402,6 +1390,7 @@ sub optioncheck {
     &check(\$cfg::device,'device','exist');
     &check(\$cfg::blksize,'blksize','exist');
     &check(\$cfg::mt_var_blksize,'mt_var_blksize');
+    &check(\$cfg::traverse_fs,'traverse_fs','false local all');
     &check(\$cfg::nocompress_types,'nocompress_types','exist');
     &check(\$cfg::remoteshell,'remoteshell','ssh ssh2 ssh1 rsh');
     &check(\$cfg::logdir,'logdir','exist');
@@ -1431,6 +1420,12 @@ sub optioncheck {
     # Check device (or dir)
     if (-c $cfg::device) {
         # ok
+	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
+	    $atime,$mtime,$ctime,$blksize,$blocks) = stat($cfg::device);
+
+	 print "rdev -s $rdev\n";
+	 exit;
+
     } elsif (-d $cfg::device) {
         if ($cfg::device !~ m:^/:) {
             push(@main::errors,"Please give full path, not relative (\$device=$cfg::device)");
@@ -1458,14 +1453,36 @@ sub optioncheck {
         &checkinpath("egrep");
         my @excl_array;
         foreach (@cfg::exclude_expr) {
-            # If the user put "*.whatever" as an expression, better turn this
-            # "glob" into a regex just to be sure ...
+
+            # If the user put "*whatever" as an expression, turn this
+            # "glob" into a regex for them
             if (/^\*/) {
                 $_ =~ s/^\*/.*/;
             }
+
+            # If the user put "*.whatever" as an expression, turn this
+            # "glob" into a regex for them
+            if (/^\*\./) {
+                $_ =~ s/^\*\./.*\\./;
+            }
+
+            # Escape shell metacharacters (needed for csh/tcsh)
+            # this didn't work...
+            #$_ =~ s/([\$\*])/\\$1/g;
+            #push(@excl_array, "egrep -v \\\"$_\\\"");
+
             push(@excl_array, "egrep -v \"$_\"");
         }
         $main::exclude_cmd = "| " . join(" | ", @excl_array);
+    }
+
+    # Traverse mountpoints?
+    if ($cfg::traverse_fs eq "local") {
+        $main::mountpoint_flag = "! -fstype nfs";
+    } elsif ($cfg::traverse_fs eq "all") {
+        $main::mountpoint_flag = "";
+    } else {
+        $main::mountpoint_flag = "-xdev";
     }
 
     # Block size
@@ -1551,10 +1568,11 @@ sub optioncheck {
     }
 
     # Check for type of touch flag
-    if ($main::uname =~ /BSD/) {
-        $main::touch_flag = "-t";
-    } else {
+    # Only GNU fileutils has the touch -d flag
+    if ($main::uname =~ /Linux/) {
         $main::touch_flag = "-d";
+    } else {
+        $main::touch_flag = "-t";
     }
 
     # Check we can find rsh or ssh
@@ -1562,7 +1580,6 @@ sub optioncheck {
 
     # Check we can find common stuff
     &checkinpath('touch');
-    &checkinpath('date');
     &checkinpath('hostname');
     &checkinpath('tee');
     &checkinpath('rm');
@@ -1593,6 +1610,7 @@ sub optioncheck {
         $main::afio_verb_flag = "-v";
         $main::dump_verb_flag = "-v";
         $main::tar_verb_flag = "--verbose";
+        $main::cpio_verb_flag = "--verbose";
         $main::zip_verb_flag = "-v";
     } else {
         $main::afio_verb_flag = "";
@@ -1864,27 +1882,17 @@ sub current_time {
 
     my $short = shift(@_);
     my $string;
-    my $textdate;
-    my $time = time;
-    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($time);
-
-    $year += 1900;              # year from localtime has 1900 subtracted
-    $mon += 1;                  # month from localtime starts at 0
-
-    $string = sprintf("%04d",$year) . sprintf("%02d",$mon) . sprintf("%02d",$mday);
+    my $current_time = time;
 
     if (defined($short)) {
-        return($string);
-    }
-
-    $string .= sprintf("%02d",$hour) . sprintf("%02d",$min) . "." . sprintf("%02d",$sec);
-
-    if ($main::touch_flag eq "-t") {
-        return($string);
+        $string = strftime("%Y%m%d", localtime($current_time));
+    } elsif ($main::touch_flag eq "-t") {
+        $string = strftime("%Y%m%d%H%M.%S", localtime($current_time));
     } else {
-        chomp($_ = ctime($time));
-        return($_);
+        $string = strftime("%a %b %d %H:%M:%S %Y", localtime($current_time));
     }
+
+    return($string);
 
 }
 
@@ -2073,6 +2081,14 @@ sub run_or_echo_then_query {
     &mt('generic-query');
     &line();
 
+    # Maybe rewind (usually false for reads)
+    if ($main::do_rewind_after == 1) {
+        &log("| Rewinding...");
+        &mt('rewind');
+        &line();
+    }
+
+
 }
 
 ######################################################################
@@ -2107,9 +2123,11 @@ sub setup_before_read {
     $main::device = &maybe_get_filename();
 
     &mt("generic-blksize $main::mt_blksize");
-    if (defined($main::opt{'reten'})) {
-        &log("| Retensioning tape...");
-        &mt("retension");
+
+    # Maybe retension
+    if ($main::do_reten == 1) {
+        &log('| Retensioning tape...');
+        &mt('retension');
     }
 
     &line();
@@ -2165,6 +2183,51 @@ sub print_afio_volume_header {
     }
 }
 
+######################################################################
+# Figure out which of rewind/erase/reten we are going to assume
+######################################################################
+sub set_tape_operation_defaults {
+
+    # Assume stuff based on how we are called first
+    if (defined($main::opt{'fs'})) {
+        if ($main::opt{'fs'} eq 'all') {
+            if ($main::level == 0) {
+                # All level zero - retension, and erase a new tape
+                $main::do_reten = 1;
+                $main::do_erase = 1;
+                $main::do_rewind_after = 1;
+            } else {
+                # All incremental backup - go to end of tape
+                $main::do_reten = 0;
+                $main::do_erase = 0;
+                $main::do_rewind_after = 1;
+            }
+        } else {
+            # Just one filesystem - assume we append to tape
+            $main::do_reten = 0;
+            $main::do_erase = 0;
+            $main::do_rewind_after = 1;
+        } # all or one filesystem
+
+    } else {
+
+        # We're doing a read of some sort
+        $main::do_reten = 0;
+        $main::do_erase = 0; # -erase has no effect anyway here
+        $main::do_rewind_after = 0;
+    }
+
+    # Then see if commandline flags override anything
+    if (defined($main::opt{'reten'})) {
+        $main::do_reten = $main::opt{'reten'};
+    }
+    if (defined($main::opt{'erase'})) {
+        $main::do_erase = $main::opt{'erase'};
+    }
+    if (defined($main::opt{'rewind'})) {
+        $main::do_rewind_after = $main::opt{'rewind'};
+    }
+}
 
 ######################################################################
 # Split long lines for echoing
