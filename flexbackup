@@ -2730,7 +2730,7 @@ sub optioncheck {
 	$main::path{'bfr'} = &checkinpath('bfr');
 	push(@main::remoteprogs, $main::path{'bfr'});
 
-	my $megs = $cfg::buffer_megs . "M";
+	my $megs = $cfg::buffer_megs . "m";
 
 	$main::buffer_cmd = " | $main::path{bfr} -b $megs";
 	$main::write_catchpipe_cmd = "$main::path{bfr} -b $megs | $main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=";

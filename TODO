@@ -6,7 +6,10 @@ Some of these might not happen
 
 Cleanup/fix:
  - Fix buffer test to handle bfr as well
- - Fix stdout/err flow when list/extract/etc
+ - Fix stdout/err flow when listing (maybe just "buffer")
+ - Don't tie to db for list extract compare restore test-tape-drive
+ - Don't check for writeable stampdir for non-backup
+ - Don't check for writeable logdir for non-backup
  - Better cleanup after error in backup
  - Clean up more $main:: vars, split into types or refactor code
  - Whole class of problems like:
@@ -19,15 +22,12 @@ Cleanup/fix:
    overwritten with ourselves if comp_log stayed the same. (cosmetic nit)
  - Try to refactor backup all/single, each fs, >1 tapes, etc.  Duplicated
      logic in some spots..
- - Don't tie to db for list extract compare restore test-tape-drive
- - Don't check for writeable stampdir for non-backup
- - Don't check for writeable logdir for non-backup
  - Fix afio w/null (FreeBSD printf can't spit out null char)
  - Delete deprecated sections
 
 Misc:
  - Update faq for new items changes since 1.0.1
- - Add link/package for bfr
+ - Add link/rpm for bfr
  - Make a manual page (AND other enchanced documentation, more than a README)
    someone made a good start or two:
      http://www.law.utulsa.edu:8080/users/bchapman/linuxnotes/flexbackup
@@ -44,7 +44,7 @@ Features to add:
 
  - Handle multi-volume backups (original idea w/ 'multibuf' never panned out)
 
-      Found "multivol" program solution!  It also used a slightly different
+      Found "multivol" program solution!  It also uses a slightly different
       labelling, but the idea was sort of the same as mine, with small key at
       the start of the tape.
 
@@ -57,6 +57,8 @@ Features to add:
      Redo include/exclude paths, not just expressions?  per-fs?
 
  - Make package delta work with BSD ports or debian pkgs
+
+ - Finish arj, cab, rar reading
 
  - If we detect an error and are using tapes, do seomthing intelligent
      to reposition tape, add another filemark etc to get tape to known state
@@ -73,6 +75,7 @@ Features to add:
  - Spiff up the contributed CGI program?
 
  - autoconf it (esp if we pkg multivol?)
+   Make a multvol tar/rpm available 
 
  - Split main program; use separate libs for archiver types that are stored
    in different files?  downside: install then requires more than just program + conf file.
@@ -82,9 +85,6 @@ Features to add:
      for the 'find' for instance and make things more standardized. although
      keeping it simply built out of standard commandline utils is a big plus
      as well...
-
- - Just to be stupid: add arj, cab, rar reading (I don't think unix
-     utils for creating those exist).
 
  - Make remote machine path overrides possible, that supercede others?
 
