@@ -10,7 +10,9 @@ Changes:
 
 Cleanup:
   - Redid the way buffer/read/write strings were constructed to make more sense
-
+  - Interactive restore creates log file (was in e-smith stuff)
+  - Extract/list/compare/restore use date-stamped logfiles (e-smith)
+  
 ----------------------------------------------------------------------
 Version 0.9.9.7 (20030115)
 

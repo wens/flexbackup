@@ -1213,9 +1213,9 @@ sub list_routine {
 
     my $cmd;
 
-    $main::log = "flexbackup.list.log";
+    $main::log = "flexbackup.list." . &current_time('numeric') . ".log";
     if (! open(LOG,">$main::log")) {
-	$main::log = "$cfg::tmpdir/flexbackup.list.log";
+	$main::log = "$cfg::tmpdir/$main::log";
 	if (! open(LOG,">$main::log")) {
 	    die "Can't write to $main::log: $OS_ERROR";
 	}
@@ -1293,9 +1293,9 @@ sub extract_routine {
     my $newlist = "$cfg::tmpdir/extract.$$";
     my $cmd;
 
-    $main::log = "flexbackup.extract.log";
+    $main::log = "flexbackup.extract." . &current_time('numeric') . ".log";
     if (! open(LOG,">$main::log")) {
-	$main::log = "$cfg::tmpdir/flexbackup.extract.log";
+	$main::log = "$cfg::tmpdir/$main::log";
 	if (! open(LOG,">$main::log")) {
 	    die "Can't write to $main::log: $OS_ERROR";
 	}
@@ -1420,9 +1420,9 @@ sub compare_routine {
 
     my $cmd;
 
-    $main::log = "flexbackup.compare.log";
+    $main::log = "flexbackup.compare." . &current_time('numeric') . ".log";
     if (! open(LOG,">$main::log")) {
-	$main::log = "$cfg::tmpdir/flexbackup.compare.log";
+	$main::log = "$cfg::tmpdir/$main::log";
 	if (! open(LOG,">$main::log")) {
 	    die "Can't write to $main::log: $OS_ERROR";
 	}
@@ -1481,6 +1481,15 @@ sub compare_routine {
 # Interactive restore
 ######################################################################
 sub restore_routine {
+
+    $main::log = "flexbackup.restore." . &current_time('numeric') . ".log";
+    if (! open(LOG,">$main::log")) {
+	$main::log = "$cfg::tmpdir/$main::log";
+	if (! open(LOG,">$main::log")) {
+	    die "Can't write to $main::log: $OS_ERROR";
+	}
+    }
+    close(LOG);
 
     my $cmd = &setup_before_read();
 
