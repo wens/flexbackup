@@ -9,9 +9,9 @@ Before next release:
  - auto-testing script for all archive types and compression
    during changes
  - mail new maintainer of dump now and ask about -T
-   ask about dump length not really being modulo blksize deal
  - resurrect my old drive and test ftape stuff again
 
+ - update web pages (move stuff into subdirs, etc)
 
 Features to add:
  - interactive restore-like shell for types besides dump
@@ -61,8 +61,6 @@ Cleanup/fix:
  - try restore -D for comparing subdirs w/ restore
  - check that dir we are backing up exists
  - autodetect ftape and raw device to eliminate configuration
- - figure out dump length being multiple of blocksize problem
-     manpage says one thing, behavior is another
  - figure out why I can't get dump -T to work
  - related problem to the above bullet.  dump updates
      /etc/dumpdates if you dump a subdir, so if you do another

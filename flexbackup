@@ -1655,15 +1655,7 @@ sub optioncheck {
         &checkinpath('restore');
 
         # Length of tape
-        if ($cfg::dump_length =~ m/^\d+$/) {
-            # Really need buffer in units of blksize not k
-            # Huh? this seems to be bogus, B flag is always
-            # taken in k. Is the man page for dump wrong?
-            #if (($cfg::dump_length % $cfg::blksize) != 0) {
-            #    push(@main::errors,"\$dump_length must be multiple of \$blksize\n");
-            #}
-            #$cfg::dump_length = $cfg::dump_length / $cfg::blksize;
-        } else {
+        if ($cfg::dump_length !~ m/^\d+$/) {
             push(@main::errors,"\$dump_length must be set to integer number of kilobytes");
         }
 
