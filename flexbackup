@@ -15,11 +15,12 @@
 #  flexbackup -fs <x>              : backup directory <x>, level 0
 #  flexbackup -fs all -level <n>   : backup all (defined in config file), level n
 #  flexbackup -fs <x> -level <n>   : backup directory <x>, level n
-#     -level can be an integer, or full/differential/incremental
+#        -level can be an integer, or full/differential/incremental
 #
 #  flexbackup [...] -pkgdelta rpm  : prune backup to files not part of an RPM
 #                                    or changed from distributed version
-#
+#  flexbackup [...] -wday <n>      : backup only if the week day matches
+#                                    the input number.  Sunday is 0 or 7.
 # READING ARCHIVES:
 #  flexbackup -list                : list files in archive at current
 #                                    tape position
@@ -154,7 +155,8 @@ if (! &main::GetOptions(\%main::opt,
 			"test-tape-drive",
 			"toc:s",
 			"type=s",
-			"version"
+			"version",
+			"wday=i"
 			)) {
     &usage();
     exit(0);
@@ -173,6 +175,8 @@ if (defined($main::opt{'version'})) {
     exit(0);
 }
 
+# Exit if -wday given and it isn't that day of the week (see FAQ)
+&check_wday();
 
 # Get/read config file
 print "\nflexbackup version " . &versionstring() . "\n";
@@ -267,6 +271,9 @@ sub backup_routine {
     my $comp_cmd;
     my $tape_key;
     my $logsuffix = '';
+
+
+
 
     # Get rid of trailing /
     $main::opt{'fs'} = &nuke_trailing_slash($main::opt{'fs'});
@@ -4822,4 +4829,29 @@ sub test_tape_drive {
 	print "SUCCESS! Tape drive parameters seem to work just fine\n";
     }
 
+}
+
+
+######################################################################
+# Check if the week day is as specified before backup (for complex cron setups)
+######################################################################
+sub check_wday {
+
+    if (defined($main::opt{'wday'})) {
+	my @week_days = qw(Sunday Monday Tuesday Wednesday Thursday Friday Saturday);
+	my @now = localtime;
+	my $wday_now = $now[6];
+
+	# Just silently hard-limit these to valid set
+	if ($main::opt{'wday'} >= 7) {
+	    $main::opt{'wday'} = 0;
+	}
+	if ($main::opt{'wday'} < 0) {
+	    $main::opt{'wday'} = 0;
+	}
+
+	if ($wday_now != $main::opt{'wday'}) {
+	    exit(0);
+	}
+    }
 }
