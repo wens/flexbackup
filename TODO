@@ -5,16 +5,18 @@ Flexbackup to-do list
 Some of these might not happen, but figured I should jot them down
 
 Before next release:
- - auto-testing script for all archive types and compression
-   during changes
  - test incremntal tar, move tar to regular find
  - resurrect my old drive and test ftape stuff again
+
+ - auto-testing script for all archive types and compression
+   during changes
 
  - update web pages (move stuff into subdirs, etc)
 
 Features to add:
  - interactive restore-like shell for types besides dump
      see notes below
+ - add "traverse mountpoints" option for non-dump types
  - support multiple tapes for a single archive
      dump already does this? afio has hooks too.
      tar does(-M). would the pipeline mechanism screw

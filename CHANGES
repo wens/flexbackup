@@ -23,7 +23,10 @@ New Features:
  - add -compress flag to override config file setting
 
 Bug fixes/cleanup:
- - find -regex doens't exist on BSD, redo with egrep to be more
+ - afio nocompress types bug - have to list them all if we give the
+     -E flag.. (I added mp3 and it ignored the builtin defaults)
+     made generic \$nocompress_types since zip uses it too
+ - find -regex doesn't exist on BSD, redo with egrep to be more
      generic
  - update string timestamp format a little bit (no timezone)
  - GPL clause in program itself not readme
