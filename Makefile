@@ -23,7 +23,7 @@ lsm: version
 	perl -pi -e 's/VERSION/$(VER)/' flexbackup.lsm
 	perl -pi -e 's/DATE/$(DATE)/' flexbackup.lsm
 
-tar: version tag
+tar: version tag lsm
 	cd /tmp; $(CVS) export -r $(CVSVER) flexbackup; mv flexbackup flexbackup-$(VER)
 	cd /tmp/flexbackup-$(VER); mv Makefile.dist Makefile
 	cd /tmp/flexbackup-$(VER); mv flexbackup.spec.template flexbackup.spec
