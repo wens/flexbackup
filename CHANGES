@@ -2,7 +2,7 @@ $Id$
 $Name$
 
 ----------------------------------------------------------------------
-Version 1.2.1 (200310??)
+Version 1.2.1 (20031010)
 
 Changes:
  - Added "-ignore-errors" flag to allow backups to continue even if
