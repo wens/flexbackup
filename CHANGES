@@ -12,11 +12,23 @@ Changes: (just so we can say it supports *everything* for archive formats)
  - Put .zip back in, same way as in old releases (kinda hokey with the tmpfiles, 
       but there is no cleaner way to do it with info-zip utils like I wanted)
 
+Bug fixes:
+ - Fixed problem with other releases trying to use find w/ -cnewer. Desired
+   so we get files that change perms, not content.  ctime can't be set
+   backward with touch -t (or any mechanism), so we can't back-date a
+   reference file.
+
+   Now fixed so at least for local filesystems this works. Remote backups
+   still won't catch that type of change.  Code changes:
+     -don't use generated timestamp files for local fs's; use the original stampfile
+     -refactor remote fs variable
+     -get_last_date function changes
+     -no stamps at all for level 0
+
 Cleanup:
  - '-rmindex all' says it will wait 5 seconds
  - Fix warning with no args
- - touch -t the same for everyone. buggy touch in pre-4.0 fileutils is old
-      by now..
+ - touch -t the same for everyone. buggy touch in pre-4.0 fileutils is old by now..
  - Clean up date routines
 
 ----------------------------------------------------------------------

@@ -5,23 +5,17 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
- - Revisit -cnewer problem.  Make sure it works with touch -t/-d of
-     timestamp refs (ctime isn't set backward by touch like the mtime)
-
-     ctime can't be set anyway. with touch or utime() or whatever.
-     http://mail.gnu.org/archive/html/bug-fileutils/2001-01/msg00032.html
-     
+ - Use system with args list so it uses execve not shell.  or open |- & exec.
+     will get one layer of shell expansion outta the way
  - Clean up more $main:: vars, split into types or refactor code
  - bash PIPESTATUS trick fails if remote filesystem and shell there!=bash
      and shell local==bash. bah.
  - Check buffer avail mem thing from John
+ - Check for existence of remote executables? (John had something)
  - Try to use dump combined flags (for older dumps that want abc not -a -b -c)
  - When level > 9 and using files, -toc sorts it wrong (cosmetic nit)
  - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
  - Not all finds have the -fstype flag (from $traverse_fs)
- - Check for existence of remote executables (John had something)
- - Use system with args list so it uses execve not shell.  or open |- & exec.
-     will get one layer of shell expansion outta the way
  - Split main program; use separate libs for archiver types that are stored
    in different files?  install then requires more than just program + conf file.
 
@@ -29,7 +23,6 @@ Misc:
  - Make a manual page (AND other enchanced documentation, more than a README)
    someone made a good start or two:
      http://myezserver.com/downloads/mitel/howto/flexbackup-howto.html
-      
      http://www.cyber-euskadi.com/howtos/contrib/flexbackup-restore-from-disk-howto.html
      how about french?  http://sgmf.free.fr/flexbackup_doc.html
  - Someone needs to put a bunch of stuff in a faq
@@ -42,13 +35,15 @@ Misc:
 
 Features to add:
  - A "no blocking at all" option
-
-- smbtar?
+ - smbtar?
      doable - overload type 'tar'. smbtar triggers with a fs spec of something like
                smb:user:pass@host/share:dir
      smbtar has "files newer than" option, test
      don't want password echoed
      no exclude from find
+ - some "level" that uses rpm, verifies all packages, and just backs
+      up any file not in a package OR changed from a package. and the rpm list.
+      once the above works make it work for debian packages
  - Non-root use (remote too)
     document sudo workaround from Alex
     maybe works using the path overrides I put in?
@@ -69,9 +64,6 @@ Features to add:
  - Try restore -D for comparing subdirs w/ restore
  - Interactive restore-like shell for types besides dump
       see notes below
- - some "level" that uses rpm, verifies all packages, and just backs
-      up any file not in a package OR changed from a package. and the rpm list.
-      once the above works make it work for debian packages
  - Log tape sizes (output of buffer or dd or mt tell can be used?)
  - Extract options to not overwrite existing files
  - Handle multi-volume backups (original idea never panned out)
