@@ -16,7 +16,8 @@
 #  flexbackup -fs all -level <n>   : backup all (defined in config file), level n
 #  flexbackup -fs <x> -level <n>   : backup directory <x>, level n
 #     -level can be an integer, or full/differential/incremental
-#  flexbackup [...] -delta rpm     : only backup files not part of an RPM package
+#
+#  flexbackup [...] -pkgdelta rpm  : prune backup to files not part of an RPM
 #                                    or changed from distributed version
 #
 # READING ARCHIVES:
@@ -129,7 +130,7 @@ if (! &main::GetOptions(\%main::opt,
 			"compare:s",
 			"compress=s",
 			"d=s%",
-			"delta=s",
+			"pkgdelta=s",
 			"device=s",
 			"differential",
 			"erase!",
@@ -331,9 +332,9 @@ sub backup_routine {
 
 
     # Possibly populate package-file hashes if we are using
-    # -delta.  This is so we only have to run through these operations
+    # -pkgdelta.  This is so we only have to run through these operations
     # once per machine if multiple fs's are being run
-    if (defined($main::delta)) {
+    if (defined($main::pkgdelta)) {
 	if (defined($main::local)) {
 	    &find_packaged_files('localhost');
 	    &find_changed_files('localhost');
@@ -342,7 +343,7 @@ sub backup_routine {
 	    &find_packaged_files($host);
 	    &find_changed_files($host);
 	}
-	$main::pkg_delta_filelist = "$cfg::tmpdir/pkgdelta.$PROCESS_ID";
+	$main::pkgdelta_filelist = "$cfg::tmpdir/pkgdelta.$PROCESS_ID";
 	&line();
     }
 
@@ -601,8 +602,8 @@ sub backup {
 
 	my $filename = $level;
 
-	if (defined($main::delta)) {
-	    $filename .= $main::delta;
+	if (defined($main::pkgdelta)) {
+	    $filename .= $main::pkgdelta;
 	}
 
 	if ($cfg::staticfiles eq 'true') {
@@ -650,12 +651,12 @@ sub backup {
     chomp($host = `hostname`);
     $title = $cfg::type . "+" . $cfg::compress;
     $title =~ s/\+false//;
-    if (!defined($main::delta)) {
+    if (!defined($main::pkgdelta)) {
 	$title = "level $level $dir $main::date_at_start $title from $host";
 	$title_without_type = "level $level $dir $main::date_at_start from $host";
     } else {
-	$title = "level $level+$main::delta $dir $main::date_at_start $title from $host";
-	$title_without_type = "level $level+$main::delta $dir $main::date_at_start from $host";
+	$title = "level $level+$main::pkgdelta $dir $main::date_at_start $title from $host";
+	$title_without_type = "level $level+$main::pkgdelta $dir $main::date_at_start from $host";
     }
 
     # Modify table of contents
@@ -715,8 +716,8 @@ sub backup {
     }
 
     # Nuke tmp file list if we did local package delta
-    if (defined($main::delta)) {
-	push(@cmds, &maybe_remote_cmd("$main::path{rm} -f $main::pkg_delta_filelist", $remote));
+    if (defined($main::pkgdelta)) {
+	push(@cmds, &maybe_remote_cmd("$main::path{rm} -f $main::pkgdelta_filelist", $remote));
     }
 
     # Strip multiple spaces
@@ -902,7 +903,7 @@ sub backup_dump {
 	&log("| NOTE: \$traverse_fs is always false for type=dump");
     }
 
-    if (defined($main::delta)) {
+    if (defined($main::pkgdelta)) {
 	&log("| NOTE: packaging system delta ignored for for type=dump");
     }
 
@@ -3074,12 +3075,12 @@ sub optioncheck {
     }
 
     # Package delta option
-    if (defined($main::opt{'delta'})) {
-	if ($main::opt{'delta'} eq 'rpm') {
-	    $main::delta = 'rpm';
+    if (defined($main::opt{'pkgdelta'})) {
+	if ($main::opt{'pkgdelta'} eq 'rpm') {
+	    $main::pkgdelta = 'rpm';
 	    $main::path{'rpm'} = &checkinpath('rpm');
 	} else {
-	    push(@main::errors,"$main::opt{delta} not a valid option for -delta");
+	    push(@main::errors,"$main::opt{pkgdelta} not a valid option for -pkgdelta");
 	}
     }
 
@@ -4239,7 +4240,7 @@ sub file_list_cmd {
 
     $cmd .= "$main::exclude_expr ";
 
-    if (!defined($main::delta)) {
+    if (!defined($main::pkgdelta)) {
 	if ($separator eq 'newline') {
 	    $cmd .= "-print ";
 	} else {
@@ -4250,7 +4251,7 @@ sub file_list_cmd {
 	# Use the normal level & timestamp mechanism to get a list of files
 	# Then only keep unowned or owned+changed files
 	my $find = &maybe_remote_cmd("cd \"$dir\"; $cmd -print", $remote);
-	my $write = "> $main::pkg_delta_filelist";
+	my $write = "> $main::pkgdelta_filelist";
 	if(defined($remote)) {
 	    &log("| Listing level $level to-be-archived files for $remote:$dir");
 	    $write = &maybe_remote_cmd("$main::path{cat} $write", $remote);
@@ -4285,7 +4286,7 @@ sub file_list_cmd {
 
 	&line();
 
-	$cmd = "$main::path{cat} $main::pkg_delta_filelist "
+	$cmd = "$main::path{cat} $main::pkgdelta_filelist "
     }
 
     return($cmd);
@@ -4300,7 +4301,7 @@ sub find_packaged_files {
 
     my $host = shift (@_);
 
-    if ($main::delta eq 'rpm') {
+    if ($main::pkgdelta eq 'rpm') {
 
 	my $cmd = "$main::path{rpm} -q -a -l";
 
@@ -4333,7 +4334,7 @@ sub find_changed_files {
 
     my $host = shift (@_);
 
-    if ($main::delta eq 'rpm') {
+    if ($main::pkgdelta eq 'rpm') {
 
 	my $cmd = "$main::path{rpm} -V -a";
 
