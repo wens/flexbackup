@@ -1602,7 +1602,7 @@ sub optioncheck {
 		$expr = '"' . $expr . '"';
 	    }
 
-	    $main::exclude_expr .= "-not -regex $expr ";
+	    $main::exclude_expr .= "! -regex $expr ";
 	}
     }
 
