@@ -23,7 +23,11 @@ Cleanup/fix:
  - Delete deprecated sections
 
 Misc:
- - Update faq for new items changes since 1.0.2
+ - Update README/faq for new items changes since 1.0.2
+     pkgdelta
+     filelist
+     mt_blksize
+     example for -wday use
  - Add link/rpm for bfr
  - Make a manual page (AND other enchanced documentation, more than a README)
    someone made a good start or two:
@@ -116,6 +120,8 @@ Features to add:
  - "rsync" type for when using on-disk?
 
  - Make file-based backups able to use split for smaller archives?
+
+ - -wday option
 
 -------------------------------------------------------------
 

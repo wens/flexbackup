@@ -31,10 +31,14 @@ Changes:
   - If staticfiles or staticlogs true, don't timestamp list/extract/compare
     log
 
+  - Added -wday option (helps with once-a-month, on a certain day of the
+    week only cron setups)
+
+Cleanup:
   - Don't check for writeable stampdir for non-backup
   - Don't check for writeable logdir for non-backup
   - Don't tie to db for non-backup
-  
+
 ----------------------------------------------------------------------
 Version 1.0.2 (20030219)
 
