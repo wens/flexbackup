@@ -103,12 +103,13 @@ $main::CONFFILE="/etc/flexbackup.conf";
 
 # This took awhile to figure out.  if the shell is capable of it, we use
 # this on the end of any pipelines to see if any of the commands in the
-# pipeline failed, rathe rthan just the last one.
+# pipeline failed, rather than just the last one.
 #
 # If /bin/sh is really bash2 in disguise, or remote shell is bash2/zsh,
-# we can use their status array veriables
+# we can use their status array variables
 #
 # With plain sh, we don't know if the non-last command in the pipe fails
+# See exit-status collecting trick in the code.
 #
 # With tcsh/csh as a remote shell, you don't know which command, but
 # $? is still set if anything in the pipeline failed
@@ -244,7 +245,7 @@ sub backup_routine {
     # FIXME better on exit if error....
     # (clean the log, finish the fs loop, etc)
     # Find any die/exit from wahtever this calls past logfile open,
-    # and perculate it up...
+    # and percolate it up...
 
     my @files;
     my $label;
