@@ -60,6 +60,9 @@ $OUTPUT_AUTOFLUSH = 1;
 
 package main;
 
+# This is changed during "make install"
+$main::CONFFILE="/etc/flexbackup.conf";
+
 %main::opt = ();
 if (! &main::GetOptions(\%main::opt,
                         "help",
@@ -545,7 +548,7 @@ sub backup_dump {
     my $dir = shift(@_);
     my @cmds;
     my $archive_cmd;
-    my $tmpstamp = "/tmp/refdate.$$";
+    my $tmpstamp = "$cfg::tmpdir/refdate.$$";
     my $len_flag = $cfg::dump_length;
 
     $_ = &get_last_date($label);
@@ -582,8 +585,8 @@ sub backup_afio {
     my $title = shift(@_);
     my @cmds;
     my $archive_cmd = '';
-    my $tmpstamp = "/tmp/refdate.$$";
-    my $tmpnocompress = "/tmp/nocompress.$$";
+    my $tmpstamp = "$cfg::tmpdir/refdate.$$";
+    my $tmpnocompress = "$cfg::tmpdir/nocompress.$$";
 
     $_ = &get_last_date($label);
     push(@cmds,&maybe_remote_cmd("touch -t $_ $tmpstamp"));
@@ -632,7 +635,7 @@ sub backup_cpio {
     my $title = shift(@_);
     my @cmds;
     my $archive_cmd;
-    my $tmpstamp = "/tmp/refdate.$$";
+    my $tmpstamp = "$cfg::tmpdir/refdate.$$";
 
     $_ = &get_last_date($label);
     push(@cmds,&maybe_remote_cmd("touch -t $_ $tmpstamp"));
@@ -676,7 +679,7 @@ sub backup_tar {
     my @cmds;
     my $archive_cmd;
     my $date_flag;
-    my $tmpexclude = "/tmp/exclude.$$";
+    my $tmpexclude = "$cfg::tmpdir/exclude.$$";
     my $exclude_flag = '';
 
     # With this one we don't have to put a stampfile on the remote system
@@ -944,12 +947,12 @@ sub readconfigfile {
     if (defined($main::opt{'c'})) {
         $configfile = $main::opt{'c'};
     } else {
-        $configfile = "/etc/flexbackup.conf";
+        $configfile = $main::CONFFILE;
     }
     if (! -r $configfile) {
         die("config file $configfile: $OS_ERROR");
     }
-    system("perl -c $configfile 2>&1");
+    system("/usr/bin/perl -c $configfile 2>&1");
     if ($CHILD_ERROR) {
         die("syntax error in config file $configfile");
     }
@@ -1082,6 +1085,7 @@ sub optioncheck {
     &check(\$cfg::blksize,'blksize','exist');
     &check(\$cfg::remoteshell,'remoteshell','ssh ssh2 ssh1 rsh');
     &check(\$cfg::logdir,'logdir','exist');
+    &check(\$cfg::tmpdir,'tmpdir','exist');
     &check(\$cfg::comp_log,'comp_log','gzip bzip2 false');
     &check(\$cfg::stampdir,'stampdir','exist');
     &check(\$cfg::prefix,'prefix','exist');
@@ -1296,14 +1300,24 @@ sub optioncheck {
         $main::cpio_blksize = $cfg::blksize * 1024;
     }
 
-    # log/stamp files
+    # tmp path, log/stamp files
     &checkinpath($cfg::comp_log) if ($cfg::comp_log ne "false");
 
+    $cfg::tmpdir = &nuke_trailing_slash($cfg::tmpdir);
+    $cfg::logdir = &nuke_trailing_slash($cfg::logdir);
+    $cfg::stampdir = &nuke_trailing_slash($cfg::stampdir);
+
+    if ($cfg::tmpdir !~ m:^/:) {
+        push(@main::errors,"\$tmpdir must be absolute path: $cfg::tmpdir");
+    }
     if ($cfg::logdir !~ m:^/:) {
         push(@main::errors,"\$logdir must be absolute path: $cfg::logdir");
     }
     if ($cfg::stampdir !~ m:^/:) {
         push(@main::errors,"\$stampdir must be absolute path: $cfg::stampdir");
+    }
+    if (! -d $cfg::tmpdir) {
+        push(@main::errors,"\$tmpdir $cfg::tmpdir is not a directory");
     }
     if (! -d $cfg::logdir) {
         mkdir("$cfg::logdir",0755) or push(@main::errors,"Can't mkdir $cfg::logdir: $OS_ERROR");

@@ -20,6 +20,7 @@ tag: version commit
 
 tar: tag lsm
 	cd /tmp; cvs co -r $(CVSVER) flexbackup; mv flexbackup flexbackup-$(VER)
+	cd /tmp/flexbackup-$(VER); mv Makefile.dist Makefile 
 	tar -C /tmp -z -c -v -X tar.exclude -f $(SITE)/flexbackup-$(VER).tar.gz flexbackup-$(VER)
 	cp -p $(SITE)/flexbackup-$(VER).tar.gz $(SITE)/flexbackup-latest.tar.gz
 	cd /tmp; echo yes | cvs release -d flexbackup-$(VER)

@@ -1,0 +1,27 @@
+# Hey emacs, use -*-Makefile-*- mode
+######################################################################
+# $Id$
+# $Name$
+######################################################################
+
+# Where the script binary should go
+BINPATH = /usr/bin
+
+# Where flexbackup.conf should be stored
+CONFFILE = /etc/flexbackup.conf
+
+# Where perl lives
+PERLPATH = /usr/bin/perl
+
+######################################################################
+
+all:
+	@echo 'Nothing to build; try "make install"'
+
+install:
+	install -m 0644 flexbackup.conf $(CONFFILE)
+	cp flexbackup fb.install
+	cp fb.install fb.tmp; sed -e 's%/etc/flexbackup.conf%$(CONFFILE)%g;' fb.tmp > fb.install
+	cp fb.install fb.tmp; sed -e 's%/usr/bin/perl%$(PERLPATH)%g' fb.tmp > fb.install
+	install -m 0755 fb.install $(BINPATH)/flexbackup
+	rm -f fb.install
