@@ -22,12 +22,12 @@ tag: version commit
 	cvs commit -m "" flexbackup.lsm.template flexbackup.spec TODO README
 	cvs tag -F $(CVSVER)
 
-tar: tag lsm
-	cd /tmp; cvs co -r $(CVSVER) flexbackup; mv flexbackup flexbackup-$(VER)
+tar: tag
+	cd /tmp; cvs export -r $(CVSVER) flexbackup; mv flexbackup flexbackup-$(VER)
 	cd /tmp/flexbackup-$(VER); mv Makefile.dist Makefile
 	tar -C /tmp -z -c -v -X tar.exclude -f $(SITE)/tarball/flexbackup-$(VER).tar.gz flexbackup-$(VER)
 	cp -p $(SITE)/tarball/flexbackup-$(VER).tar.gz $(SITE)/tarball/flexbackup-latest.tar.gz
-	cd /tmp; echo yes | cvs release -d flexbackup-$(VER)
+	rm -rf /tmp/flexbackup-$(VER)
 
 rpm: tar
 	rpmbuild -ta $(SITE)/tarball/flexbackup-$(VER).tar.gz
@@ -37,17 +37,9 @@ rpm: tar
 	rm $(RPM)/SRPMS/flexbackup-$(VER)-1.src.rpm
 
 webdoc:
-	cd /tmp; cvs co -r $(CVSVER) flexbackup
+	cd /tmp; cvs export -r $(CVSVER) flexbackup
 	cp /tmp/flexbackup/CHANGES /tmp/flexbackup/README /tmp/flexbackup/TODO $(SITE)
-	cd /tmp; echo yes | cvs release -d flexbackup
-
-lsm: tag
-	cd /tmp; cvs co -r $(CVSVER) flexbackup; mv flexbackup flexbackup-$(VER)
-	tar -C /tmp -z -c -v -X tar.exclude -f $(SITE)/tarball/flexbackup-$(VER).tar.gz flexbackup-$(VER)
-	cd /tmp; echo yes | cvs release -d flexbackup-$(VER)
-	./sizelsm.perl $(SITE)/tarball $(VER)
-	cvs commit -m "" flexbackup.lsm
-	cvs tag -F $(CVSVER) flexbackup.lsm
+	rm -rf /tmp/flexbackup
 
 version:
 	test -n "$(VER)"
