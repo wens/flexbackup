@@ -3863,7 +3863,7 @@ sub check_shell {
 
     print "| Checking shell on $host... ";
 
-    $pipecmd = 'echo tcsh:$tcsh; echo bash:$BASH_VERSION; echo zsh:$ZSH_VERSION; echo ksh:$KSH_VERSION';
+    $pipecmd = 'echo tcsh:$tcsh; echo bash:$BASH_VERSION; echo zsh:$ZSH_VERSION; echo ksh:$KSH_VERSION; set x = 1 && test $x && echo csh:yes';
     if ($host eq 'localhost') {
     } else {
 	$pipecmd = "$main::remoteshell $host '" . $pipecmd . "'";
@@ -3889,6 +3889,7 @@ sub check_shell {
 	    } else {
 		$main::shelltype{$host} = $shell;
 	    }
+            last;
 	}
     }
     close (PIPE);
