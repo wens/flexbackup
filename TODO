@@ -5,7 +5,6 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
- - Check buffer avail mem thing from John?
  - Check for existence of remote executables? (John had something)
  - Clean up more $main:: vars, split into types or refactor code
  - bash PIPESTATUS trick fails if remote filesystem and shell there!=bash

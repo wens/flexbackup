@@ -1938,6 +1938,7 @@ sub mt {
 sub optioncheck {
 
     my $realdev;
+    my $buftest;
     my $buffer_blk_flag;
     my $buffer_pad_flag;
 
@@ -2002,7 +2003,7 @@ sub optioncheck {
     if (@main::errors) {
 	print "\nErrors:\n";
 	while(@main::errors) {
-	    print " " . pop(@main::errors) . "\n";
+	    print " " . shift(@main::errors) . "\n";
 	}
 	exit(1);
     }
@@ -2228,6 +2229,17 @@ sub optioncheck {
 	    my $write_flags;
 	    my $read_flags;
 	    my $megs = $cfg::buffer_megs . "m";
+
+	    $buftest = &test_shared_mem_for_buffer($main::path{'buffer'}, $megs);
+	    if ($buftest != 0) {
+		if ($buftest == 255) {
+		    push (@main::errors, "You don't have enough SysV shared memory to run 'buffer'!");
+		    push (@main::errors, "Try lowering the amount specified in \$buffer_megs in your flexbackup.conf file,");
+		    push (@main::errors, "or reconfigure your kernel to include more SysV shared memory pages.");
+		} else {
+		    push (@main::errors, "Unknown problem trying to run 'buffer' (exit code $buftest). Try disabling it.");
+		}
+	    }
 
 	    if (defined($main::tapedevice)) {
 		$write_flags = "-u 100 -t -p 75 $buffer_pad_flag -o ";
@@ -2609,7 +2621,7 @@ sub optioncheck {
     if (@main::errors) {
 	print "\nErrors:\n";
 	while(@main::errors) {
-	    print " " . pop(@main::errors) . "\n";
+	    print " " . shift(@main::errors) . "\n";
 	}
 	exit(1);
     }
@@ -3641,4 +3653,39 @@ sub file_list_cmd {
 
     return($cmd);
 
+}
+
+#############################################################################
+# Actually test to see if we can run buffer. In situations where SysV shared
+# memory is low, buffer can fail causing catastrophic failures in the dump
+# process....
+#############################################################################
+sub test_shared_mem_for_buffer {
+
+    my $buffer_prog = shift(@_);
+    my $mem = shift(@_);
+    my $tmp_name;
+    my $f;
+    my $retval = 0;
+
+    $tmp_name = "$cfg::tmpdir/testbuff$$.txt";
+
+    if (!open(TMP, ">$tmp_name")) {
+	printf (STDERR "Could not open tmp file '$tmp_name' for writing - $!\n");
+	exit (2);
+    }
+    # Spew some bytes into the tmp file for buffer to buffer .... It is much
+    # easier to do this then open a pipe directly to buffer--this way we can
+    # monitor buffer's exit code while trashing its stderr.
+    foreach $f (0..1000) {
+	printf (TMP "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz\n");
+    }
+    close (TMP);
+    system("$buffer_prog -m {mem -o /dev/null 2> /dev/null < $tmp_name");
+    unlink("$tmp_name");
+    if ($?) {
+	$retval = $? >> 8;
+    }
+
+    return ($retval);
 }
