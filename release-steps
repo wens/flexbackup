@@ -9,17 +9,20 @@ make rsync
   uploads files/web to edwinh.org
   uploads files/web to sourceforge.net
 
-get flexbackup.org synced
-
 make upload VER=x.x.x
   uploads files to sunsite
   uploads files to rh contrib
+  uploads files to sf.net file release incoming
+
+sourceforge.net file release (stupid web form not automatable)
   
+get flexbackup.org synced
+
 freshmeat notice
 
 flexbackup-announce notice
 
 get John to do FreeBSD port stuff
 
-sourceforge.net file release
+
 

@@ -55,6 +55,9 @@ upload: version lsm
 	ncftpput ibiblio.org /incoming/linux flexbackup.lsm
 	ncftpput incoming.redhat.com /libc6 $(SITE)/RPMS/flexbackup-$(VER)-1.noarch.rpm
 	ncftpput incoming.redhat.com /libc6 $(SITE)/RPMS/flexbackup-$(VER)-1.src.rpm
+	ncftpput upload.sourceforge.net /incoming $(SITE)/tarball/flexbackup-$(VER).tar.gz
+	ncftpput upload.sourceforge.net /incoming $(SITE)/RPMS/flexbackup-$(VER)-1.src.rpm
+	ncftpput upload.sourceforge.net /incoming $(SITE)/RPMS/flexbackup-$(VER)-1.noarch.rpm
 
 version:
 	test -n "$(VER)"
