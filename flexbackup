@@ -1280,7 +1280,6 @@ sub backup_tar {
     $cmd .= "--files-from=- ";
     $cmd .= "--ignore-failed-read ";
     $cmd .= "--same-permissions ";
-    $cmd .= "--same-order ";
     $cmd .= "--no-recursion ";
     $cmd .= "--totals ";
     if ($cfg::label ne 'false') {
@@ -1932,7 +1931,6 @@ sub extract_routine {
 	}
 	$cmd .= "--totals ";
 	$cmd .= "--same-permissions ";
-	$cmd .= "--same-order ";
 	$cmd .= "$main::tar_verb_flag ";
 	$cmd .= "$main::tar_sparse_flag ";
 	$cmd .= "$main::tar_recnum_flag ";
