@@ -18,6 +18,10 @@ Changes beyond stable release:
       "-set all" acts like old "-fs all".  If using tapes & level 0, each
       set is a different tape (acts like the old numeric index to @filesystems)
 
+  - Per-filesystem subtree pruning
+       $prune{'/'} = "tmp proc";
+       $prune{'host:/'} = "disk*";
+
   - Added packaging system delta capability (RPM only for now).
 
     If you give "-pkgdelta rpm", after the level/timestamp checks, we

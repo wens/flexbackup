@@ -11,17 +11,12 @@ Currently in progress:
  - add faq on extract filelist
      also .z at end if afio
  - FIXMEs in code
- - mbuffer testing w/ remote
  - Check old release for use_file + -erase.  nukes db entry for keyfile
    (devel too as well)
    check -newtape
  - Make "-erase" for use_file wipe files+index+key?
    check -newtape
- - Finish up -set / -dir
-     test with tapes
-     how to spec dirs with spaces?
- - Exclude paths, not just expressions?  per-fs?
- - destdir option for compare /extract
+ - How to spec dirs with spaces for sets/dir/prune?
 
 Cleanup/fix:
  - Better cleanup after error in backup
@@ -145,6 +140,8 @@ Features to add:
  - Exclude subtrees that have a ".nobackup" file in them?  Users can control
    themselves that way.  Suggestion from someone based on dobackup.pl
    probably.
+
+ - Destdir option for compare /extract
 
 -------------------------------------------------------------
 

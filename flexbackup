@@ -955,9 +955,19 @@ sub backup_dump {
 	die("Can't use level > 9 and type=dump");
     }
 
-    # Warnings
+    # Warnings about stuff dump can't do
     if (defined($cfg::exclude_expr[0])) {
 	&log("| NOTE: \$exclude_expr is ignored for type=dump");
+    }
+
+    my $prunekey;
+    if (defined($remote)) {
+	$prunekey = "$remote:$dir";
+    } else {
+	$prunekey = $dir;
+    }
+    if (defined(%{$main::prune{$prunekey}})) {
+	&log("| NOTE: \$prune is ignored for type=dump");
     }
 
     if ($cfg::traverse_fs ne 'false') {
@@ -2783,6 +2793,15 @@ sub optioncheck {
 	}
     }
 
+    # Subtree pruning
+    foreach my $fs (keys %cfg::prune) {
+	$fs = &nuke_trailing_slash($fs);
+	foreach my $dir (split(/\s+/,$cfg::prune{$fs})) {
+	    $dir = &nuke_trailing_slash($dir);
+	    $main::prune{$fs}{"./$dir/*"} = 1;
+	}
+    }
+
     # Verbose flag
     if ($cfg::verbose eq "true") {
 	$main::dump_verb_flag = "-v";
@@ -3175,7 +3194,7 @@ sub optioncheck {
 	    mkdir("$cfg::logdir",0755) or push(@main::errors,"Can't mkdir $cfg::logdir: $OS_ERROR");
 	}
 	if (! -w $cfg::logdir) {
-	    push(@main::errors,"Can't write to $cfg::logdir: $OS_ERROR");
+	    push(@main::errors,"Can't write to $cfg::logdir");
 	}
 	if (! -d $cfg::stampdir) {
 	    mkdir("$cfg::stampdir",0755) or push(@main::errors,"Can't mkdir $cfg::stampdir: $OS_ERROR");
@@ -4305,6 +4324,16 @@ sub file_list_cmd {
     my $cmd = '';
     $cmd .= "$main::path{find} . $main::mountpoint_flag ";
     $cmd .= "-depth ";
+
+    my $prunekey;
+    if (defined($remote)) {
+	$prunekey = "$remote:$dir";
+    } else {
+	$prunekey = $dir;
+    }
+    foreach my $key (keys %{$main::prune{$prunekey}}) {
+	$cmd .= "! -path \"$key\" ";
+    }
 
     if (defined($otherarg)) {
 	$cmd .= $otherarg . " ";
