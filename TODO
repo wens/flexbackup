@@ -18,6 +18,7 @@ Cleanup/fix:
     - Use lowest common denominator flags? Sort of what's tried now w/ cpio
 
 Misc:
+ - fix descr text in freshmeat
  - Add faq on files changing underneath? explain sql db dump?
  - Create mbuffer rpm (if I can make it work reliably for myself)
  - Man page (create from -help perhaps)
