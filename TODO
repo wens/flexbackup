@@ -5,6 +5,8 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
+ - Fix stdout/err flow when list/extract/etc
+ - Fix mt compression
  - Better cleanup after error in backup
  - Clean up more $main:: vars, split into types or refactor code
  - Whole class of problems like:
@@ -21,7 +23,6 @@ Cleanup/fix:
  - Don't check for writeable stampdir for non-backup
  - Don't check for writeable logdir for non-backup
  - Fix afio w/null (FreeBSD printf can't spit out null char)
- - Fix mt compression
 
 Misc:
  - Make a manual page (AND other enchanced documentation, more than a README)
@@ -39,7 +40,8 @@ Misc:
 
 Features to add:
 
- - Make package delta save the RPM list
+ - Make package delta have config options
+
  - Make package delta work with BSD ports or debian pkgs
 
  - Have an mt op. override in the config (tell = status for debugging, platform
@@ -55,19 +57,11 @@ Features to add:
 
       Will do this post 1.0
 
-      Otherwise, maybe figure out which archivers support & try to add
-      won't work with pipelines probably - TEST
-      use short write detection, or do we need to spec tape length?
-      needs testing
-       dump - depends on flavor
-       afio: -s size
-       cpio -M? uses short write detection for length?
-       tar -M & -L?
-       star tsize=
-       pax -B
-       zip nope
-      will hose indexes - no index on second volume
-      what about read/restore?
+ - Better way to spec fs,
+     be able to have spaces in dirs in the conf file
+     better way for multiple tapes
+     Maybe take out the multiple tape fs array parts if we can do mutivol?
+     Redo include/exclude paths, not just expressions?  per-fs?
 
  - If we detect an error and are using tapes, do seomthing intelligent
      to reposition tape, add another filemark etc to get tape to known state
@@ -84,13 +78,6 @@ Features to add:
  - Spiff up the contributed CGI program?
 
  - autoconf it (esp if we pkg multivol?)
-
- - Better way to spec fs,
-     be able to have spaces in dirs in the conf file
-     better way for multiple tapes
-     Maybe take out the multiple tape fs array parts if we can do mutivol?
-
- - Redo include/exclude paths, not just expressions?  per-fs?
 
  - Split main program; use separate libs for archiver types that are stored
    in different files?  downside: install then requires more than just program + conf file.
