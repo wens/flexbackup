@@ -3740,10 +3740,7 @@ sub test_bufferprog {
 	    printf (STDERR "Could not open tmp file '$tmp_name' for writing - $!\n");
 	    exit (2);
 	}
-	# Spew some bytes into the tmp file for buffer to buffer
-	foreach my $f (0..1000) {
-	    printf (TMP "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyz\n");
-	}
+	printf (TMP "testme\n");
 	close (TMP);
 	if (!defined($main::opt{'n'})) {
 	    chomp($out = `$buffer_prog -m $mem -o /dev/null < $tmp_name 2>&1`);
@@ -3778,22 +3775,22 @@ sub test_bufferprog {
 
 	print "| Checking 'buffer' on host $host... ";
 
-	my $tmpfile = "$cfg::tmpdir/test.$PROCESS_ID";
+	my $tmpfile = "$cfg::tmpdir/buftest.$host.$PROCESS_ID.sh";
 
 	# Create a script which tests the buffer program
-	# FIXME
-	my $script  = "echo '#!/bin/sh' > $tmpfile; ";
-	$script .= "echo 'tmp_name=/tmp/bufftest\$\$.txt' >> $tmpfile; ";
-	$script .= "echo 'echo testme > \$tmp_name' >> $tmpfile; ";
-	$script .= "echo '$buffer_prog -m ${mem} -o /dev/null 2> /dev/null < \$tmp_name' >> $tmpfile; ";
-	$script .= "echo 'res=\$?' >> $tmpfile; ";
-	$script .= "echo 'if [ \$res -eq 0 ]; then' >> $tmpfile; ";
-	$script .= "echo 'echo \"buffer was successful\"' >> $tmpfile; ";
-	$script .= "echo 'else' >> $tmpfile; ";
-	$script .= "echo 'echo \"buffer was unsuccessful: exit code \$res\"' >> $tmpfile; ";
-	$script .= "echo 'fi' >> $tmpfile; ";
-	$script .= "echo '/bin/rm -f \$tmp_name' >> $tmpfile; ";
-	system("$script");
+	open(SCR,"> $tmpfile") || die;
+	print SCR "#!/bin/sh\n";
+	print SCR "tmp_name=/tmp/bufftest\$\$.txt\n";
+	print SCR "echo testme > \$tmp_name\n";
+	print SCR "$buffer_prog -m $mem -o /dev/null 2> /dev/null < \$tmp_name\n";
+	print SCR "res=\$?\n";
+	print SCR "if [ \$res -eq 0 ]; then\n";
+	print SCR "   echo \"buffer was successful\"\n";
+	print SCR "else\n";
+	print SCR "   echo \"buffer was unsuccessful: exit code \$res\"\n";
+	print SCR "fi\n";
+	print SCR "/bin/rm -f \$tmp_name\n";
+	close(SCR);
 
 	if (!(open PIPE,"cat $tmpfile | ($main::remoteshell $host 'cat > $tmpfile; chmod 755 $tmpfile; $tmpfile; /bin/rm -f $tmpfile') | ")) {
 	    push (@main::errors, "Could not open pipe to temporary script. - $!");
@@ -3805,8 +3802,8 @@ sub test_bufferprog {
 		chomp($out = $_);
 		if (/^$buffer_prog was unsuccessful: exit code (\d+)/) {
 		    $retval = $1;
+		    print "Failed!\n";
 		    if ($retval != 0) {
-			print "Failed!\n";
 			push(@main::errors, "Problems encountered testing 'buffer' command on host '$host':");
 			push(@main::errors, "  --> " . $out);
 			if ($retval == 255) {
@@ -3817,13 +3814,14 @@ sub test_bufferprog {
 			} else {
 			    push(@main::errors, "  Unknown problem trying to run 'buffer' (exit code $retval). Try disabling it.");
 			}
-		    } else {
-			print "Ok\n";
 		    }
-
 		}
 	    }
 	    close (PIPE);
+	}
+
+	if ($retval == 0) {
+	    print "Ok\n";
 	}
 
 	unlink("$tmpfile");
