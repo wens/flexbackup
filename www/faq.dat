@@ -116,7 +116,19 @@ treating the thing like a SCSI tape - I've had more success that way.
 
 <P>You can also just try writing/reading stuff straight from the drive
 with tar or dd (to factor flexbackup out of the loop).  If you can get that
-working, but flexbackup still seems to malfunction, let us know.
+working, but flexbackup still seems to malfunction, let us know.  Try
+things like:
+<PRE>
+  # Backup two dirs
+  mt -f /dev/tape rewind
+  find /dir1 -print | afio -o -z -v -b 64k - | dd ibs=64k obs=64k of=/dev/tape
+  find /dir2 -print | afio -o -z -v -b 64k - | dd ibs=64k obs=64k of=/dev/tape
+
+  # List
+  mt -f /dev/tape rewind
+  dd ibs=64k obs=64k if=/dev/tape | afio -t -z -v -b 64k -
+  dd ibs=64k obs=64k if=/dev/tape | afio -t -z -v -b 64k -
+</PRE>
 
 <c>Common problems
 

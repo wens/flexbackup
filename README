@@ -11,7 +11,7 @@ A flexible backup tool
 
 Features:
    o Easy to configure
-   o Uses dump, afio, tar (gnu), cpio, star, pax, or zip archivers
+   o Uses dump, afio, GNU tar, cpio, star, pax, or zip archivers
    o Full and numbered levels of incremental backup (acts like "dump")
    o Backup, list, compare, extract, extract list of files modes
    o Compression and buffering options for all backup types
@@ -48,7 +48,9 @@ interface to them.
 ----------------------------------------------------------------------
 USE
 
-See "flexbackup -help". Examples below.
+  --> Please see "flexbackup -help" <--
+ 
+Some examples below.
 
 To do a full backup of /home:
 
@@ -66,9 +68,9 @@ To do an level 5 incremental backup of all filesystems:
 
    flexbackup -fs all -level 5
 
-Extract all files from current tape position into current directory:
+Extract all files from file number 1 on the tape into current directory:
 
-   flexbackup -extract
+   flexbackup -extract -num 1
 
 Compare afio archive at current tape position with the current
 directory:
@@ -125,19 +127,21 @@ NOTES
  archive is not necessarily the directory you told it to dump, but
  rather the mount point of the filesystem
 
- I suggest using "afio", especially if you want compression.  It
- compresses one file at a time, so an error will not corrupt your
- entire archive like with other types.
+ I suggest using "afio" for tapes, especially if you want compression.  It
+ compresses one file at a time, so an error will not corrupt your entire
+ archive like with other types.  If you are using on-disk backups, the
+ archive type doesn't matter as much.
 
 ----------------------------------------------------------------------
 MISCELLANEOUS
 
- I did this to to help automate my life.
- See the TODO list for what I might be planning to do next
+ I originally did this to to help automate my life.
+ See the TODO list for what we might be planning to do next.
 
  Send problems/suggestions to:
-   flexbackup-help@lists.sourceforge.net
- or see http://flexbackup.sourceforge.net for contact information.
+   flexbackup-help@lists.sourceforge.net 
+ Please check the FAQ!
+ See http://flexbackup.sourceforge.net for contact information.  
 
  Thanks,
    Edwin Huffstutler <edwinh+flexbackup@edwinh.org>
