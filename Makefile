@@ -15,7 +15,6 @@ all: tar rpm webdoc
 
 tag: version commit
 	perl -pi -e 's/^ README for version .*/ README for version $(VER)/' README
-	perl -pi -e 's/^Flexbackup todo list as of version .*/Flexbackup todo list as of version $(VER)/' TODO
 	perl -pi -e 's/^Version:        .*/Version:        $(VER)/' flexbackup.lsm.template
 	perl -pi -e 's/^Entered-date:   .*/Entered-date:   $(DATE)/' flexbackup.lsm.template
 	perl -pi -e 's/%define version .*/%define version $(VER)/' flexbackup.spec
@@ -25,16 +24,16 @@ tag: version commit
 tar: tag lsm
 	cd /tmp; cvs co -r $(CVSVER) flexbackup; mv flexbackup flexbackup-$(VER)
 	cd /tmp/flexbackup-$(VER); mv Makefile.dist Makefile
-	tar -C /tmp -z -c -v -X tar.exclude -f $(SITE)/flexbackup-$(VER).tar.gz flexbackup-$(VER)
-	cp -p $(SITE)/flexbackup-$(VER).tar.gz $(SITE)/flexbackup-latest.tar.gz
-	cp -p $(SITE)/flexbackup-$(VER).tar.gz archive
+	tar -C /tmp -z -c -v -X tar.exclude -f $(SITE)/tarball/flexbackup-$(VER).tar.gz flexbackup-$(VER)
+	cp -p $(SITE)/tarball/flexbackup-$(VER).tar.gz $(SITE)/tarball/flexbackup-latest.tar.gz
+	cp -p $(SITE)/tarball/flexbackup-$(VER).tar.gz archive
 	cd /tmp; echo yes | cvs release -d flexbackup-$(VER)
 
 rpm: tar
 	sudo cp $(SITE)/flexbackup-$(VER).tar.gz $(RPM)/SOURCES
 	sudo rpm -ba flexbackup.spec
-	cp $(RPM)/RPMS/noarch/flexbackup-$(VER)-1.noarch.rpm $(SITE)
-	cp $(RPM)/SRPMS/flexbackup-$(VER)-1.src.rpm $(SITE)
+	cp -p $(RPM)/RPMS/noarch/flexbackup-$(VER)-1.noarch.rpm $(SITE)/RPMS
+	cp -p $(RPM)/SRPMS/flexbackup-$(VER)-1.src.rpm $(SITE)/RPMS
 	sudo rpm --rmsource flexbackup.spec
 	sudo rm $(RPM)/RPMS/noarch/flexbackup-$(VER)-1.noarch.rpm
 	sudo rm $(RPM)/SRPMS/flexbackup-$(VER)-1.src.rpm
@@ -46,9 +45,9 @@ webdoc:
 
 lsm: tag
 	cd /tmp; cvs co -r $(CVSVER) flexbackup; mv flexbackup flexbackup-$(VER)
-	tar -C /tmp -z -c -v -X tar.exclude -f $(SITE)/flexbackup-$(VER).tar.gz flexbackup-$(VER)
+	tar -C /tmp -z -c -v -X tar.exclude -f $(SITE)/tarball/flexbackup-$(VER).tar.gz flexbackup-$(VER)
 	cd /tmp; echo yes | cvs release -d flexbackup-$(VER)
-	./sizelsm.perl $(SITE) $(VER)
+	./sizelsm.perl $(SITE)/tarball $(VER)
 	cvs commit -m "" flexbackup.lsm
 	cvs tag -F $(CVSVER) flexbackup.lsm
 

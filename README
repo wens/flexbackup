@@ -12,8 +12,8 @@ Flexible backup script.
 
 Features:
    o Easy to configure
-   o Uses dump, afio, tar, or cpio with the flick of a switch
-   o Backup, extract, compare, list modes
+   o Uses dump, afio, tar, cpio, or zip with the flick of a switch
+   o Backup, list, compare, extract, extract list of files modes
    o Compression and buffering options for all backup types
    o Full (0) and 1-9 levels of incremental backup (ala "dump")
    o Filesystem-oriented (won't traverse devices)
@@ -25,12 +25,13 @@ Features:
 
 Software needed:
    o perl
-   o gzip or bzip2
-   o buffer
-   o mt (or ftmt if using ftape)
+   o fileutils, findutils
    o one or more of
-       dump/restore afio tar cpio
-   o possibly ftape and ftape-tools
+       dump/restore afio tar cpio zip/unzip
+   o mt
+   o gzip, bzip2, or compress (optional)
+   o buffer (optional)
+   o ftape-tools (optional, for ftape driver)
 
 See the INSTALL file for installation instructions.
 
@@ -78,6 +79,10 @@ directory:
 
    flexbackup -compare -type afio
 
+Extract files listed in "restorelist" from an on-disk file:
+
+   flexbackup -extract home.0.19990930.afio -files restorelist
+
 ----------------------------------------------------------------------
 NOTES
 
@@ -98,18 +103,23 @@ NOTES
  Archiving to files - just set $device to a directory. Backups
  will be called <filesystem>.<level>.<yyyymmdd>.<type>
 
- You can give filenames as an argument to -compare/extract/list/restore
+ Extracting only lists of files: dump/restore and tar will recurse
+ into subdirectories if they are in the list.  afio and cpio will not
+ (you must list all the files you want to extract them in that case)
 
  Remote: rsh or ssh is used for remote backups.  Backups of remote machines
  are to be run from the machine with the tape drive!
 
+ When comparing "dump" archives, and if you only backed up a
+ subdirectory of a filesystem, you will get errors for the "other"
+ parts of the filesystem.  Similarly, if you extract a dump archive,
+ remember that it keeps the subdirectory path, the "top" of the
+ archive is not necessarily the directory you told it to dump, but
+ rather the mount point of the filesystem
+
  I suggest using "afio", especially if you want compression.  It
  compresses one file at a time, so an error will not corrupt your
  entire archive like with other types.
-
- When comparing "dump" archives, and if you only backed up a
- subdirectory of a filesystem, you will get errors for the "other"
- parts of the filesystem.
 
 ----------------------------------------------------------------------
 MISCELLANEOUS
@@ -122,13 +132,6 @@ MISCELLANEOUS
 
  Thanks,
    Edwin Huffstutler <edwinh@computer.org>
-
-
- DISCLAIMER: This program is distributed in the hope that it will be
- useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
- Public License (See COPYING) for more details.
-
 
 Local Variables:
 mode: flyspell

@@ -1,50 +1,34 @@
-Flexbackup to-do list
-
 $Id$
 $Name$
 
+Flexbackup to-do list
 Some of these might not happen, but figured I should jot them down
 
-Current:
+Before next release:
+ - test the block size 0 stuff
+ - auto-testing script for all archive types and compression
+   during changes
+ - mail new maintainer of dump now and ask about -T
+   ask about dump length not really being modulo blksize deal
+ - resurrect my old drive and test ftape stuff again
 
- - try afio -g parameter when creating
- - try restore -d for comparing w/ restore
- - config option for tar --record-number
-
- - make exclude_expr a list option
-     gotta watch for -a vs -o for tar
-
- - mail new maintainer of  dump now and ask about -T
-   ask about dump length deal
-
- - cleanup erase/reten/etc.  Throw global flags based on options.
-   use only -erase -reten flags
-
- - arbitrary "list of files" extract (give arg to list file)
-   strip /, ./
-   make sure dirs are recursed?
-     afio: use "-w file"
-     cpio: use "--pattern-file file"
-     tar:  use "--files-from file"
-     restore: use "-x filenameinarchive otherfileinarchive" (know this recurses)
-   test all this
-   update readme
 
 Features to add:
- - zip/unzip backend
- - lha backend
  - interactive restore-like shell for types besides dump
      see notes below
  - support multiple tapes for a single archive
      dump already does this? afio has hooks too.
-     tar does, (-M); won't work for compressed?
-     would the pipeline mechanism screw it all up?
-     need to test with an almost-full tape.
+     tar does(-M). would the pipeline mechanism screw
+     it all up?
 
      found a utility called "multivol", and one from Kbackup celled
      "multibuf" that could replace buffer and handle volumes too.
      must play with them both.
 
+     need to test with an almost-full tape, or a floppy
+
+ - grab /etc/mtab or /proc/mounts or "mount" and put device in Backup of: line
+     (like dump does)
  - configurable path for programs (gtar=tar, etc)
      remote vs local too
  - table of contents for a tape
@@ -53,7 +37,7 @@ Features to add:
      Scott Penrose had some ideas here...
  - Gnome driver/configurator utility
      I have a "picture" of what I want this to look like
-     use glade + libglade perl bindings
+     use glade + libglade
      will be a seperate program that just manipulates flexbackup
  - make a manual page
      embed in script, use pod2man
@@ -63,13 +47,18 @@ Features to add:
      possible at all?
      just install s/w on client w/remote tape device. need config file
      option
- - encryption
+ - encryption with gnupg, crypt
  - cd-rom burning (or just .iso type?) for full backups?
 
 Cleanup/fix:
-
- - resurrect my old drive and test ftape stuff again
- - check to make 100% sure dump works over the pipe mechanism
+ - make -extract -files for afio/cpio/zip recurse dirs
+      dump/tar already to this.
+ - zip/unzip backend, use fifos rather than temp files
+ - make list/extract/etc show what commands they will run
+      split functions out like backup
+ - cleanup erase/reten/etc.  Throw global flags based on options.
+      use only -erase -reten flags
+ - try restore -D for comparing subdirs w/ restore
  - check that dir we are backing up exists
  - autodetect ftape and raw device to eliminate configuration
  - figure out dump length being multiple of blocksize problem
@@ -93,9 +82,6 @@ Use perl readline module
 4) then give a shell w/ all commands from regular dump
 5) mark things for extraction
 6) reopen archive & extract that list
-
-If using afio, all we need are the block numbers and we can seek directly
-to them and extract.
 
 Help from restore to jog my brain...
 
