@@ -5,10 +5,16 @@ Edwin Huffstutler <edwinh@computer.org>
 The following people have helped me debug/fix things:
 
 John Reynolds <jreynold@primenet.com>
-Rafal Maszkowski <rzm@icm.edu.pl>
-Rick Gaudette <rjg@ECE.NEU.EDU>
-Michael Bartosh <bartosh@apple.tamu.edu>
+ FreeBSD compatibility, other additions
 
+Rick Gaudette <rjg@ECE.NEU.EDU>
+ pre-4.0 fileutils touch -t problem
+
+Rafal Maszkowski <rzm@icm.edu.pl>
+ one-way ssh/rsh hint
+
+Michael Bartosh <bartosh@apple.tamu.edu>
+ mt debugging
 
 $Id$
 $Name$
