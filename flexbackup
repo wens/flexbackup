@@ -178,7 +178,10 @@ sub backup_routine {
     my %oldlogs;
     my %oldstamps;
     my $fs;
-    my $logext;
+    my $logfile;
+    my $symlink;
+    my $logext = '';
+    my $comp_cmd;
 
     # Get backup level...
     if (defined($main::opt{'level'})) {
@@ -192,7 +195,9 @@ sub backup_routine {
 
     # Figure out log file name & empty log file
     $label = &get_label($main::opt{'fs'});
-    $main::log = "$cfg::logdir/$cfg::prefix$label.$main::level.$main::date";
+    $logfile = "$cfg::prefix$label.$main::level.$main::date";
+    $symlink = "$cfg::prefix$label.latest";
+    $main::log = "$cfg::logdir/$logfile";
     if (! open(LOG,">$main::log")) {
         die "Can't write to $main::log: $OS_ERROR";
     }
@@ -201,7 +206,7 @@ sub backup_routine {
     &line();
     &mt("generic-blksize $main::mt_blksize");
 
-    # Remove old stamp files
+    # Remember old stamp files (will remove at end of job)
     # ("old" = any higher-numbered stamps for this label)
     opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $OS_ERROR");
     @files = readdir(DIR);
@@ -368,25 +373,29 @@ sub backup_routine {
 
     # Compress log file
     if ($cfg::comp_log ne 'false') {
-        my $comp_cmd;
         if ($cfg::comp_log eq "gzip") {
-            $logext = "gz";
-            $main::comp_cmd .= "gzip -f $main::log";
+            $logext = ".gz";
+            $comp_cmd = "gzip -f $main::log";
         } elsif ($cfg::comp_log eq "bzip2") {
-            $logext = "bz2";
-            $main::comp_cmd .= "bzip2 -f $main::log";
+            $logext = ".bz2";
+            $comp_cmd = "bzip2 -f $main::log";
         } elsif ($cfg::comp_log eq "compress") {
-            $logext = "Z";
-            $main::comp_cmd .= "compress -f $main::log";
+            $logext = ".Z";
+            $comp_cmd = "compress -f $main::log";
         }
         &line("logonly");
-        print "| Compressing log ($main::log.$logext)\n";
-        system("$main::comp_cmd");
+        print "| Compressing log ($logfile" . "$logext)\n";
+        system("$comp_cmd");
         if ($CHILD_ERROR) {
-            warn("error compressing log file\n");
+            warn("Error compressing log file\n");
         }
         undef $main::log;
     }
+
+    # Symlink the "latest" log file for this level
+    &log("| Linking $symlink" . "$logext -> $logfile" . $logext);
+    unlink("$cfg::logdir/$symlink" . $logext);
+    symlink("$logfile" . $logext,"$cfg::logdir/$symlink" . $logext);
 
     &line();
 
@@ -544,46 +553,7 @@ sub backup {
     # Format commands for nice printing
     @echo_cmds = @cmds;
     foreach (@echo_cmds) {
-        # Split long lines.  This looks convolved but it auto-wraps the
-        # command lines down to a nice width for printing...
-        my @chunks = split(" ",$_);
-        my $line = "";
-        my $linelimit = 76;
-        while (@chunks) {
-            while ($_ = shift(@chunks)) {
-                if (length($_) < $linelimit ) {
-                    # Item is less than $linelimit -
-                    # check to see if total line length is over, if so
-                    # save it for next line
-                    if ((length($line) + length($_)) > $linelimit) {
-                        unshift(@chunks,$_);
-                        last;
-                    }
-                } else {
-                    # Single item longer than $linelimit -
-                    # wait till we have a blank line
-                    if ($line !~ /^ ?$/) {
-                        unshift(@chunks,$_);
-                        last;
-                    }
-                }
-                # Add this item to the line
-                $line .= $_ . " ";
-            }
-
-            # Print backslash at end unless the last line
-            if (@chunks) {
-                $_ = '\\';
-            } else {
-                $_ = "";
-            }
-
-            # What a mess we went through above, just to print it...
-            &log("| $line" . $_);
-
-            # Indent next line(s) by one space
-            $line = " ";
-        }
+        &split_and_echo($_);
     }
     &line();
 
@@ -697,7 +667,8 @@ sub backup_afio {
     $cmd .= "(echo //--$tmplabel flexbackup.volume_header_info && ";
     $cmd .= "find . -xdev ";
     $cmd .= "-newer $tmpstamp ";
-    $cmd .= "-print ";
+    $cmd .= "-print | ";
+    $cmd .= "sed -e \"s%^\./%%\" ";
     $cmd .= "$main::exclude_cmd ";
     $cmd .= ") | ";
     $cmd .= "afio -o ";
@@ -752,7 +723,8 @@ sub backup_cpio {
     $cmd .= "cd $dir ; ";
     $cmd .= "find . -xdev ";
     $cmd .= "-newer $tmpstamp ";
-    $cmd .= "-print ";
+    $cmd .= "-print | ";
+    $cmd .= "sed -e \"s%^\./%%\" ";
     $cmd .= "$main::exclude_cmd ";
     $cmd .= "| ";
     $cmd .= "cpio --create ";
@@ -893,7 +865,15 @@ sub backup_zip {
 ######################################################################
 sub list_routine {
 
-    my $cmd = &setup_before_read();
+    my $cmd;
+
+    $main::log = "flexbackup.list.log";
+    if (! open(LOG,">$main::log")) {
+        warn "Can't write to $main::log: $OS_ERROR";
+    }
+    close(LOG);
+
+    $cmd = &setup_before_read();
 
     if ($cfg::type eq 'dump') {
 	$cmd .= "restore -t ";
@@ -946,9 +926,17 @@ sub list_routine {
 ######################################################################
 sub extract_routine {
 
-    my $cmd = &setup_before_read();
     my $restore_files = '';
     my $newlist = "$cfg::tmpdir/extract.$$";
+    my $cmd;
+
+    $main::log = "flexbackup.extract.log";
+    if (! open(LOG,">$main::log")) {
+        warn "Can't write to $main::log: $OS_ERROR";
+    }
+    close(LOG);
+
+    $cmd = &setup_before_read();
 
     if (defined($main::opt{'files'})) {
         # Have to get a list of the files for restore to use
@@ -1041,8 +1029,15 @@ sub extract_routine {
 ######################################################################
 sub compare_routine {
 
-    my $cmd = &setup_before_read();
+    my $cmd;
 
+    $main::log = "flexbackup.compare.log";
+    if (! open(LOG,">$main::log")) {
+        warn "Can't write to $main::log: $OS_ERROR";
+    }
+    close(LOG);
+
+    $cmd = &setup_before_read();
     if ($cfg::type eq 'dump') {
 	$cmd .= "restore -C ";
         $cmd .= "$main::dump_blk_flag ";
@@ -1572,6 +1567,7 @@ sub optioncheck {
     &checkinpath('tee');
     &checkinpath('rm');
     &checkinpath('find');
+    &checkinpath('sed');
 
     # Ftape support
     if ($cfg::ftape eq 'true') {
@@ -1692,7 +1688,6 @@ sub optioncheck {
     } elsif ($cfg::type eq 'tar') {
 
         &checkinpath('tar');
-        &checkinpath('sed');
 
         # Echo record number
         $main::tar_recnum_flag = "";
@@ -2065,10 +2060,13 @@ sub run_or_echo_then_query {
 
     my $cmd = shift(@_);
 
+    &split_and_echo($cmd);
+    &line();
+
     if (!defined($main::opt{'n'})) {
-        system($cmd);
+        system("($cmd) 2>&1 | tee -a $main::log");
     } else {
-        &log("$cmd");
+        &log("(debug) command output would be here");
     }
 
     &line();
@@ -2104,11 +2102,13 @@ sub maybe_remote_cmd {
 ######################################################################
 sub setup_before_read {
 
-    $main::device = &maybe_get_filename();
     my $cmd;
+
+    $main::device = &maybe_get_filename();
 
     &mt("generic-blksize $main::mt_blksize");
     if (defined($main::opt{'reten'})) {
+        &log("| Retensioning tape...");
         &mt("retension");
     }
 
@@ -2162,5 +2162,57 @@ sub print_afio_volume_header {
     # for now just echo our stdin
     while(<STDIN>) {
         print;
+    }
+}
+
+
+######################################################################
+# Split long lines for echoing
+######################################################################
+sub split_and_echo {
+
+    my $string = shift(@_);
+    my @chunks;
+    my $line = "";
+    my $linelimit = 76;
+
+    # This looks convolved but it auto-wraps the
+    # command lines down to a nice width for printing...
+
+    @chunks = split(" ",$string);
+    while (@chunks) {
+        while ($_ = shift(@chunks)) {
+            if (length($_) < $linelimit ) {
+                # Item is less than $linelimit -
+                # check to see if total line length is over, if so
+                # save it for next line
+                if ((length($line) + length($_)) > $linelimit) {
+                    unshift(@chunks,$_);
+                    last;
+                }
+            } else {
+                # Single item longer than $linelimit -
+                # wait till we have a blank line
+                if ($line !~ /^ ?$/) {
+                    unshift(@chunks,$_);
+                    last;
+                }
+            }
+            # Add this item to the line
+            $line .= $_ . " ";
+        }
+
+        # Print backslash at end unless the last line
+        if (@chunks) {
+            $_ = '\\';
+        } else {
+            $_ = "";
+        }
+
+        # What a mess we went through above, just to print it...
+        &log("| $line" . $_);
+
+        # Indent next line(s) by one space
+        $line = " ";
     }
 }

@@ -4,20 +4,18 @@ $Name$
 Flexbackup to-do list
 Some of these might not happen, but figured I should jot them down
 
+
 Features to add:
  - interactive restore-like shell for types besides dump
      see notes below
  - add "traverse mountpoints" option for non-dump types
  - support multiple tapes for a single archive
-     dump already does this? afio has hooks too.
-     tar does(-M). would the pipeline mechanism screw it all up?
-
-     found a utility called "multivol", and one from Kbackup celled
-     "multibuf" that could replace buffer and handle volumes too.
-     must play with them both.
-
-     need to test with an almost-full tape, or a floppy
-
+     - dump already does this? afio has hooks too. tar does(-M). would
+       the pipeline mechanism screw it all up?
+     - found a utility called "multivol", and one from Kbackup celled
+       "multibuf" that could replace buffer and handle volumes too.
+        must play with them both.
+     - need to test with an almost-full tape, or a floppy
  - grab /etc/mtab or /proc/mounts or "mount" and put device in Backup of: line
      (like dump does)
  - configurable path for programs (gtar=tar, etc)
@@ -32,14 +30,13 @@ Features to add:
      will be a seperate program that just manipulates flexbackup
  - make a manual page
      embed in script, use pod2man
- - log files for extract/compare/etc?
  - extract options to not overwrite existing files
  - remote extract/compare/restore
-     possible at all?
      just install s/w on client w/remote tape device. need config file
      option
  - encryption with gnupg, crypt
  - cd-rom burning (or just .iso type?) for full backups?
+
 
 Cleanup/fix:
  - make -extract -files for afio/cpio/zip recurse dirs
@@ -60,6 +57,7 @@ Cleanup/fix:
 
 Notes for cloning restore shell for afio/tar/cpio types)
 Use perl readline module
+(Maybe a seperate program or mmodule that runs off a list fed to it)
 
 1) do a listing
 2) parse & put into data structures

@@ -6,6 +6,7 @@ Version 0.9.6 (19991002)
 New Features:
  - buffing is optional
  - add -norewind flag
+ - log files for list/extract/compare
  - can now have more than one exclude expression defined
  - use our own timestamps for "dump", with -T
      config file variable to use /etc/dumpdates
@@ -35,7 +36,7 @@ Bug fixes/cleanup:
  - dates back to string format (easier to read), use numeric only on BSD
      will work with pre-4.0 fileutils that have touch -t bug
  - tar exclude mess is fixed, using --files-from again as well.
-    problem before way I was not stripping directory names
+    problem before was I was not stripping directory names
  - make better afio control file handling for volume labels
  - use -B (--read-full-blocks/--read-full-records) for tar
  - use $verbose to set restore -v for list/extract
