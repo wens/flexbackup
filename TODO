@@ -31,6 +31,7 @@ Misc:
 Features to add:
 
   - Remote directores for to-disk backups
+  - Remote device via Net::FTP ?
 
   - A shorter summary status that's better than doing
          egrep "(error|of set|Backup of|written)"
