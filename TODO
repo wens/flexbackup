@@ -6,7 +6,7 @@ Some of these might not happen
 
 Cleanup/fix:
 
- - Check -regex '.*\(a\|b\)' with FreeBSD find
+ - Check fix for find -E -regex '.*(a|b)' with FreeBSD
 
  Blocked pending me having a work tape drive again:
   - Need to pad for reads?  test all types.
@@ -27,11 +27,8 @@ Misc:
  - Add faq on -erase -newtape taking forever / erase_rewind_only
      could be mt erase, could be dd index hang (-test-tape-drive)
  - add faq re: pkg delta how it works
- - add faq -wday use
 
- - Add faq on files changing underneath tar? sql db dump?
-
- - Update README/faq/spec/lsm description text for new features since 1.0.3
+ - Update README/spec/lsm description text for new features since 1.0.3
      sets
      pruning
      pkgdelta
@@ -40,6 +37,7 @@ Misc:
 
  - fix description text in sf project, freshmeat
 
+ - Add faq on files changing underneath tar? sql db dump?
  - Create mbuffer rpm (if I can make it work)
  - Man page (create from -help perhaps)
  - Try against torture-test list:

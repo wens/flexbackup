@@ -2,7 +2,7 @@
 Installation instructions
 
 1. If you don't like the default paths for the config file, the bin dir for
-   porgrams, or where perl lives, edit the Makefile, and set
+   programs, or where perl lives, edit the Makefile, and set
    them.  Defaults are CONFFILE=/etc/flexbackup.conf, BINPATH=/usr/bin,
    PERLPATH=/usr/bin/perl
 
