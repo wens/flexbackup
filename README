@@ -32,12 +32,7 @@ Software needed:
        dump/restore afio tar cpio
    o possibly ftape and ftape-tools
 
-Install:
-   o Copy flexbackup.conf to /etc
-   o Copy the flexbackup program to someplace in your PATH
-     You only need to do this on the machine with the tape drive -
-     remote machines don't need anything installed
-   o Edit /etc/flexbackup.conf as desired. See the comments
+See the INSTALL file for isstallation instructions.
 
 I looked at many other packages and didn't really find anything that
 worked the way I wanted it to.  For my needs I felt the existing

@@ -24,4 +24,4 @@ install:
 	cp fb.install fb.tmp; sed -e 's%/etc/flexbackup.conf%$(CONFFILE)%g;' fb.tmp > fb.install
 	cp fb.install fb.tmp; sed -e 's%/usr/bin/perl%$(PERLPATH)%g' fb.tmp > fb.install
 	install -m 0755 fb.install $(BINPATH)/flexbackup
-	rm -f fb.install
+	rm -f fb.install fb.tmp
