@@ -2724,7 +2724,7 @@ sub optioncheck {
 
     }
 
-    # Filesystems
+    # Sets / filesystems
     if (defined($main::opt{'dir'})) {
 
 	    # Single directory
@@ -2738,6 +2738,12 @@ sub optioncheck {
 	    $main::opt{'dir'} = &nuke_trailing_slash($main::opt{'dir'});
 
     } elsif (defined($main::opt{'set'})) {
+
+	foreach my $set (keys %cfg::set) {
+	    if ($set eq 'all') {
+		push(@main::errors,"can't define a set named 'all'");
+	    }
+	}
 
 	my @do_sets;
 	if ($main::opt{'set'} eq 'all') {
