@@ -4,7 +4,7 @@
   |  _| | |  __/>  <| |_) | (_| | (__|   <| |_| | |_) |
   |_|   |_|\___/_/\_\_.__/ \__,_|\___|_|\_\\__,_| .__/
                                                 |_|
- http://members.home.com/edwinh/flexbackup/
+ http://members.home.com/flexbackup/
  README for version 0.9.7.1
 
 ----------------------------------------------------------------------
@@ -90,7 +90,7 @@ List what backups are on this tape:
 NOTES
 
  The first file on a tape is the "index key" (see "flexbackup -toc").
- Therefore, do an "mt fsf 1" first, if you want to read the first backup 
+ Therefore, do an "mt fsf 1" first, if you want to read the first backup
  archive on a tape.
 
  Level 0 backups of "all" assume a new tape - will trigger
@@ -136,7 +136,7 @@ MISCELLANEOUS
  See the TODO list for what I might be planning to do next
 
  Send comments/problems/suggestions to:
-   edwinh+flexbackup@computer.org
+   flexbackup@home.com
 
  Thanks,
    Edwin Huffstutler <edwinh@computer.org>

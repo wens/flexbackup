@@ -3,9 +3,9 @@ Name: flexbackup
 %define version 0.9.7.1
 Version: %{version}
 Release: 1
-Packager: Edwin Huffstutler <edwinh+flexbackup@computer.org>
-Source: http://members.home.com/edwinh/flexbackup/flexbackup-%{version}.tar.gz
-Url: http://members.home.com/edwinh/flexbackup/
+Packager: Edwin Huffstutler <flexbackup@home.com>
+Source: http://members.home.com/flexbackup/tarball/flexbackup-%{version}.tar.gz
+Url: http://members.home.com/flexbackup/
 Copyright: GPL
 Group: Applications/Archiving
 BuildRoot: /var/tmp/flexbackup-root
@@ -26,7 +26,7 @@ Features:
    o Backup, extract, compare, list modes
    o Compression and buffering for all backup types
    o Full (0) and 1-9 levels of incremental backup
-   o Keeps a table of contents so you know what's on each tape
+   o Keeps a table of contents so you know whats on each tape
    o Does remote filesystems (over rsh/ssh; no special service)
    o Works with IDE/SCSI tapes on Linux/FreeBSD, Linux ftape, or disk files
    o Nice log files

@@ -1971,7 +1971,7 @@ sub versionstring {
     if ($ver eq '') {
         $ver = "devel";
     }
-    return($ver . " <edwinh+flexbackup\@computer.org>");
+    return($ver . " <flexbackup\@home.com>");
 
 }
 
