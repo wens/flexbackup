@@ -325,10 +325,10 @@ sub backup_routine {
 	foreach my $lf (reverse sort @files) {
 
 	    # Skip our own log
-	    next if ($lf =~ m/^$logfile(\.gz|\.bz2|\.Z|\.zip)?$/);
+	    next if ($lf =~ m/^$logfile(\.gz|\.bz2|\.lzo|\.Z|\.zip)?$/);
 
 	    # Find normal old logs
-	    if ($lf =~ m/^$cfg::prefix$label\.(\d+)(\.(\d+))?(\.gz|\.bz2|\.Z|\.zip)?$/) {
+	    if ($lf =~ m/^$cfg::prefix$label\.(\d+)(\.(\d+))?(\.gz|\.bz2|\.lzo|\.Z|\.zip)?$/) {
 		if ($1 >= $::level) {
 		    # Might be from $staticlogs=true or false
 		    if (defined($3)) {
@@ -340,7 +340,7 @@ sub backup_routine {
 	    }
 
 	    # If this is a level 0, we can nuke incremental logs
-	    if (($::level == 0) and ($lf =~ m/^$cfg::prefix$label\.(incremental)(\.(\d+))?(\.gz|\.bz2|\.Z|\.zip)?$/)) {
+	    if (($::level == 0) and ($lf =~ m/^$cfg::prefix$label\.(incremental)(\.(\d+))?(\.gz|\.bz2|\.lzo|\.Z|\.zip)?$/)) {
 		# Might be from $staticlogs=true or false
 		if (defined($3)) {
 		    $oldlogs{"$cfg::logdir/$lf"} = $1 . "|" . $3;
@@ -557,6 +557,9 @@ sub backup_routine {
 	} elsif ($cfg::comp_log eq "bzip2") {
 	    $logext = ".bz2";
 	    $comp_cmd = "$::path{bzip2} -f \"$::log\"";
+	} elsif ($cfg::comp_log eq "lzop") {
+	    $logext = ".lzo";
+	    $comp_cmd = "$::path{lzop} -f \"$::log\"";
 	} elsif ($cfg::comp_log eq "zip") {
 	    $logext = ".zip";
 	    $comp_cmd = "$::path{cat} \"$::log\" | $::path{zip} -q - - > \"$::log" . $logext . "\"; $::path{rm} -f \"$::log\"";
@@ -671,6 +674,8 @@ sub backup {
 		$filename .= ".gz";
 	    } elsif ($cfg::compress eq "bzip2") {
 		$filename .= ".bz2";
+	    } elsif ($cfg::compress eq "lzop") {
+		$filename .= ".lzo";
 	    } elsif ($cfg::compress eq "zip") {
 		$filename .= ".zip";
 	    } elsif ($cfg::compress eq "compress") {
@@ -683,6 +688,8 @@ sub backup {
 		$filename .= "-gz";
 	    } elsif ($cfg::compress eq "bzip2") {
 		$filename .= "-bz2";
+	    } elsif ($cfg::compress eq "lzop") {
+		$filename .= "-lzo";
 	    } elsif ($cfg::compress eq "zip") {
 		$filename .= "-zip";
 	    } elsif ($cfg::compress eq "compress") {
@@ -2677,7 +2684,7 @@ sub optioncheck {
     # First check if things are defined in the config file
     # Checks exist, true/false, or one of options
     &checkvar(\$cfg::type,'type','dump afio cpio tar star pax zip ar shar lha copy rsync filelist','tar');
-    &checkvar(\$cfg::compress,'compress','gzip bzip2 compress zip false hardware','gzip');
+    &checkvar(\$cfg::compress,'compress','gzip bzip2 lzop compress zip false hardware','gzip');
     &checkvar(\$cfg::compr_level,'compr_level','exist','4');
     &checkvar(\$cfg::verbose,'verbose','bool','true');
     &checkvar(\$cfg::sparse,'sparse','bool','true');
@@ -2694,7 +2701,7 @@ sub optioncheck {
     &checkvar(\$cfg::erase_rewind_only,'erase_rewind_only','bool','false');
     &checkvar(\$cfg::logdir,'logdir','exist','/var/log/flexbackup');
     &checkvar(\$cfg::tmpdir,'tmpdir','exist','/tmp');
-    &checkvar(\$cfg::comp_log,'comp_log','gzip bzip2 compress zip false','gzip');
+    &checkvar(\$cfg::comp_log,'comp_log','gzip bzip2 lzop compress zip false','gzip');
     &checkvar(\$cfg::stampdir,'stampdir','exist','/var/lib/flexbackup');
     &checkvar(\$cfg::index,'index','exist','/var/lib/flexbackup/index');
     &checkvar(\$cfg::keyfile,'keyfile','exist','00-index-key');
@@ -2952,6 +2959,16 @@ sub optioncheck {
 	}
 	$::unz = "$::path{$cfg::compress} -d | ";
 
+    } elsif ($cfg::compress eq "lzop") {
+	$::path{'lzop'} = &checkinpath($cfg::compress);
+	push(@::remoteprogs, $::path{$cfg::compress});
+	if ($cfg::compr_level !~ m/^[123456789]$/) {
+	    push(@::errors,"\$compr_level must be set to 1-9");
+	} else {
+	    $::z = " | $::path{$cfg::compress} -$cfg::compr_level";
+	}
+	$::unz = "$::path{$cfg::compress} -d | ";
+
     } elsif ($cfg::compress eq "compress") {
 	$::path{'compress'} = &checkinpath($cfg::compress);
 	push(@::remoteprogs, $::path{$cfg::compress});
@@ -3199,19 +3216,23 @@ sub optioncheck {
 	&checkvar(\$cfg::afio_echo_block,'afio_echo_block','bool','false');
 	&checkvar(\$cfg::afio_compress_cache_size,'afio_compress_cache_size','exist','2');
 	&checkvar(\$cfg::afio_compress_threshold,'afio_compress_threshold','exist','3');
-	&checkvar(\$cfg::afio_nocompress_types,'afio_nocompress_types','exist','mp3 MP3 Z z gz gif zip ZIP lha jpeg jpg JPG taz tgz deb rpm bz2');
+	&checkvar(\$cfg::afio_nocompress_types,'afio_nocompress_types','exist','mp3 MP3 Z z gz gif zip ZIP lha jpeg jpg JPG taz tgz deb rpm bz2 lzo');
 
 	$::path{'afio'} = &checkinpath('afio');
 	push(@::remoteprogs, $::path{'afio'});
 
 	# Compress flag for afio must be handled differently
-	if ($cfg::compress =~ m/^(gzip|bzip2|compress|zip)$/) {
+	if ($cfg::compress =~ m/^(gzip|bzip2|lzop|compress|zip)$/) {
 
 	    if ($cfg::compress eq "gzip") {
 		$::afio_z_flag = "-P $::path{$cfg::compress} -Q -$cfg::compr_level -Z";
 		$::afio_unz_flag = "-P $::path{$cfg::compress} -Q -d -Q -q -Z";
 
 	    } elsif ($cfg::compress eq "bzip2") {
+		$::afio_z_flag = "-P $::path{$cfg::compress} -Q -$cfg::compr_level -Z";
+		$::afio_unz_flag = "-P $::path{$cfg::compress} -Q -d -Z";
+
+	    } elsif ($cfg::compress eq "lzop") {
 		$::afio_z_flag = "-P $::path{$cfg::compress} -Q -$cfg::compr_level -Z";
 		$::afio_unz_flag = "-P $::path{$cfg::compress} -Q -d -Z";
 
@@ -3345,7 +3366,7 @@ sub optioncheck {
 
     } elsif ($cfg::type eq 'zip') {
 
-	&checkvar(\$cfg::zip_nocompress_types,'zip_nocompress_types','exist','mp3 MP3 Z z gz gif zip ZIP lha jpeg jpg JPG taz tgz deb rpm bz2');
+	&checkvar(\$cfg::zip_nocompress_types,'zip_nocompress_types','exist','mp3 MP3 Z z gz gif zip ZIP lha jpeg jpg JPG taz tgz deb rpm bz2 lzo');
 
 	$::path{'zip'} = &checkinpath('zip');
 	push(@::remoteprogs, $::path{'zip'});
@@ -3353,7 +3374,7 @@ sub optioncheck {
 
 	$::zip_compr_flag = "-$cfg::compr_level";
 
-	if ($cfg::compress =~ /^(gzip|bzip2|compress|zip)$/) {
+	if ($cfg::compress =~ /^(gzip|bzip2|lzop|compress|zip)$/) {
 	    warn("Using type \"zip\" with compress=$cfg::compress makes no sense");
 	    warn("Setting compression to false");
 	    $::unz = "";
@@ -3386,7 +3407,7 @@ sub optioncheck {
 	$::path{'lha'} = &checkinpath('lha');
 	push(@::remoteprogs, $::path{'lha'});
 
-	if ($cfg::compress =~ /^(gzip|bzip2|compress|zip)$/) {
+	if ($cfg::compress =~ /^(gzip|bzip2|lzop|compress|zip)$/) {
 	    warn("Using type \"lha\" with compress=$cfg::compress makes no sense");
 	    warn("Setting compression to false");
 	    $::unz = "";
@@ -3756,21 +3777,23 @@ sub maybe_get_filename {
 
     # Try and guess file types and commpression scheme
     # might as well since we are reading from a file in this case
-    if ($file =~ m/\.(dump|cpio|tar|star|pax|a|shar|filelist)\.(gz|bz2|Z|zip)$/) {
+    if ($file =~ m/\.(dump|cpio|tar|star|pax|a|shar|filelist)\.(gz|bz2|lzo|Z|zip)$/) {
 	$cfg::type = $1;
 	$cfg::compress = $2;
 	$cfg::type =~ s/^a$/ar/;
 	$cfg::compress =~ s/gz/gzip/;
 	$cfg::compress =~ s/bz2/bzip2/;
+	$cfg::compress =~ s/lzo/lzop/;
 	$cfg::compress =~ s/Z/compress/;
 	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
 	&optioncheck();                  # redo to set a few variables over
 
-    } elsif ($file =~ m/\.afio-(gz|bz2|Z|zip)$/) {
+    } elsif ($file =~ m/\.afio-(gz|bz2|lzo|Z|zip)$/) {
 	$cfg::type = "afio";
 	$cfg::compress = $1;
 	$cfg::compress =~ s/gz/gzip/;
 	$cfg::compress =~ s/bz2/bzip2/;
+	$cfg::compress =~ s/lzo/lzop/;
 	$cfg::compress =~ s/Z/compress/;
 	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
 	&optioncheck();                  # redo to set a few variables over

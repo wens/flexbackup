@@ -8,6 +8,7 @@ Changes:
  - Added manpages
  - Add 'rsync' type that acts like 'copy' but using rsync instead of piped
    cpio's.  You need rsync 2.5.6 for this to work!
+ - Added lzop support
  - Recognize .deb files as ar archives
  - Skip proc/devpts/devfs/tmpfs for traverse_fs=local or all
 

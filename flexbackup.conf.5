@@ -42,11 +42,11 @@ Configure subtree pruning. A space-separated list of directories to prune from
 each backup. Key is a filesystem/directory or \(dqhost:directory\(dq spec as
 outlined above regular expressions allowed (not shell-type wildcards!).
 .TP
-\fB$compress\fR = \fI'false|gzip|bzip2|zip|compress|hardware'\fR;
+\fB$compress\fR = \fI'false|gzip|bzip2|lzop|zip|compress|hardware'\fR;
 .TQ
 \fB$compr_level\fR = \fI'4'\fR;
 Configure compression. Choose a type of compression to use and configure the
-level.  The compression level only applies to \fIgzip/bzip2/zip\fR compression
+level.  The compression level only applies to \fIgzip/bzip2/lzop/zip\fR compression
 types.
 .TP
 \fB$buffer\fR = \fI'false|buffer|mbuffer'\fR;
@@ -174,7 +174,7 @@ Log, Stamps, and Binary Location Settings
 \fB$logdir\fR = \fI'/var/log/flexbackup'\fR;
 Directory for log files.
 .TP
-\fB$comp_log\fR = \fI'false|gzip|bzip2|compress|zip'\fR;
+\fB$comp_log\fR = \fI'false|gzip|bzip2|lzop|compress|zip'\fR;
 Compress log?
 .TP
 \fB$staticlogs\fR = \fI'true|false'\fR;
