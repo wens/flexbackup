@@ -1,7 +1,7 @@
 $Id$
 $Name$
 
-Version 1.0pre5 (20030125)
+Version 1.0pre5 (20030124)
 
 Bug fixes:
   - Fix sh status collector for the front of remote commands
