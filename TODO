@@ -5,7 +5,8 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
- - Check for existence of remote executables? (John had something)
+ - Finish buffer me test function for remote hosts
+ - Check for things to put in @remoteprogs for remote tape drives
  - Clean up more $main:: vars, split into types or refactor code
  - bash PIPESTATUS trick fails if remote filesystem and shell there!=bash
      and shell local==bash. bah.
@@ -29,8 +30,9 @@ Misc:
      how about french?  http://sgmf.free.fr/flexbackup_doc.html
  - Someone needs to put a bunch of stuff in a faq
      Started... not much at this point
- - Try bfr or dbuffer? (buffer seems unmaintained; no O_LARGEFILE)
+ - Try bfr? (buffer seems unmaintained; no O_LARGEFILE)
      Maybe document how to recompile buffer
+     bfr looks like it will work.  will need dd too to block...
  - Try against torture-test list:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
 
@@ -89,7 +91,6 @@ Features to add:
  - Make remote machine path overrides possible, that supercede others?
  - Make -extract -files for afio/cpio/zip recurse dirs
       dump/tar already to this. Actually just check that all act the same.
- - Try restore -D for comparing subdirs w/ restore
  - Interactive restore-like shell for types besides dump
       see notes below
  - Log tape sizes (output of buffer or dd or mt tell can be used?)

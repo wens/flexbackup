@@ -6,6 +6,8 @@ Version TBD
 Changes:
   - Check that 'buffer' can run with set $megs.
       From John Reynolds, brought forward from 0.9.8
+  - Check for existence of remote executables before doing remote backups
+      Based on John Reynolds' modifications
   - A "no blocking at all" option. Set $blksize=0 in the config file.
   - Added support for "zip" as valid archive compression type
   - Added support for "zip" as valid log compression type
