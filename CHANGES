@@ -1,7 +1,7 @@
 $Id$
 $Name$
 
-Version 0.9.9.5 (20030110)
+Version 0.9.9.5 (20030111)
 
 Bug fixes:
  - Old bug: stamp files from the various parts of 'all' were not getting

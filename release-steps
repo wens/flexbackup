@@ -1,7 +1,9 @@
 edit CHANGES,TODO,README
+
 change verison/date header in CHANGES
+edit index.html for verions/date
+
 make all VER=x.x.x
-edit index.html as needed
 
 upload files/web to edwinh.org
 upload files/web to sourceforge.net

@@ -5,23 +5,22 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
- - clean up more $main:: vars, split into types or refactor
+ - Clean up more $main:: vars, split into types or refactor
  - bash PIPESTATUS trick fails if remote filesystem and shell there!=bash
      and shell local==bash. bah.
- - check buffer avail mem thing from John
- - revisit -cnewer problem.  Make sure it works with touch -t/-d of
-   timestamp refs (ctime isn't set backward by touch like the mtime)
- - when levels > 9 and using files, -toc sorts it wrong (cosmetic nit)
- - when levels > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
- - fix double dash-line on last line of logfile (screen fine. cosmetic nit)
- - try to use dump combined flags (for older dumps that want abc not -a -b -c)
+ - Check buffer avail mem thing from John
+ - Revisit -cnewer problem.  Make sure it works with touch -t/-d of
+     timestamp refs (ctime isn't set backward by touch like the mtime)
+ - Try to use dump combined flags (for older dumps that want abc not -a -b -c)
+ - When level > 9 and using files, -toc sorts it wrong (cosmetic nit)
+ - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
 
 Misc:
- - make a manual page (or other enchanced doc)! too many options now :)
+ - Make a manual page (or other enchanced doc)! too many options now :)
    someone made us a good start or two:
      http://myezserver.com/downloads/mitel/howto/flexbackup-howto.html
      http://www.cyber-euskadi.com/howtos/contrib/flexbackup-restore-from-disk-howto.html
- - someone needs to put a bunch of stuff in a faq
+ - Someone needs to put a bunch of stuff in a faq
  - Check lsm template/ibiblio.org stuff. automate
  - Try bfr or dbuffer? (buffer seems unmaintained; no O_LARGEFILE)
  - Try against torture-test list:
@@ -29,7 +28,7 @@ Misc:
 
 
 Features to add:
- - remote tape drive support
+ - Remote tape drive support
      0.9.8 patch from Caleb Crome <caleb@crome.org>
      use ssh not rmt
      could do remote dirs too...
@@ -40,37 +39,36 @@ Features to add:
       Defaults:backup !authenticate
       Cmnd_Alias BACKUP = /usr/bin/afio, /usr/bin/find
       backup  ALL = NOPASSWD: BACKUP
- - make remote machine path overrides possible, that supercede others
- - check for existence of remote executables (John had something)
- - make -extract -files for afio/cpio/zip recurse dirs
+ - Make remote machine path overrides possible, that supercede others
+ - Check for existence of remote executables (John had something)
+ - Make -extract -files for afio/cpio/zip recurse dirs
       dump/tar already to this.
- - try restore -D for comparing subdirs w/ restore
- - interactive restore-like shell for types besides dump
+ - Try restore -D for comparing subdirs w/ restore
+ - Interactive restore-like shell for types besides dump
       see notes below
  - some "level" that uses rpm, verifies all packages, and just backs
       up any file not in a package OR changed from a package. and the rpm list.
       once the above works make it work for debian packages
- - "no blocking at all" option
- - log tape sizes (output of buffer or dd or mt tell can be used?)
- - handle multi-volume backups (original idea never panned out)
- - arbitratry "groups" that act sort of like "all"
- - multiple tapes for levels that aren't 0
- - extract options to not overwrite existing files
- - cd-rom burning (or just .iso type?) for full backups?
- - put .zip back in if I can make it behave
- - .zip as compression not archive type at least?  (can't unzip stdin)
+ - A "no blocking at all" option
+ - Log tape sizes (output of buffer or dd or mt tell can be used?)
+ - Handle multi-volume backups (original idea never panned out)
+ - Arbitrary "groups" that act sort of like "all"
+ - Extract options to not overwrite existing files
+ - CD-ROM burning (or just .iso type?) for full backups? any?
+ - Put .zip back in if I can make it behave
+ - Zip as compression not archive type at least?  (can't unzip stdin)
  - star? (tar but w/ acl support)
  - smbtar/smbclient?
  - pax (just wraps tar/cpio)?
- - remote extract/compare/restore
-      just install s/w on client w/remote tape device. need config file
+ - Remote extract/compare/restore
+      Just install s/w on client w/remote tape device. need config file
       option
- - when using files
-      make lower numbered level nuke higher ones & rm index?
-      do I really want erase to nuke the archive files?
- - encryption with gnupg?
- - gnome driver/configurator utility
-      will be a separate program that just manipulates flexbackup
+ - When using files
+      Make lower numbered level nuke higher ones & rm index?
+      Do I really want erase to nuke the archive files?
+ - Encryption with gnupg?
+ - Gnome driver/configurator utility
+      a separate program that just manipulates flexbackup
 
 -------------------------------------------------------------
 
