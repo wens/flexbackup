@@ -652,7 +652,7 @@ sub backup {
     # Enough fooling around... run it.
     if (!defined($main::opt{'n'})) {
 	foreach $cmd (@cmds) {
-	    my $pid=$$;
+
 	    if ($ENV{SHELL} =~ m/bash/) {
 		open(CMD,"($cmd " . $main::bash_pipe_exit . ") 2>&1 |") || die;
 	    } else {
@@ -671,6 +671,7 @@ sub backup {
 		exit(1);
 	    }
 	    close(LOG);
+
 	}
     } else {
 	&log("(debug) command output would be here");
@@ -697,7 +698,7 @@ sub backup {
     &line();
 
     # Got errors unless I paused before trying to access the tape right way...
-    if ((!defined($main::opt{'n'})) and (!defined($main::use_file))) {
+    if ((!defined($main::opt{'n'})) and defined($main::tapedevice)) {
 	sleep 10;
     }
 
@@ -759,10 +760,10 @@ sub backup_dump {
     }
 
     # Wrap all that together
-    $cmd = &maybe_remote_cmd($cmd);
+    $cmd = &maybe_remote_cmd($cmd, $main::remote);
 
     # Append writer stuff
-    $cmd .= "$main::buffer_cmd $main::buffer_write_flags" . "$main::device";
+    $cmd = &append_writer_cmd($cmd);
 
     push(@cmds, $cmd);
 
@@ -791,17 +792,17 @@ sub backup_afio {
     $_ = &get_last_date($label, $level);
 
     $cmd = "$main::path{touch} $main::touch_flag \"$_\" $tmpstamp";
-    push(@cmds, &maybe_remote_cmd($cmd));
+    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
 
     # list of file exenstions to not compress
     if (($cfg::compress !~ /^(false|hardware)$/) and ($cfg::afio_nocompress_types ne "")) {
 	$cmd = "echo \"$cfg::afio_nocompress_types\" > $tmpnocompress";
-	push(@cmds, &maybe_remote_cmd($cmd));
+	push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
 	$no_compress = "-E $tmpnocompress";
     }
 
     $cmd = "$main::path{'printf'} \"Volume Label:\\n$title\\n\\n\" > $tmplabel";
-    push(@cmds, &maybe_remote_cmd($cmd));
+    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
 
     $cmd = '';
     $cmd .= "cd $dir && ";
@@ -829,19 +830,20 @@ sub backup_afio {
     }
 
     # Wrap all that together
-    $cmd = &maybe_remote_cmd($cmd);
+    $cmd = &maybe_remote_cmd($cmd, $main::remote);
 
     # Append writer stuff
-    $cmd .= "$main::buffer_cmd $main::buffer_write_flags" . "$main::device";
+    $cmd = &append_writer_cmd($cmd);
 
     push(@cmds, $cmd);
 
     $cmd = "$main::path{'rm'} -f $remove";
-    push(@cmds, &maybe_remote_cmd($cmd));
+    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
 
     return(@cmds);
 
 }
+
 
 ######################################################################
 # Return command to backup a filesystem using cpio
@@ -859,14 +861,14 @@ sub backup_cpio {
     $_ = &get_last_date($label, $level);
 
     $cmd = "$main::path{'touch'} $main::touch_flag \"$_\" $tmpstamp";
-    push(@cmds, &maybe_remote_cmd($cmd));
+    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
 
     # Kludge a title for by replacing / with - in the title
     # then touch a file in the dir we are going to back up.
     $title =~ s%/%-%g;
     $title =~ s% %_%g;
     $cmd = "$main::path{'touch'} \"$dir/$title\"";
-    push(@cmds, &maybe_remote_cmd($cmd));
+    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
 
     $cmd = '';
     $cmd .= "cd $dir && ";
@@ -886,15 +888,15 @@ sub backup_cpio {
     }
 
     # Wrap all that together
-    $cmd = &maybe_remote_cmd($cmd);
+    $cmd = &maybe_remote_cmd($cmd, $main::remote);
 
     # Append writer stuff
-    $cmd .= "$main::buffer_cmd $main::buffer_write_flags" . "$main::device";
+    $cmd = &append_writer_cmd($cmd);
 
     push(@cmds, $cmd);
 
     $cmd = "$main::path{'rm'} -f $tmpstamp \"$dir/$title\"";
-    push(@cmds, &maybe_remote_cmd($cmd));
+    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
 
     return(@cmds);
 
@@ -916,7 +918,7 @@ sub backup_tar {
     $_ = &get_last_date($label, $level);
 
     $cmd = "$main::path{'touch'} $main::touch_flag \"$_\" $tmpstamp";
-    push(@cmds, &maybe_remote_cmd($cmd));
+    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
 
     $cmd = '';
     $cmd .= "cd $dir && ";
@@ -945,15 +947,15 @@ sub backup_tar {
     }
 
     # Wrap all that together
-    $cmd = &maybe_remote_cmd($cmd);
+    $cmd = &maybe_remote_cmd($cmd, $main::remote);
 
     # Append writer stuff
-    $cmd .= "$main::buffer_cmd $main::buffer_write_flags" . "$main::device";
+    $cmd = &append_writer_cmd($cmd);
 
     push(@cmds, $cmd);
 
     $cmd = "$main::path{'rm'} -f $tmpstamp";
-    push(@cmds, &maybe_remote_cmd($cmd));
+    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
 
     return(@cmds);
 
@@ -1404,8 +1406,6 @@ sub mt {
 
     my (@operations) = (@_);
     my $operation;
-    my $oldoperation;
-    my $out;
 
     # Set hardware compression when we do the blocksize
     if ($cfg::compress eq "hardware") {
@@ -1476,6 +1476,7 @@ sub mt {
 
 
 	    # If using files, an mt erase (from -newtape) rm's all files in the dir
+	    # FIXME this is a dumb spot for it.  Do I really even want this behavior?
 	    if (defined($main::use_file)) {
 		opendir(DIR,$cfg::device) or die ("Can't open dir $cfg::device: $OS_ERROR");
 		foreach(readdir(DIR)) {
@@ -1542,39 +1543,56 @@ sub mt {
 
 	    # mt ops skipped for block device
 
-	} elsif (defined($main::opt{'n'})) {
-	    &log("| (debug) $main::mt -f $main::device $operation");
-
 	} else {
+
+	    my $command;
 
 	    if ($operation =~ /setblk/) {
 		# Try and see which of setblk/defblksize will work
 		# This is kludgy, but doable
-		chomp($out = `$main::mt -f $main::device $operation 2>&1`);
+		$command = "$main::path{mt} -f $main::device $operation > /dev/null 2>&1";
+		if (defined($main::remotetapehost)) {
+		    $command = &maybe_remote_cmd($command, $main::remotetapehost);
+		}
+		system($command);
 		if ($CHILD_ERROR) {
 		    &log("| Trying \"mt defblksize\" instead of \"mt setblk\"");
-		    $oldoperation = $operation;
+		    my $oldoperation = $operation;
 		    $operation =~ s/setblk/defblksize/;
-		    chomp($out = `$main::mt -f $main::device $operation 2>&1`);
+		    $command = "$main::path{mt} -f $main::device $operation > /dev/null 2>&1";
+		    if (defined($main::remotetapehost)) {
+			$command = &maybe_remote_cmd($command, $main::remotetapehost);
+		    }
+		    system($command);
 		    if ($CHILD_ERROR) {
 			&log("Error setting block size");
 			&log("Neither of these commands worked:");
-			&log("  $main::mt -f $main::device $oldoperation");
-			&log("  $main::mt -f $main::device $operation");
+			&log("  $main::path{mt} -f $main::device $oldoperation");
+			&log("  $main::path{mt} -f $main::device $operation");
 			exit(1);
 		    } # error on second guess
 		} # error on first guess
 	    } # operation = setblk
 
-	    if (defined($main::log)) {
-		system("$main::path{$main::mt} -f $main::device $operation 2>&1 | $main::path{'tee'} -a $main::log");
-	    } else {
-		system("$main::path{$main::mt} -f $main::device $operation 2>&1");
+	    $command = "$main::path{mt} -f $main::device $operation 2>&1 ";
+
+	    if (defined($main::remotetapehost)) {
+		$command = &maybe_remote_cmd($command, $main::remotetapehost);
 	    }
 
-	    if ($CHILD_ERROR) {
-		&log("Error from $main::mt $operation\n");
-		exit(1);
+	    if (!defined($main::opt{'n'})) {
+
+		open(CMD,"($command) 2>&1 |") || die;
+		if (defined($main::log)) { open(LOG,">>$main::log") || die; }
+		while(<CMD>) {
+		    print $_;
+		    if (defined($main::log)) { print LOG $_; }
+		}
+		close(CMD);
+		if (defined($main::log)) { close(LOG); }
+
+	    } else {
+		&log("| (debug) $command");
 	    }
 
 	} # not a file
@@ -1673,8 +1691,21 @@ sub optioncheck {
 	    $main::use_file = 1;
 	    $cfg::device =~ s:/$::;            # nuke trailing slash if any
 	}
+
+    } elsif ($cfg::device =~ m%(\S+):(/dev/.*)%) {
+
+	$main::remotetapehost = $1;
+	$cfg::device = $2;
+	$main::tapedevice = 1;
+	chomp($_ = `hostname`);
+	if (($_ eq $main::remotetapehost)
+	    or
+	    ($main::remotetapehost =~ /^localhost/)) {
+	    push(@main::errors, "Remote tape host and this host are the same");
+	}
+
     } else {
-	push(@main::errors,"\$device must be set to a directory or a device");
+	push(@main::errors,"\$device must be set to a directory, a local device, or a remote device");
     }
     $main::device = $cfg::device;
 
@@ -1685,11 +1716,9 @@ sub optioncheck {
 
     # Set mt type
     if ($main::ftape == 1) {
-	$main::path{'ftmt'} = &checkinpath('ftmt');
-	$main::mt = 'ftmt';
+	$main::path{'mt'} = &checkinpath('ftmt');
     } else {
 	$main::path{'mt'} = &checkinpath('mt');
-	$main::mt = 'mt';
     }
 
     # Exclude regexp for find
@@ -1805,7 +1834,7 @@ sub optioncheck {
 
     # Block padding
     my $buffer_pad_flag;
-    if (($cfg::pad_blocks eq "true") and !defined($main::use_file)) {
+    if (($cfg::pad_blocks eq "true") and defined($main::tapedevice)) {
 	$main::dd_pad_flag = "conv=noerror,sync";
 	$buffer_pad_flag = "-B";
     } else {
@@ -1823,7 +1852,8 @@ sub optioncheck {
 	    my $read_flags;
 	    my $megs = $cfg::buffer_megs . "m";
 	    $main::buffer_cmd = " | $main::path{buffer} -m $megs $buffer_blk_flag";
-	    if (!defined($main::use_file)) {
+	    $main::buffer_nopipe_cmd = "$main::path{buffer} -m $megs $buffer_blk_flag";
+	    if (defined($main::tapedevice)) {
 		$main::buffer_write_flags = "-u 100 -t -p 75 $buffer_pad_flag -o ";
 		$read_flags = "-u 100 -t -p 75 $buffer_pad_flag -i ";
 	    } else {
@@ -1839,6 +1869,7 @@ sub optioncheck {
 
 	$main::path{'dd'} = &checkinpath('dd');
 	$main::buffer_cmd = " | $main::path{dd} $main::dd_blk_flag $main::dd_pad_flag";
+	$main::buffer_nopipe_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag";
 	$main::buffer_write_flags = "of=";
 	$main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag if=";
 
@@ -1862,6 +1893,8 @@ sub optioncheck {
     $main::path{'rm'} = &checkinpath('rm');
     $main::path{'tee'} = &checkinpath('tee');
     $main::path{'find'} = &checkinpath('find');
+    $main::path{'dd'} = &checkinpath('dd');
+    $main::path{'printf'} = &checkinpath('printf');
 
     # Filesystems
     $main::num_tapes = -1;
@@ -1900,7 +1933,6 @@ sub optioncheck {
     if ($cfg::type eq 'afio') {
 
 	$main::path{'afio'} = &checkinpath('afio');
-	$main::path{'printf'} = &checkinpath('printf');
 
 	&check(\$cfg::afio_nocompress_types,'afio_nocompress_types','exist');
 
@@ -2418,23 +2450,48 @@ sub run_or_echo_then_query {
 sub maybe_remote_cmd {
 
     my $cmd = shift(@_);
+    my $host = shift(@_);
     my $quote = shift(@_);
 
     if (!defined($quote)) {
 	$quote = "'";
     }
 
-    if ($main::remote) {
+    if (defined($host) and ($host ne '')) {
 	if ($ENV{SHELL} =~ m/bash/) {
-	    $cmd  = "$cfg::remoteshell $main::remote " . $quote . $cmd . $main::bash_pipe_exit . $quote;
+	    $cmd  = "$cfg::remoteshell $host " . $quote . $cmd . $main::bash_pipe_exit . $quote;
 	} else {
-	    $cmd  = "$cfg::remoteshell $main::remote " . $quote . $cmd . $quote;
+	    $cmd  = "$cfg::remoteshell $host " . $quote . $cmd . $quote;
 	}
     } else {
 	$cmd  = "$cmd";
     }
     return($cmd);
 
+}
+
+######################################################################
+# Append to the pipelins string appropriate commands to write archive
+######################################################################
+sub append_writer_cmd {
+
+    my $cmd = shift(@_);
+
+    if (!defined($main::remotetapehost)) {
+
+	$cmd .= "$main::buffer_cmd $main::buffer_write_flags" . "$main::device";
+
+    } else {
+
+	if ($cfg::buffer eq "buffer") {
+	    $cmd .= "$main::buffer_cmd";
+	}
+	$cmd .= ' | ';
+	$cmd .= &maybe_remote_cmd("$main::buffer_nopipe_cmd $main::buffer_write_flags" . "$main::device",
+				  $main::remotetapehost);
+    }
+
+    return($cmd);
 }
 
 ######################################################################
@@ -2481,8 +2538,16 @@ sub setup_before_read {
 
     &line();
 
-    $cmd .= $main::read_cmd . $main::device . " | ";
-    $cmd .= "$main::unz ";
+    $cmd = $main::read_cmd . $main::device;
+
+    if (defined($main::remotetapehost)) {
+	$cmd = &maybe_remote_cmd($cmd, $main::remotetapehost);
+	if ($cfg::buffer eq "buffer") {
+	    $cmd .= "$main::buffer_cmd";
+	}
+    }
+
+    $cmd .= " | $main::unz ";
 
     if ($main::device =~ m/\.rpm$/) {
 	$cmd .= "rpm2cpio | ";
@@ -2690,8 +2755,8 @@ sub new_tape_key {
     }
 
     &log("| Creating index key $key");
-    $string = "printf \'$key\\nThis is a flexbackup index key\\n\' | ";
-    $string .=  "dd $main::dd_blk_flag $main::dd_pad_flag of=$dev";
+    $string = "$main::path{printf} \'$key\\nThis is a flexbackup index key\\n\' | ";
+    $string .=  "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=$dev";
 
     if (defined($main::opt{'n'})) {
 	&log("| (debug) $string");
@@ -2729,14 +2794,12 @@ sub get_tape_key {
 
     my $quiet = shift(@_);
     my $key;
-    my $dev = $main::device;
-    my $string;
 
     return('') if $cfg::indexes eq "false";
 
     # If writing to a file see if there is already an index key and use it
     if (defined($main::use_file)) {
-	$dev .= "/$cfg::keyfile";
+	my $dev = "$main::device/$cfg::keyfile";
 	if (-r $dev) {
 	    open(KEY,$dev) or die("Can't open existing key $dev: $OS_ERROR");
 	    chomp($key = <KEY>);
@@ -2747,7 +2810,11 @@ sub get_tape_key {
 
     } else {
 
-	$string = "dd $main::dd_blk_flag $main::dd_pad_flag count=1 if=$main::device";
+	my $string = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag count=1 if=$main::device";
+	if (defined($main::remotetapehost)) {
+	    $string = &maybe_remote_cmd($string, $main::remotetapehost);
+	}
+
 	if (defined($main::opt{'n'})) {
 	    &log("| (debug) $string");
 	    $key = '';
@@ -2756,6 +2823,7 @@ sub get_tape_key {
 	    @_ = split(/\n/,$key);
 	    $key = $_[0];
 	}
+
 	if (defined($key)) {
 	    chomp($key);
 	    if ($key !~ m/^\d+$/) {
@@ -2772,6 +2840,7 @@ sub get_tape_key {
 	    $main::nextfile = 0;
 	    return('');
 	}
+
     }
 
     # Find the number of existing files
