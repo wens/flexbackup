@@ -3,13 +3,16 @@ $Name$
 
 New Features:
  - tried to add intelligence for various mt flavors on different Unix variants
+ - add -newtape option to initialize index, but no backup
 
 Bug fixes:
- - sort the toc ouptput correctly
+ - sort the toc output correctly
  - rewind after printing toc
- - minor cleanups to tape key handling
+ - fix bug where tape indexes always started at 10 after awhile
+   (similar sorting problem with setting $main::nextfile)
 
 Cleanup:
+ - other minor cleanups to tape key handling
 
 ----------------------------------------------------------------------
 Version 0.9.7 (19991019)

@@ -42,6 +42,7 @@
 #  flexbackup -fs <x> -erase       : force a rewind/erase before backup
 #  flexbackup -fs <x> -norewind    : don't rewind tape after a single backup
 #  flexbackup [operation] -reten   : force a retension before read
+#  flexbackup -newtape             : erase & create new index key (but no backup)
 #  flexbackup [opt] -n             : don't run actual dump or mt commands
 #  flexbackup [opt] -d 'var=val'   : override config file setting of $var
 #  flexbackup -version             : show version
@@ -103,6 +104,7 @@ if (! &main::GetOptions(\%main::opt,
                         "erase!",
                         "rewind!",
                         "reten!",
+                        "newtape",
                         "version",
                         "n",
                         "d=s%"
@@ -162,14 +164,18 @@ if (defined($main::opt{'restore'})) {
 
     &line();
     &mt("generic-blocksize $main::mt_blksize");
-
-    # Maybe retension
-    if ($main::do_reten == 1) {
-        &log('| Retensioning tape...');
-        &mt('retension');
-    }
-
     &toc_routine();
+
+} elsif (defined($main::opt{'newtape'})) {
+
+    &line();
+    &mt("generic-blocksize $main::mt_blksize");
+    &log('| Rewinding & erasing tape...');
+    &mt('rewind');
+    &maybe_delete_old_index();
+    &mt('generic-erase');
+    &new_tape_key();
+    &line();
 
 }
 
@@ -1878,7 +1884,7 @@ sub optioncheck {
     }
 
     # Mode
-    my (@modelist) = qw(fs list extract compare restore toc);
+    my (@modelist) = qw(fs list extract compare restore toc newtape);
     my @modes;
     my $modecount = 0;
     foreach (@modelist) {
@@ -2393,7 +2399,7 @@ sub new_tape_key {
             &log("| Directory's existing key is $key");
 
             # Figure out the existing files
-            foreach (sort bynumber keys %main::index) {
+            foreach (sort keys %main::index) {
                 my ($tape,$filenum) = split(/\|/,$_);
                 if ($tape eq $key) {
                     $main::nextfile = $filenum;
@@ -2468,18 +2474,20 @@ sub get_tape_key {
         }
     }
 
-    # Figure out the existing files
+    # Find the number of existing files
+    $main::nextfile = 0;
     foreach (sort keys %main::index) {
         my ($tape,$filenum) = split(/\|/,$_);
         if ($tape eq $key) {
-            $main::nextfile = $filenum;
+            if ($filenum > $main::nextfile) {
+                $main::nextfile = $filenum;
+            }
         }
     }
-
-    &log("| Found index key $key");
-
     # Set for the next file
     $main::nextfile++;
+    &log("| Found index key $key, next file is $main::nextfile");
+
     return($key);
 
 }
