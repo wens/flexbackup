@@ -1,36 +1,20 @@
-h1                    { padding-top: 0.25in;
-                        padding-bottom: 0.25in;
-                        color: black;
-                        font-size: 24pt;
-                        font-family: Verdana, Arial, Helvetica, sans-serif;
-                        font-weight: bold;
-			text-align: center;
-                      }
+body { color: black; background: white; }
 
-h2                    { font-size: 18pt;
-                      }
-h3                    { font-size: 12pt;
-                      }
+h1 { font-family: Arial,Helvetica,sans-serif; font-size: 130%; }
+h2 { font-family: Arial,Helvetica,sans-serif; font-size: 120%; }
+h3 { font-family: Arial,Helvetica,sans-serif; font-size: 110%; color: blue; background: white; }
 
-p			{
-			font-family: Verdana, Arial, Helvetica, sans-serif;
-			font-size: 10pt;
-			}
+p { font-family: Arial,Helvetica,sans-serif; font-size: 100%; }
+li { font-family: Arial,Helvetica,sans-serif; font-size: 100%; }
+ul { font-family: Arial,Helvetica,sans-serif; font-size: 100%; }
 
-pre  	  		{
-			font-family: Courier, serif;
-                        background-color: #dddddd;
-			}
+div.indent { margin-left: 2em; font-family: Arial,Helvetica,sans-serif; font-size: 100%; }
 
+img { border: none; }
+img.title { border: none; padding: 8px; }
 
-
-code			{
-			font-family: Courier, serif;
-			}
-
-tt			{
-			font-family: Courier, serif;
-			}
-
-
+a:link { color: blue; background: white; }
+a:visited { color: green; background: white; }
+a:hover { color: red; background: #e0e0e0; }
+a:active { color: red; background: white; }
 
