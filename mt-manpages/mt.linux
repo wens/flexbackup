@@ -1,0 +1,330 @@
+
+
+
+MT(1)                                                       MT(1)
+
+
+NNAAMMEE
+       mt - control magnetic tape drive operation
+
+SSYYNNOOPPSSIISS
+       mmtt [-h] [-f device] operation [count] [arguments...]
+
+DDEESSCCRRIIPPTTIIOONN
+       This  manual  page  documents the tape control program mmtt.
+       mmtt performs the given _o_p_e_r_a_t_i_o_n, which must be one of  the
+       tape  operations  listed  below, on a tape drive. The com­
+       mands can also be listed by running the program  with  the
+       _-_h  option.  The  version  of  mt  is  printed with the _-_v
+       option. The path of the tape device to operate on  can  be
+       given  with  the  _-_f  or  _-_t  option.  If neither of those
+       options is given, and the  environment  variable  TTAAPPEE  is
+       set,  it  is used.  Otherwise, a default device defined in
+       the file _/_u_s_r_/_i_n_c_l_u_d_e_/_s_y_s_/_m_t_i_o_._h is used.
+
+       Some operations optionally  take  an  argument  or  repeat
+       count,  which  can  be  given after the operation name and
+       defaults to 1.
+
+       The available operations are listed below.  Unique  abbre­
+       viations  are  accepted.  Not all operations are available
+       on all systems, or work on all types of tape drives.
+
+       fsf    Forward space _c_o_u_n_t files.  The tape is  positioned
+              on the first block of the next file.
+
+       fsfm   Forward  space _c_o_u_n_t files.  The tape is positioned
+              on the last block of the previous file.
+
+       bsf    Backward space _c_o_u_n_t files.  The tape is positioned
+              on the last block of the previous file.
+
+       bsfm   Backward space _c_o_u_n_t files.  The tape is positioned
+              on the first block of the next file.
+
+       asf    The tape is positioned  at  the  beginning  of  the
+              _c_o_u_n_t  file. Positioning is done by first rewinding
+              the tape and then spacing forward over _c_o_u_n_t  file­
+              marks.
+
+       fsr    Forward space _c_o_u_n_t records.
+
+       bsr    Backward space _c_o_u_n_t records.
+
+       fss    (SCSI tapes) Forward space _c_o_u_n_t setmarks.
+
+       bss    (SCSI tapes) Backward space _c_o_u_n_t setmarks.
+
+       eod, seod
+              Space  to end of valid data.  Used on streamer tape
+              drives to append data to the logical and of tape.
+
+
+
+                           August 1998                          1
+
+
+
+
+
+MT(1)                                                       MT(1)
+
+
+       rewind Rewind the tape.
+
+       offline, rewoffl
+              Rewind the tape  and,  if  applicable,  unload  the
+              tape.
+
+       retension
+              Rewind  the  tape,  then  wind it to the end of the
+              reel, then rewind it again.
+
+       weof, eof
+              Write _c_o_u_n_t EOF marks at current position.
+
+       wset   (SCSI tapes) Write _c_o_u_n_t setmarks at current  posi­
+              tion (only SCSI tape).
+
+       erase  Erase the tape.
+
+       status Print status information about the tape unit.
+
+       seek   (SCSI  tapes)  Seek to the _c_o_u_n_t block on the tape.
+              This operation is available on  some  Tandberg  and
+              Wangtek  streamers and some SCSI-2 tape drives. The
+              block address should be obtained from a  _t_e_l_l  call
+              earlier.
+
+       tell   (SCSI  tapes) Tell the current block on tape.  This
+              operation is available on some Tandberg and Wangtek
+              streamers and some SCSI-2 tape drives.
+
+       setpartition
+              (SCSI  tapes) Switch to the partition determined by
+              _c_o_u_n_t_.  The default data partition of the  tape  is
+              numbered  zero.  Switching  partition  is available
+              only if enabled for the device, the device supports
+              multiple partitions, and the tape is formatted with
+              multiple partitions.
+
+       partseek
+              (SCSI tapes) The tape  position  is  set  to  block
+              _c_o_u_n_t  in the partition given by the argument after
+              count. The default partition is zero.
+
+       mkpartition
+              (SCSI tapes) Format the tape  with  one  (count  is
+              zero)  or  two  partitions (count gives the size of
+              the second partition in megabytes). The tape  drive
+              must  be able to format partitioned tapes with ini­
+              tiator-specified partition size and partition  sup­
+              port must be enabled for the drive.
+
+       load   (SCSI tapes) Load the tape into the drive.
+
+       lock   (SCSI tapes) Lock the tape drive door.
+
+
+
+                           August 1998                          2
+
+
+
+
+
+MT(1)                                                       MT(1)
+
+
+       unlock (SCSI tapes) Unlock the tape drive door.
+
+       setblk (SCSI  tapes)  Set  the  block size of the drive to
+              _c_o_u_n_t bytes per record.
+
+       setdensity
+              (SCSI tapes) Set the tape density  code  to  _c_o_u_n_t_.
+              The  proper  codes to use with each drive should be
+              looked up from the drive documentation.
+
+       densities
+              (SCSI tapes) Write explanation of some common  den­
+              sity codes to standard output.
+
+       drvbuffer
+              (SCSI tapes) Set the tape drive buffer code to _n_u_m_­
+              _b_e_r_.  The proper value for unbuffered operation  is
+              zero and "normal" buffered operation one. The mean­
+              ings of other values can be found in the drive doc­
+              umentation  or, in case of a SCSI-2 drive, from the
+              SCSI-2 standard.
+
+       compression
+              (SCSI tapes) The compression within the  drive  can
+              be  switched  on  or  off  using  the MTCOMPRESSION
+              ioctl. Note that this method is  not  supported  by
+              all  drives implementing compression. For instance,
+              the Exabyte 8 mm drives use density codes to select
+              compression.
+
+       stoptions
+              (SCSI  tapes)  Set  the driver options bits for the
+              device to the defined values. Allowed only for  the
+              superuser.  The bits can be set either by oring the
+              option bits from the file /usr/include/linux/mtio.h
+              to  _c_o_u_n_t_,  or  by using the following keywords (as
+              many keywords can be used on the same line as  nec­
+              essary, unambiguous abbreviations allowed):
+
+              buffer-writes  buffered writes enabled
+
+              async-writes   asynchronous writes enabled
+
+              read-ahead     read-ahead for fixed block size
+
+              debug          debugging (if compiled into driver)
+
+              two-fms        write two filemarks when file closed
+
+              fast-eod       space directly to eod (and lose file
+                             number)
+
+              auto-lock      automatically lock/unlock drive door
+
+
+
+
+                           August 1998                          3
+
+
+
+
+
+MT(1)                                                       MT(1)
+
+
+              def-writes     the block size and density  are  for
+                             writes
+
+              can-bsr        drive can space backwards well
+
+              no-blklimits   drive  doesn't  support  read  block
+                             limits
+
+              can-partitions drive can handle partitioned tapes
+
+              scsi2logical   seek and  tell  use  SCSI-2  logical
+                             block  addresses  instead  of device
+                             dependent addresses
+
+              sysv           enable the System V semantics
+
+       stsetoptions
+              (SCSI tapes) Set selected driver options bits.  The
+              methods  to specify the bits to set are given above
+              in description of stoptions.  Allowed only for  the
+              superuser.
+
+       stclearoptions
+              (SCSI tapes) Clear selected driver option bits. The
+              methods to specify the  bits  to  clear  are  given
+              above  in  description  of stoptions.  Allowed only
+              for the superuser.
+
+       stwrthreshold
+              (SCSI tapes)  The  write  threshold  for  the  tape
+              device is set to _c_o_u_n_t kilobytes. The value must be
+              smaller than or equal to the  driver  buffer  size.
+              Allowed only for the superuser.
+
+       defblksize
+              (SCSI  tapes)  Set  the  default  block size of the
+              device to _c_o_u_n_t bytes. The value  -1  disables  the
+              default  block  size.  The block size set by _s_e_t_b_l_k
+              overrides the default until a new tape is inserted.
+              Allowed only for the superuser.
+
+       defdensity
+              (SCSI  tapes)  Set  the  default  density code. The
+              value -1 disables the default density. The  density
+              set by _s_e_t_d_e_n_s_i_t_y overrides the default until a new
+              tape is inserted. Allowed only for the superuser.
+
+       defdrvbuffer
+              (SCSI tapes) Set the default drive buffer code. The
+              value  -1  disables  the default drive buffer code.
+              The drive buffer code set  by  _d_r_v_b_u_f_f_e_r  overrides
+              the  default  until a new tape is inserted. Allowed
+              only for the superuser.
+
+
+
+
+                           August 1998                          4
+
+
+
+
+
+MT(1)                                                       MT(1)
+
+
+       defcompression
+              (SCSI tapes) Set the default compression state. The
+              value -1 disables the default compression. The com­
+              pression state set  by  _c_o_m_p_r_e_s_s_i_o_n  overrides  the
+              default  until a new tape is inserted. Allowed only
+              for the superuser.
+
+       sttimeout
+              sets the normal timeout for the device.  The  value
+              is  given  in  seconds.  Allowed only for the supe­
+              ruser.
+
+       stlongtimeout
+              sets the long timeout for the device. The value  is
+              given in seconds. Allowed only for the superuser.
+
+       datcompression
+              (some  SCSI-2 tapes) Inquire or set the compression
+              status (on/off) using SCSI commands sent by mt.  If
+              the  _c_o_u_n_t  is  omitted  the  compression status is
+              printed. If the _c_o_u_n_t is zero or "off", compression
+              is  disabled.  If  the _c_o_u_n_t is anything else, com­
+              pression is enabled.  The  command  uses  the  SCSI
+              ioctl  to read and write the Data Compression Char­
+              acteristics mode page (15). ONLY ROOT CAN USE  THIS
+              COMMAND. The compression can be controlled with the
+              mt command _c_o_m_p_r_e_s_s_i_o_n with kernels  above  1.3.84.
+              This  command  is  not  currently  included  in the
+              default configuration of mt.
+
+       mmtt exits with a status of 0 if the operation succeeded,  1
+       if the operation or device name given was invalid, or 2 if
+       the operation failed.
+
+AAUUTTHHOORR
+       The  program  is  written  by   Kai   Makisara   <Kai.Mak­
+       isara@metla.fi>.
+
+CCOOPPYYRRIIGGHHTT
+       The  program  and  the  manual page are copyrighted by Kai
+       Makisara, 1998.  They can be distributed according to  the
+       GNU Copyleft.
+
+SSEEEE AALLSSOO
+       st(4)
+
+
+
+
+
+
+
+
+
+
+
+
+                           August 1998                          5
+
+

@@ -1,0 +1,198 @@
+
+
+
+User Commands                                               mt(1)
+
+
+
+NAME
+     mt - magnetic tape control
+
+SYNOPSIS
+     mt [ -f _t_a_p_e_n_a_m_e ] _c_o_m_m_a_n_d...  [ _c_o_u_n_t ]
+
+DESCRIPTION
+     mt sends commands to a magnetic tape drive.  If -f  _t_a_p_e_n_a_m_e
+     is not specified, the environment variable TAPE is used.  If
+     TAPE does not exist, mt uses the device /dev/rmt/0n.
+
+OPTIONS
+     -f _t_a_p_e_n_a_m_e    Specify the raw tape device.
+
+OPERANDS
+     _c_o_u_n_t          The number of times that the requested opera-
+                    tion  is to be performed. By default, mt per-
+                    forms _c_o_m_m_a_n_d once;  multiple  operations  of
+                    _c_o_m_m_a_n_d may be performed by specifying _c_o_u_n_t.
+
+     _c_o_m_m_a_n_d        Available commands that can be sent to a mag-
+                    netic tape drive.  Only as many characters as
+                    are required to uniquely identify  a  _c_o_m_m_a_n_d
+                    need be specified.
+
+                    eof, weof      Write _c_o_u_n_t EOF marks  at  the
+                                   current position on the tape.
+
+                    fsf            Forward space over  _c_o_u_n_t  EOF
+                                   marks.  The tape is positioned
+                                   on  the  first  block  of  the
+                                   file.
+
+                    fsr            Forward space _c_o_u_n_t records.
+
+                    bsf            Back  space  over  _c_o_u_n_t   EOF
+                                   marks.  The tape is positioned
+                                   on the beginning-of-tape  side
+                                   of the EOF mark.
+
+                    bsr            Back space _c_o_u_n_t records.
+
+                    nbsf           Back space _c_o_u_n_t  files.   The
+                                   tape   is  positioned  on  the
+                                   first block of the file.  This
+                                   is equivalent to _c_o_u_n_t+_1 bsf's
+                                   followed by one fsf.
+
+                    asf            Absolute space to  _c_o_u_n_t  file
+                                   number.  This is equivalent to
+                                   a rewind  followed  by  a  fsf
+                                   _c_o_u_n_t.
+
+
+
+SunOS 5.6           Last change: 13 Nov 1996                    1
+
+
+
+
+
+
+User Commands                                               mt(1)
+
+
+
+                    If _c_o_u_n_t is specified with any of the follow-
+                    ing  commands,  the  _c_o_u_n_t is ignored and the
+                    command is performed only once.
+
+                    eom            Space to the end  of  recorded
+                                   media  on  the  tape.  This is
+                                   useful  for  appending   files
+                                   onto previously written tapes.
+
+                    rewind         Rewind the tape.
+
+                    offline, rewoffl
+                                   Rewind  the   tape   and,   if
+                                   appropriate,  take  the  drive
+                                   unit off-line by unloading the
+                                   tape.  It  cycles  through all
+                                   four tapes.
+
+                    status         Print status information about
+                                   the tape unit.
+
+                    retension      Rewind the cartridge tape com-
+                                   pletely,  then wind it forward
+                                   to the end  of  the  reel  and
+                                   back  to  beginning-of-tape to
+                                   smooth out tape tension.
+
+                    reserve        Allow the tape drive to remain
+                                   reserved   after  closing  the
+                                   device.  The drive  must  then
+                                   be explicitly released.
+
+                    release        Re-establish    the    default
+                                   behavior   of   releasing   at
+                                   close.
+
+                    forcereserve   Break the reservation  of  the
+                                   tape  drive  held  by  another
+                                   host and then reserve the tape
+                                   drive.   This  command  can be
+                                   executed only with  super-user
+                                   privileges.
+
+                    erase          Erase the entire tape.   Eras-
+                                   ing  a  tape  may  take a long
+                                   time depending on  the  device
+                                   and/or tape. Refer to the dev-
+                                   ice specific manual  for  time
+                                   details.
+
+EXIT STATUS
+     0       All operations were successful.
+
+
+
+SunOS 5.6           Last change: 13 Nov 1996                    2
+
+
+
+
+
+
+User Commands                                               mt(1)
+
+
+
+     1       Command was unrecognized or mt was  unable  to  open
+             the specified tape drive.
+
+     2       An operation failed.
+
+FILES
+     /dev/rmt/*          magnetic tape interface
+
+ATTRIBUTES
+     See attributes(5) for descriptions of the  following  attri-
+     butes:
+
+     __________________________________
+    | ATTRIBUTE TYPE|  ATTRIBUTE VALUE|
+    |_______________________________|____________________________________|_
+    | Availability  |  SUNWcsu        |
+    |________________|__________________|
+
+SEE ALSO
+     tar(1),   tcopy(1),   ar(4),   environ(4),    attributes(5),
+     mtio(7I), st(7D)
+
+BUGS
+     Not all devices  support  all  options.   Some  options  are
+     hardware-dependent.    Refer  to  the  corresponding  device
+     manual page.
+
+     mt is architecture sensitive. Heterogeneous operation  (that
+     is, Sun3 to Sun4 or the reverse) is not supported.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SunOS 5.6           Last change: 13 Nov 1996                    3
+
+
+

@@ -1,0 +1,97 @@
+mt Command (BSD)
+
+
+
+Purpose
+
+Gives subcommands to streaming tape device.
+
+Syntax
+
+mt [ -f TapeName ] Subcommand [ Count ]
+
+Description
+
+The mt command gives subcommands to a streaming tape device. If you
+do not specify the -f flag with the TapeName parameter, the TAPE environment
+variable is used. If the environment variable does not exist, the
+mt command uses the /dev/rmt0.1 device. The TapeName parameter must
+be a raw (not block) tape device. You can specify more than one operation
+with the Count parameter.
+
+Subcommands
+
+eof, weof	Writes the number of end-of-file markers specified by the
+Count parameter at the current position on the tape.
+
+fsf	Moves the tape forward the number of files specified by the Count
+parameter.
+
+bsf	Moves the tape backwards the number of files specified by the
+Count parameter. If using the bsf subcommand would cause the tape
+head to move back past the beginning of the tape, then the tape will
+be rewound, and the mt command will return EIO.
+
+fsr	Moves the tape forward the number of records specified by the
+Count parameter.
+
+bsr	Moves the tape backwards the number of records specified by the
+Count parameter.
+
+rewoff1, rewind	Rewinds the tape. The Count parameter is ignored.
+
+status	Prints status information about the specified tape device.
+The output of the status command may change in future implementations.
+
+Flag
+
+-f TapeName	Specifies the TapeName parameter.
+
+Examples
+
+1.	To rewind the rmt1 tape device, enter:
+
+mt -f /dev/rmt1 rewind
+
+2.	To move forward two files on the default tape device, enter:
+
+mt fsf 2
+
+3.	To write two end-of-file markers on the tape in the /dev/rmt0.6
+file, enter:
+
+mt -f /dev/rmt0.6 weof 2
+
+Exit Status
+
+0	Indicates a successful completion.
+
+>0	Indicates an error occurred.
+
+Implementation Specifics
+
+Software Product/Option:	Base Operating System/ Base Operating System
+Runtime
+
+Standards Compliance:	OSF/1, OSF Level 3
+
+Files
+
+/dev/rmt/n.n	Specifies the raw streaming tape interface.
+
+/usr/bin/mt	Specifies the mt command file.
+
+Related Information
+
+The tctl command.
+
+The environment file, rmt special file.
+
+The ioctl subroutine.
+
+Tape Drives in AIX Version 4.1 System Management Guide: Operating
+System and Devices.
+
+
+
+

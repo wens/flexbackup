@@ -4,3 +4,4 @@ tar.exclude
 release-steps
 CVS
 www
+mt-manpages

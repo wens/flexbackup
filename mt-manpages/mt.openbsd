@@ -1,0 +1,81 @@
+MT(1)                      OpenBSD Reference Manual                      MT(1)
+
+NAME
+     mt, eject - magnetic tape and removable media manipulating program
+
+SYNOPSIS
+     mt [-f tapename] command [count]
+     eject [-f] tapename
+
+DESCRIPTION
+     The mt utility sends commands to a magnetic tape drive.  By default, mt
+     performs the requested operation once.  Operations may be performed mul-
+     tiple times by specifying count. Note that tapename must reference a raw
+     (not block) tape device.  If tapename is of the form ``host:tapename'' or
+     ``user@host:tapename'', mt writes to the named tape device on the remote
+     host using rmt(8).
+
+     The available commands are listed below.  Only as many characters as are
+     required to uniquely identify a command need be specified.
+
+     eof, weof  Write count end-of-file marks at the current position on the
+                tape.
+
+     fsf        Forward space count files.
+
+     fsr        Forward space count records.
+
+     bsf        Back space count files.
+
+     bsr        Back space count records.
+
+     rewind     Rewind the tape (count is ignored).
+
+     offline, rewoffl
+                Rewind the tape and place the tape unit off-line (count is
+                ignored). On non-tape removable media, the offline command
+                causes the media to be ejected when the last operation on it
+                closes (i.e., the filesystem is unmounted).
+
+     status     Print status information about the tape unit.
+
+     retension  Retension the tape (if this operation is supported by the tape
+                unit).
+
+     erase      Erase the tape (if this operation is supported by the tape
+                unit).
+
+     eom        Forward space to the end of the media.
+
+     blocksize  Set the tape blocksize to count bytes.
+
+     density    Set the tape density code to count as specified in the SCSI2
+                specification.
+
+     eject is simply an alias for mt, with the offline command specified.
+
+     If a tape name is not specified, and the environment variable TAPE does
+     not exist, mt uses the device /dev/rst0.
+
+     mt returns a 0 exit status when the operation(s) were successful, 1 if
+     the command was unrecognized, and 2 if an operation failed.
+
+ENVIRONMENT
+
+     If the following environment variable exists, it is utilized by mt.
+
+     TAPE        mt checks the TAPE environment variable if the argument
+                         tapename is not given.
+
+FILES
+     /dev/rst*                      raw SCSI tape interface
+     /dev/rmt*                      raw magnetic tape interface
+     /usr/src/sys/scsi/scsi_tape.h  list of SCSI2 density codes
+
+SEE ALSO
+     dd(1),  ioctl(2),  mtio(4),  environ(7)
+
+HISTORY
+     The mt utility appeared in 4.3BSD.
+
+OpenBSD 2.6                      June 12, 1996                               2

@@ -1,0 +1,132 @@
+
+
+
+ mmmmtttt((((1111))))                                                                 mmmmtttt((((1111))))
+
+
+
+
+ NNNNAAAAMMMMEEEE
+      mt - magnetic tape manipulating program
+
+ SSSSYYYYNNNNOOOOPPPPSSSSIIIISSSS
+      mmmmtttt [----tttt _t_a_p_e_n_a_m_e] _c_o_m_m_a_n_d [_c_o_u_n_t]
+
+ DDDDEEEESSSSCCCCRRRRIIIIPPPPTTTTIIIIOOOONNNN
+      mmmmtttt is used to give commands to the tape drive.  If _t_a_p_e_n_a_m_e is not
+      specified, the environment variable TTTTAAAAPPPPEEEE is used; if TTTTAAAAPPPPEEEE is not
+      defined, the default drive is used.
+
+      mmmmtttt winds the tape in the requested direction (forward or backward),
+      stopping after the specified _c_o_u_n_t EOF marks or records are passed.
+      If _c_o_u_n_t is not specified, one is assumed.  Each EOF mark counts as
+      one record.  When winding backwards, the tape always stops at the BOT
+      marker, regardless of the number remaining in _c_o_u_n_t.
+
+      mmmmtttt accepts the following _c_o_m_m_a_n_ds:
+
+           eeeeooooffff       Write _c_o_u_n_t EOF marks.
+
+           ffffssssffff       Forward space _c_o_u_n_t files.
+
+           ffffssssrrrr       Forward space _c_o_u_n_t records.
+
+           bbbbssssffff       Backward space _c_o_u_n_t files.
+
+           bbbbssssrrrr       Backward space _c_o_u_n_t records.
+
+           rrrreeeewwww       Rewind tape.
+
+           ooooffffffffllll      Rewind tape and go offline.
+
+           eeeeoooodddd       Seek to end of data (DDS and QIC drives only).
+
+           ssssmmmmkkkk       Write _c_o_u_n_t setmarks (DDS drives only).
+
+           ffffssssssss       Forward space _c_o_u_n_t setmarks (DDS drives only).
+
+           bbbbssssssss       Backward space _c_o_u_n_t setmarks (DDS drives only).
+
+      Spacing operations (back or forward space file or record) leave the
+      tape positioned past the object being spaced to in the direction of
+      motion.  That is, backspacing a file leaves the the tape positioned
+      before the file mark, forward spacing a file leaves the tape
+      positioned after the file mark.  This is consistent with all classical
+      usage on tapes.
+
+ FFFFIIIILLLLEEEESSSS
+      ////ddddeeeevvvv////rrrrmmmmtttt////****          Raw magnetic tape interface
+
+
+
+
+ Hewlett-Packard Company            - 1 -    HP-UX Release 10.20:  July 1996
+
+
+
+
+
+
+ mmmmtttt((((1111))))                                                                 mmmmtttt((((1111))))
+
+
+
+
+      ////ddddeeeevvvv////rrrrmmmmtttt////0000mmmmnnnnbbbb       Default tape interface
+
+ WWWWAAAARRRRNNNNIIIINNNNGGGGSSSS
+      Only raw, no rewind Berkeley type devices should be specified.  This
+      type of device will not reposition the tape upon close.  eg,
+      ////ddddeeeevvvv////rrrrmmmmtttt////0000mmmmnnnnbbbb.  Please refer to _m_t(7) for more details.
+
+      It is possible to wind the tape beyond the EOT marker and off the end
+      of the reel.
+
+ EEEEXXXXAAAAMMMMPPPPLLLLEEEESSSS
+      Rewind the tape associated with the device file ////ddddeeeevvvv////rrrrmmmmtttt////0000mmmmnnnnbbbb:
+
+           mmmmtttt ----tttt ////ddddeeeevvvv////rrrrmmmmtttt////0000mmmmnnnnbbbb rrrreeeewwww
+
+ AAAAUUUUTTTTHHHHOOOORRRR
+      mmmmtttt was developed by the University of California, Berkeley.
+
+ SSSSEEEEEEEE AAAALLLLSSSSOOOO
+      dd(1), mt(7).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ Hewlett-Packard Company            - 2 -    HP-UX Release 10.20:  July 1996
+
+
+

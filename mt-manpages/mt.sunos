@@ -1,0 +1,132 @@
+
+
+
+MT(1)                    USER COMMANDS                      MT(1)
+
+
+
+NAME
+     mt - magnetic tape control
+
+SYNOPSIS
+     mt [ -f _t_a_p_e_n_a_m_e ] _c_o_m_m_a_n_d [ _c_o_u_n_t ]
+
+DESCRIPTION
+     mt sends commands to a magnetic tape drive.  If _t_a_p_e_n_a_m_e  is
+     not  specified,  the  environment variable TAPE is used.  If
+     TAPE  does  not  exist,  mt  uses  the  device   /dev/rmt12.
+     _t_a_p_e_n_a_m_e  refers  to a raw tape device.  By default, mt per-
+     forms the requested operation once;  multiple operations may
+     be performed by specifying _c_o_u_n_t.
+
+     The available commands are listed below.  Only as many char-
+     acters  as  are required to uniquely identify a command need
+     be specified.
+
+     mt returns a 0 exit status when the operation(s)  were  suc-
+     cessful,  1  if  the  command  was unrecognized or if mt was
+     unable to open the specified tape drive, and 2 if an  opera-
+     tion failed.
+
+OPTIONS
+     eof, weof    Write _c_o_u_n_t EOF marks at the  current  position
+                  on the tape.
+
+     fsf          Forward space over _c_o_u_n_t EOF marks. The tape is
+                  positioned on the first block of the file.
+
+     fsr          Forward space _c_o_u_n_t records.
+
+     bsf          Back space over _c_o_u_n_t EOF marks.  The  tape  is
+                  positioned on the beginning-of-tape side of the
+                  EOF mark.
+
+     bsr          Back space _c_o_u_n_t records.
+
+     nbsf         Back space _c_o_u_n_t files.  The tape is positioned
+                  on  the  first  block  of  the  file.   This is
+                  equivalent to _c_o_u_n_t+_1  bsf's  followed  by  one
+                  fsf.
+
+     asf          Absolute space to _c_o_u_n_t file number.   This  is
+                  equivalent to a rewind followed by a fsf _c_o_u_n_t.
+
+     For the following commands, _c_o_u_n_t is ignored:
+
+     eom          Space to the end of recorded media on the tape.
+                  This  is useful for appending files onto previ-
+                  ously written tapes.
+
+
+
+
+Sun Release 4.1   Last change: 19 December 1989                 1
+
+
+
+
+
+
+MT(1)                    USER COMMANDS                      MT(1)
+
+
+
+     rewind       Rewind the tape.
+
+     offline, rewoffl
+                  Rewind the tape and, if appropriate,  take  the
+                  drive unit off-line by unloading the tape.
+
+     status       Print status information about the tape unit.
+
+     retension    Rewind the cartridge tape completely, then wind
+                  it  forward  to the end of the reel and back to
+                  beginning-of-tape to smooth out tape tension.
+
+     erase        Erase the entire tape.
+
+FILES
+     /dev/rmt*           magnetic tape interface
+     /dev/rar*           Archive cartridge tape interface
+     /dev/rst*           SCSI tape interface
+
+SEE ALSO
+     ar(4S), mtio(4), st(4S), tm(4S), xt(4S) environ(5V)
+
+BUGS
+     Not all devices  support  all  options.   Some  options  are
+     hardware-dependent.    Refer  to  the  corresponding  device
+     manual page.
+
+
+WARNINGS
+     The bsf option for SCSI tape in SunOS 4.0.3 is  incompatible
+     with this release and releases prior to 4.0.3.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Sun Release 4.1   Last change: 19 December 1989                 2
+
+
+
