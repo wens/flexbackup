@@ -844,6 +844,7 @@ sub backup_afio {
     $cmd .= "$main::afio_z_flag ";
     $cmd .= "$main::afio_verb_flag ";
     $cmd .= "$main::afio_sparse_flag ";
+    $cmd .= "$main::afio_atime_flag ";
     $cmd .= "$main::afio_bnum_flag ";
     $cmd .= "$main::afio_blk_flag ";
     $cmd .= "-";
@@ -978,6 +979,7 @@ sub backup_tar {
     $cmd .= "--label \"$title\" ";
     $cmd .= "$main::tar_verb_flag ";
     $cmd .= "$main::tar_sparse_flag ";
+    $cmd .= "$main::tar_atime_flag ";
     $cmd .= "$main::tar_recnum_flag ";
     $cmd .= "$main::tar_blk_flag ";
     $cmd .= "--file - ";
@@ -1043,6 +1045,7 @@ sub backup_star {
     $cmd .= "$main::star_acl_flag ";
     $cmd .= "$main::star_verb_flag ";
     $cmd .= "$main::star_sparse_flag ";
+    $cmd .= "$main::star_atime_flag ";
     $cmd .= "$main::star_blocknum_flag ";
     $cmd .= "$main::star_blk_flag ";
     $cmd .= "file=- ";
@@ -1952,6 +1955,7 @@ sub optioncheck {
     &check(\$cfg::compr_level,'compr_level','exist');
     &check(\$cfg::verbose,'verbose');
     &check(\$cfg::sparse,'sparse');
+    &check(\$cfg::atime_preserve,'atime_preserve');
     &check(\$cfg::indexes,'indexes');
     &check(\$cfg::staticfiles,'staticfiles');
     &check(\$cfg::buffer,'buffer','false buffer');
@@ -2331,6 +2335,17 @@ sub optioncheck {
 	$main::cpio_sparse_flag = "";
 	$main::tar_sparse_flag = "";
 	$main::star_sparse_flag = "";
+    }
+
+    # atime preserve flag
+    if ($cfg::atime_preserve eq "true") {
+	$main::afio_atime_flag = "-a";
+	$main::tar_atime_flag = "--atime-preserve";
+	$main::star_atime_flag = "-atime";
+    } else {
+	$main::afio_atime_flag = "";
+	$main::tar_atime_flag = "";
+	$main::star_atime_flag = "";
     }
 
     # Type-specific setup
@@ -3683,14 +3698,21 @@ sub file_list_cmd {
     $cmd .= "-depth ";
 
     if ($level != 0) {
-	if (!defined($remote)) {
+
+	# If local, we can use the flexbackup timetamp native and ctime
+	# checks can be used.  Remote, we'll be creating stamp with "touch
+	# -t"...  but ctime can't be touched backwards.  Turn it off.
+	#
+	# If atime preserve is set, can't use ctime checks anyway since
+	# preserving atime changes the ctime.
+
+	if (($cfg::atime_preserve eq 'false') and !defined($remote)) {
 	    $cmd .= '\( ';
 	}
+
 	$cmd .= "-newer $timestampfile ";
-	# If local, we can use the flexbackup timetamp native and ctime
-	# can be used.  Remote, we'll be creating one with touch -t...
-	# ctime can't be touched backwards
-	if (!defined($remote)) {
+
+	if (($cfg::atime_preserve eq 'false') and !defined($remote)) {
 	    $cmd .= "-or -cnewer $timestampfile " . '\) ';
 	}
     }

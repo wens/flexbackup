@@ -4,8 +4,10 @@ $Name$
 NOT YET RELEASED but in CVS
 
 Bug fixes:
- - Take out atime preserve options for tar/star.  Turning that on messes 
-   up the -cnewer tests, and >0 levels get all files again...
+ - atime preserve option to tar/star/afio modifies the ctime of the
+     files. Using ctime checks then says everything is newer, no matter
+     what the level. Make atime preserve a global option defaulting to
+     false; if true turn off ctime checks.
 
 ----------------------------------------------------------------------
 Version 1.0pre1 (20030118)
