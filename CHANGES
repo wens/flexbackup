@@ -1,6 +1,7 @@
 $Id$
 $Name$
 
+NOT YET RELEASED but in CVS
 
 Bug fixes:
  - Take out atime preserve options for tar/star.  Turning that on messes 
