@@ -803,8 +803,8 @@ sub backup_tar {
     # find everything that _matches_ the regexp, then use it as an exclude list for tar
     if (defined($cfg::exclude_expr[0])) {
         $cmd .= "rm -f $tmpexclude ; ";
-        foreach (@main::include_cmds) {
-            $cmd .= "find $dir -xdev | sed -e \"s%^\./%%\" $_ >> $tmpexclude ; ";
+        foreach (@main::not_include_cmds) {
+            $cmd .= "find $dir -xdev $_ >> $tmpexclude ; ";
         }
         $exclude_flag = "--exclude-from $tmpexclude";
     }
@@ -828,9 +828,9 @@ sub backup_tar {
     if ($main::remote and ($cfg::buffer eq "true")) {
         $cmd .= "$main::buffer_cmd";
     }
-#    if (defined($cfg::exclude_expr[0])) {
-#        $cmd .= " ; rm -f $tmpexclude";
-#    }
+    if (defined($cfg::exclude_expr[0])) {
+        $cmd .= " ; rm -f $tmpexclude";
+    }
 
     # Wrap all that together
     $cmd = &maybe_remote_cmd($cmd);
@@ -1183,10 +1183,19 @@ sub get_last_date {
     # or use the epoch for level 0
     if ($main::level == 0) {
         $numeric_val = '197001010000.00';
-        $string_val = "Thu Jan  1 00:00:00 1970";
-
+        # Need a slightly different format for dump -T
+        if (($cfg::type eq "dump") and ($cfg::dump_use_dumpdates eq "false")) {
+            $string_val = "Thu Jan 01 00:00:00 1970";
+        } else {
+            $string_val = "Thu Jan  1 00:00:00 MST 1970";
+        }
     } elsif ($targetfile ne '') {
-        chomp($string_val = `date -r $targetfile '+%a %b %e %H:%M:%S %Y'`);
+        if (($cfg::type eq "dump") and ($cfg::dump_use_dumpdates eq "false")) {
+            # Need a format w/o the timezone field for dump -T
+            chomp($string_val = `date -r $targetfile '+%a %b %d %H:%M:%S %Y'`);
+        } else {
+            chomp($string_val = `date -r $targetfile`);
+        }
         chomp($numeric_val = `date -r $targetfile +%Y%m%d%H%M.%S`);
 
     } else {
@@ -1195,10 +1204,13 @@ sub get_last_date {
     }
 
     # what kind of touch flag we are using determines the return type
-    if ($main::touch_flag eq "-t") {
-        $return_val = $numeric_val;
-    } else {
+    # dump -T always expects the string type though
+    if (($main::touch_flag eq "-d")
+        or
+        (($cfg::type eq "dump") and ($cfg::dump_use_dumpdates eq "false"))) {
         $return_val = $string_val;
+    } else {
+        $return_val = $numeric_val;
     }
 
     &log("| Date of this level $main::level backup: $main::date_at_start");
@@ -1457,7 +1469,7 @@ sub optioncheck {
 
     # Exclude regexp for find
     $main::exclude_cmd = '';
-    @main::include_cmds = ();
+    @main::not_include_cmds = ();
     # Deal with the old non-array setting that may be in the config file
     if (!defined($cfg::exclude_expr[0]) and defined($cfg::exclude_expr)) {
         $cfg::exclude_expr[0] = $cfg::exclude_expr;
@@ -1472,7 +1484,7 @@ sub optioncheck {
                 $_ =~ s/^\*/.*/;
             }
             push(@excl_array, "egrep -v \"$_\"");
-            push(@main::include_cmds, "| egrep \"$_\"");
+            push(@main::not_include_cmds, "| egrep \"$_\"");
         }
         $main::exclude_cmd = "| " . join(" | ", @excl_array);
     }
