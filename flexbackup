@@ -159,6 +159,7 @@ sub backup_routine {
     my $olddate;
     my %oldlogs;
     my $fs;
+    my $logext;
 
     # Get backup level...
     if (defined($main::opt{'level'})) {
@@ -338,7 +339,12 @@ sub backup_routine {
     # compress log file
     if ($cfg::comp_log ne 'false') {
         &line("logonly");
-        print "| Compressing log file ($main::log)\n";
+        if ($cfg::comp_log eq "gzip") {
+            $logext = "gz";
+        } else {
+            $logext = "bz2";
+        }
+        print "| Compressing log file ($main::log.$logext)\n";
         system("$cfg::comp_log -f $main::log");
         if ($CHILD_ERROR) {
             warn("error compressing log file\n");
