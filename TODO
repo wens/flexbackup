@@ -8,7 +8,7 @@ Cleanup/fix:
  - Fix buffer test to handle bfr as well
  - if staticfiles or staticlogs true, don't timestamp list/extract/compare
     (make part of setup function as well)
- - Fix stdout/err flow when listing (maybe just "buffer")
+ - Fix stdout/err flow when listing (maybe just "buffer" problem?)
  - Don't tie to db for list extract compare restore test-tape-drive
  - Don't check for writeable stampdir for non-backup
  - Don't check for writeable logdir for non-backup
@@ -28,7 +28,7 @@ Cleanup/fix:
  - Delete deprecated sections
 
 Misc:
- - Update faq for new items changes since 1.0.1
+ - Update faq for new items changes since 1.0.2
  - Add link/rpm for bfr
  - Make a manual page (AND other enchanced documentation, more than a README)
    someone made a good start or two:
@@ -59,8 +59,6 @@ Features to add:
      Redo include/exclude paths, not just expressions?  per-fs?
 
  - Make package delta work with BSD ports or debian pkgs
-
- - Finish arj, cab, rar reading
 
  - If we detect an error and are using tapes, do seomthing intelligent
      to reposition tape, add another filemark etc to get tape to known state

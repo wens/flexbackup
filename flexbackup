@@ -1707,15 +1707,6 @@ sub list_routine {
 
 	$cmd .= "$main::path{cat}";
 
-    } elsif ($cfg::type eq 'arj') {
-	$cmd .= "$main::path{unarj} ";
-
-    } elsif ($cfg::type eq 'rar') {
-	$cmd .= "$main::path{unrar} ";
-
-    } elsif ($cfg::type eq 'cab') {
-	$cmd .= "$main::path{cabextract} ";
-
     }
 
     &run_or_echo_then_query($cmd);
@@ -1879,15 +1870,6 @@ sub extract_routine {
 	}
 	$cmd .= "; ";
 	$cmd .= "$main::path{rm} -f $tmpfile";
-
-    } elsif ($cfg::type eq 'arj') {
-	$cmd .= "$main::path{unarj} ";
-
-    } elsif ($cfg::type eq 'rar') {
-	$cmd .= "$main::path{unrar} ";
-
-    } elsif ($cfg::type eq 'cab') {
-	$cmd .= "$main::path{cabextract} ";
 
     }
 
@@ -3420,24 +3402,6 @@ sub maybe_get_filename {
 
     } elsif ($file =~ m/\.lzh$/i) {
 	$cfg::type = "lha";
-	$cfg::compress = "false";
-	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
-	&optioncheck();                  # redo to set a few variables over
-
-    } elsif ($file =~ m/\.arj$/i) {
-	$cfg::type = "arj";
-	$cfg::compress = "false";
-	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
-	&optioncheck();                  # redo to set a few variables over
-
-    } elsif ($file =~ m/\.rar$/i) {
-	$cfg::type = "rar";
-	$cfg::compress = "false";
-	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
-	&optioncheck();                  # redo to set a few variables over
-
-    } elsif ($file =~ m/\.cab$/i) {
-	$cfg::type = "cab";
 	$cfg::compress = "false";
 	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
 	&optioncheck();                  # redo to set a few variables over
