@@ -6,10 +6,7 @@ Some of these might not happen
 
 Currently in progress:
  - How to spec dirs with spaces for sets/dir/prune?
- - Check if tar label 99 char limit on unix
  - Try it under cygwin just for grins
-     need to fix fs spec / prune for spaces
-     why is touch of label failing?
 
 Cleanup/fix:
  - Better cleanup after error in backup
@@ -71,6 +68,8 @@ Features to add:
      to reposition tape, add another filemark, etc to get tape to known state
      and avoid the maybe-error in the index & what 'nextfile' is on the tape
 
+ - Log tape sizes (output of buffer or dd or mt tell can be used?)
+
  - smbtar?
      doable - overload type 'tar'. smbtar triggers with a fs spec of something like
                smb:user:pass@host/share:dir
@@ -79,10 +78,19 @@ Features to add:
      no exclude from find
      top level of shares only?
 
- - Spiff up the contributed CGI program?
+ - Make -extract -files for afio/cpio/zip recurse dirs
+      dump/tar already to this. Actually just check that all act the same.
 
- - autoconf it (esp if we pkg multivol?)
-   Make a multvol tar/rpm available 
+ - Interactive restore-like shell for types besides dump
+      see notes below
+
+ - "rsync" type for when using on-disk?
+
+ - Destdir option for compare /extract
+
+ - Umask spec for on-disk archives/logs/stamps.  check tmpfiles too.
+
+ - Spiff up the contributed CGI program?
 
  - Split main program; use separate libs for archiver types that are stored
    in different files?  downside: install then requires more than just program + conf file.
@@ -94,14 +102,6 @@ Features to add:
      as well...
 
  - Make remote machine path overrides possible, that supercede others?
-
- - Make -extract -files for afio/cpio/zip recurse dirs
-      dump/tar already to this. Actually just check that all act the same.
-
- - Interactive restore-like shell for types besides dump
-      see notes below
-
- - Log tape sizes (output of buffer or dd or mt tell can be used?)
 
  - Stor lists of files backed up in a on-disk db (to help find what to
      restore from?). Actually now you can just 'zgrep filename
@@ -120,8 +120,6 @@ Features to add:
 
  - Encryption with gnupg?
 
- - "rsync" type for when using on-disk?
-
  - Make file-based backups able to use split for smaller archives?
 
  - Along the same lines of "-toc all" there should be facilities in
@@ -134,10 +132,6 @@ Features to add:
  - Exclude subtrees that have a ".nobackup" file in them?  Users can control
    themselves that way.  Suggestion from someone based on dobackup.pl
    probably.
-
- - Destdir option for compare /extract
-
- - Umask spec for on-disk archives/logs/stamps.  check tmpfiles too.
 
 
 -------------------------------------------------------------
