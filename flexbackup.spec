@@ -14,7 +14,7 @@ Requires: mt-st
 Requires: gzip
 Requires: bzip2
 Requires: buffer
-Requires: fileutils
+Requires: fileutils >= 4.0
 Requires: findutils
 
 
@@ -53,12 +53,15 @@ rm -rf $RPM_BUILD_ROOT
 %files
 /usr/bin/flexbackup
 %defattr(-,root,root)
-%doc CHANGES COPYING TODO README CREDITS flexbackup.lsm
+%doc CHANGES COPYING TODO README CREDITS flexbackup.lsm INSTALL
 %dir /var/lib/flexbackup
 %dir /var/log/flexbackup
 %config /etc/flexbackup.conf
 
 %changelog
+* Tue Sep 28 1999 Edwin Huffstutler <edwinh@computer.org>
+- need fileutils at least 4.0.  3.16 had touch -t bug...
+
 * Sat Sep 25 1999 Edwin Huffstutler <edwinh@computer.org>
 - add more requires, update description, email address.
 - really goes in /usr/bin since it needs perl anyway --

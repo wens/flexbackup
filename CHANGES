@@ -113,3 +113,7 @@ Version 0.8
   - clean some duplicated code
   - rpm build, lsm file
   - previously just a local hack I had done for myself
+
+
+$Id$
+$Name$
