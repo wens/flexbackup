@@ -332,10 +332,16 @@ sub backup_routine {
 
     # Possibly populate package-file hashes if we are using
     # -delta.  This is so we only have to run through these operations
-    # once on this machine
+    # once per machine if multiple fs's are being run
     if (defined($main::delta)) {
-	&populate_packaged_files('localhost');
-	&populate_changed_files('localhost');
+	if (defined($main::local)) {
+	    &find_packaged_files('localhost');
+	    &find_changed_files('localhost');
+	}
+	foreach my $host (keys %main::remotehosts) {
+	    &find_packaged_files($host);
+#            &find_changed_files($host);
+	}
 	$main::pkg_delta_filelist = "$cfg::tmpdir/pkgdelta.$PROCESS_ID";
 	&line();
     }
@@ -593,12 +599,16 @@ sub backup {
     # (config file's $device points to a dir in this case)
     if (defined($main::use_file)) {
 
-	my $filename;
+	my $filename = $level;
+
+	if (defined($main::delta)) {
+	    $filename .= $main::delta;
+	}
 
 	if ($cfg::staticfiles eq 'true') {
-	    $filename = $level . "." . $cfg::type;
+	    $filename .= "." . $cfg::type;
 	} else {
-	    $filename = $level . "." . $main::date . "." . $cfg::type;
+	    $filename .= "." . $main::date . "." . $cfg::type;
 	}
 
 	if ($cfg::type eq 'ar') {
@@ -706,7 +716,7 @@ sub backup {
 
     # Nuke tmp file list if we did local package delta
     if (defined($main::delta)) {
-	push(@cmds, "$main::path{rm} -f $main::pkg_delta_filelist");
+	push(@cmds, &maybe_remote_cmd("$main::path{rm} -f $main::pkg_delta_filelist", $remote));
     }
 
     # Strip multiple spaces
@@ -2483,7 +2493,6 @@ sub optioncheck {
     } elsif ($cfg::device =~ m%(\S+):(/dev/.*)%) {
 
 	$main::remotetapehost = $1;
-	$main::remotehosts{$1} = 1;
 	$cfg::device = $2;
 	$main::tapedevice = 1;
 
@@ -2502,9 +2511,6 @@ sub optioncheck {
 	$main::path{'mt'} = &checkinpath('ftmt');
     } else {
 	$main::path{'mt'} = &checkinpath('mt');
-    }
-    if (defined($main::remotetapehost)) {
-	push(@main::remoteprogs,$main::path{'mt'});
     }
 
     # Exclude regexp for find
@@ -2708,6 +2714,8 @@ sub optioncheck {
 	    # Single fs
 	    if ($main::opt{'fs'} =~ /^(\S+):/) {
 		$main::remotehosts{$1} = 1;
+	    } else {
+		$main::local = 1;
 	    }
 
 	} else {
@@ -2719,6 +2727,8 @@ sub optioncheck {
 		foreach my $fs (split(/\s+/,$list)) {
 		    if ($fs =~ /^(\S+):/g) {
 			$main::remotehosts{$1} = 1;
+		    } else {
+			$main::local = 1;
 		    }
 		}
 	    }
@@ -3063,17 +3073,8 @@ sub optioncheck {
 	}
     }
 
-    # Pacakge delta option
+    # Package delta option
     if (defined($main::opt{'delta'})) {
-	if (defined $main::remotetapehost) {
-	    if (scalar(keys %main::remotehosts) > 1) {
-		push(@main::errors,"-delta $main::opt{delta} not useable with remote filesystems yet");
-	    }
-	} else {
-	    if (scalar(keys %main::remotehosts) > 0) {
-		push(@main::errors,"-delta $main::opt{delta} not useable with remote filesystems yet");
-	    }
-	}
 	if ($main::opt{'delta'} eq 'rpm') {
 	    $main::delta = 'rpm';
 	    $main::path{'rpm'} = &checkinpath('rpm');
@@ -4248,10 +4249,18 @@ sub file_list_cmd {
 
 	# Use the normal level & timestamp mechanism to get a list of files
 	# Then only keep unowned or owned+changed files
-	&log("| Listing level $level to-be-archived files for $dir");
+	my $find = &maybe_remote_cmd("cd \"$dir\"; $cmd -print", $remote);
+	my $write = "> $main::pkg_delta_filelist";
+	if(defined($remote)) {
+	    &log("| Listing level $level to-be-archived files for $remote:$dir");
+	    $write = &maybe_remote_cmd("$main::path{cat} $write", $remote);
+	    $write = "| $write";
+	} else {
+	    &log("| Listing level $level to-be-archived files for $dir");
+	}
 	&log("| Finding subset of files based on packaging system delta");
-	open(NEWLIST,"> $main::pkg_delta_filelist") || die;
-	open(LIST,"cd \"$dir\"; $cmd -print |") || die;
+	open(LIST,"$find |") || die;
+	open(NEWLIST,"$write") || die;
 	while(<LIST>) {
 
 	    chomp(my $file = $_);
@@ -4287,14 +4296,22 @@ sub file_list_cmd {
 ######################################################################
 # Fill %packaged with a list of files on host owned by packages
 ######################################################################
-sub populate_packaged_files {
+sub find_packaged_files {
 
     my $host = shift (@_);
 
     # FIXME -n
     if ($main::delta eq 'rpm') {
-	&log("| Finding files owned by RPM packages on $host...");
-	open(LIST,"$main::path{rpm} -q -a -l |") || die;
+
+	my $cmd = "$main::path{rpm} -q -a -l";
+
+	if ($host ne 'localhost') {
+	    &log("| Finding all files owned by RPM packages on host $host...");
+	    $cmd = &maybe_remote_cmd($cmd, $host);
+	} else {
+	    &log("| Finding all files owned by RPM packages...");
+	}
+	open(LIST,"$cmd |") || die;
 	while(<LIST>) {
 	    if (m:^(/.*)$:) {
 		$main::packaged{$host}{$1} = 1;
@@ -4309,17 +4326,27 @@ sub populate_packaged_files {
 # Fill %changed with a list of packaged files on host that have been
 # modified
 ######################################################################
-sub populate_changed_files {
+sub find_changed_files {
 
     my $host = shift (@_);
 
     # FIXME -n
     if ($main::delta eq 'rpm') {
-	&log("| Finding changed RPM package files on $host...");
+
+	my $cmd = "$main::path{rpm} -V -a";
+
+	if ($host ne 'localhost') {
+	    &log("| Finding changed package files on host $host...");
+	    $cmd = &maybe_remote_cmd($cmd, $host);
+	} else {
+	    &log("| Finding changed package files...");
+	}
 	&log("| May take quite a while, be patient");
-	open(LIST,"$main::path{rpm} -V -a |") || die;
+	open(LIST,"$cmd |") || die;
 	while(<LIST>) {
-	    if (m:^(.*) . (.*)$:) {
+	    # ex: if size, md5sum, and timestamp changed on a config file
+	    # S.5....T c /etc/ntp.conf
+	    if (m:^([\.S][\.M][\.5][\.D][\.L][\.U][\.G][\.T]) [dgc ] (.*)$:) {
 		$main::changed{$host}{$2} = 1;
 	    }
 	}
@@ -4605,7 +4632,11 @@ sub test_tape_drive () {
 	$cmd .= $main::buffer_cmd;
     }
     # if pad blocks was true we have nulls at the end (won't be in this script otherwise)
-    $cmd .= " | $main::path{tr} -d '\\0' > $tmp1";
+    if ($cfg::pad_blocks eq 'true') {
+	$cmd .= " | $main::path{tr} -d '\\0' > $tmp1";
+    } else {
+	$cmd .= "> $tmp1";
+    }
     system($cmd);
     if ($CHILD_ERROR) {
 	$fail++;
@@ -4622,7 +4653,11 @@ sub test_tape_drive () {
 	$cmd .= $main::buffer_cmd;
     }
     # if pad blocks was true we have nulls at the end (won't be in this script otherwise)
-    $cmd .= " | $main::path{tr} -d '\\0' > $tmp2";
+    if ($cfg::pad_blocks eq 'true') {
+	$cmd .= " | $main::path{tr} -d '\\0' > $tmp2";
+    } else {
+	$cmd .= "> $tmp2";
+    }
     system($cmd);
 
     &mt('generic-query');

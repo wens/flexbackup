@@ -40,9 +40,8 @@ Misc:
 Features to add:
 
  - Make package delta save the RPM list
- - Make package delta work for remote
  - Make package delta work with BSD ports or debian pkgs
- 
+
  - Have an mt op. override in the config (tell = status for debugging, platform
      specific junk).  just act like path stuff does now.
 
@@ -136,6 +135,10 @@ Features to add:
 
  - Gnome driver/configurator utility
       a separate program that just manipulates flexbackup
+
+ - "rsync" type for when using on-disk?
+ 
+ - Make file-based backups able to use split for smaller archives?
 
 -------------------------------------------------------------
 
