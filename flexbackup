@@ -2822,7 +2822,7 @@ sub run_or_echo_then_query {
     &line();
 
     if (!defined($main::opt{'n'})) {
-	system("($cmd) 2>&1 | $main::path{'tee'} -a $main::log");
+	system("($cmd) 2>&1 | $main::path{tee} -a $main::log");
     } else {
 	&log("(debug) command output would be here");
     }
@@ -3591,3 +3591,6 @@ sub file_list_cmd {
     return($cmd);
 
 }
+
+
+
