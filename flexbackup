@@ -1041,6 +1041,7 @@ sub backup_afio {
 	my $time = &get_last_date($label, $level, 'numeric');
 	$cmd = "$main::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= " $stamp";
     } else {
 	$stamp = &get_last_date($label, $level, 'filename');
     }
@@ -1050,11 +1051,15 @@ sub backup_afio {
 	$cmd = "$main::path{printf} \"$cfg::afio_nocompress_types\" > $tmpnocompress";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
 	$no_compress = "-E $tmpnocompress";
+	$remove .= " $tmpnocompress";
     }
 
-    $cmd = "$main::path{printf} \"Volume Label:\\n$title\\n\\n\" > $tmplabel";
-    push(@cmds, &maybe_remote_cmd($cmd, $remote));
-
+    if ($cfg::label ne 'false') {
+        $cmd = "$main::path{printf} \"Volume Label:\\n$title\\n\\n\" > $tmplabel";
+        push(@cmds, &maybe_remote_cmd($cmd, $remote));
+        $remove .= " $tmplabel";
+    }
+    
     $cmd = "cd \"$dir\" && ";
     $cmd .= "($main::path{printf} \"//--$tmplabel flexbackup.volume_header_info\\n\" && ";
     $cmd .= &file_list_cmd($dir, $stamp, 'newline', $level, $remote);
@@ -1084,14 +1089,6 @@ sub backup_afio {
 
     push(@cmds, $cmd);
 
-    $remove = "$tmplabel";
-    if (defined($remote) and ($level != 0)) {
-	$remove .= " $stamp";
-    }
-    if ($no_compress ne '') {
-	$remove .= " $tmpnocompress";
-    }
-
     return($remove, @cmds);
 
 }
@@ -1115,15 +1112,19 @@ sub backup_cpio {
 	my $time = &get_last_date($label, $level, 'numeric');
 	$cmd = "$main::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= " $stamp";
     } else {
 	$stamp = &get_last_date($label, $level, 'filename');
     }
 
-    # Kludge a title by replacing / with - in the title
-    # then touch a file in the dir we are going to back up.
-    $title =~ s%/%-%g;
-    $cmd = "$main::path{touch} \"$dir/$title\"";
-    push(@cmds, &maybe_remote_cmd($cmd, $remote));
+    if ($cfg::label ne 'false') {
+        # Kludge a title by replacing / with - in the title
+        # then touch a file in the dir we are going to back up.
+        $title =~ s%/%-%g;
+        $cmd = "$main::path{touch} \"$dir/$title\"";
+        push(@cmds, &maybe_remote_cmd($cmd, $remote));
+        $remove .= " \"$dir/$title\"";
+    }
 
     $cmd = "cd \"$dir\" && ";
     $cmd .= &file_list_cmd($dir, $stamp, 'null', $level, $remote);
@@ -1149,11 +1150,6 @@ sub backup_cpio {
 
     push(@cmds, $cmd);
 
-    $remove = "\"$dir/$title\"";
-    if (defined($remote) and ($level != 0)) {
-	$remove .= " $stamp";
-    }
-
     return($remove, @cmds);
 
 }
@@ -1177,6 +1173,7 @@ sub backup_tar {
 	my $time = &get_last_date($label, $level, 'numeric');
 	$cmd = "$main::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= " $stamp";
     } else {
 	$stamp = &get_last_date($label, $level, 'filename');
     }
@@ -1192,7 +1189,9 @@ sub backup_tar {
     $cmd .= "--same-order ";
     $cmd .= "--no-recursion ";
     $cmd .= "--totals ";
-    $cmd .= "--label \"$title\" ";
+    if ($cfg::label ne 'false') {
+        $cmd .= "--label \"$title\" ";
+    }
     $cmd .= "$main::tar_verb_flag ";
     $cmd .= "$main::tar_sparse_flag ";
     $cmd .= "$main::tar_atime_flag ";
@@ -1213,10 +1212,6 @@ sub backup_tar {
     $cmd = &append_writer_cmd($cmd);
 
     push(@cmds, $cmd);
-
-    if (defined($remote) and ($level != 0)) {
-	$remove .= "$stamp";
-    }
 
     return($remove, @cmds);
 
@@ -1241,6 +1236,7 @@ sub backup_star {
 	my $time = &get_last_date($label, $level, 'numeric');
 	$cmd = "$main::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= " $stamp";
     } else {
 	$stamp = &get_last_date($label, $level, 'filename');
     }
@@ -1255,7 +1251,9 @@ sub backup_star {
     $cmd .= "-D ";
     $cmd .= "-B ";
     $cmd .= "-dirmode ";
-    $cmd .= "VOLHDR=\"$title\" ";
+    if ($cfg::label ne 'false') {
+        $cmd .= "VOLHDR=\"$title\" ";
+    }
     $cmd .= "H=$cfg::star_format ";
     $cmd .= "$main::star_fifo_flag ";
     $cmd .= "$main::star_acl_flag ";
@@ -1280,10 +1278,6 @@ sub backup_star {
 
     push(@cmds, $cmd);
 
-    if (defined($remote) and ($level != 0)) {
-	$remove .= " $stamp";
-    }
-
     return($remove, @cmds);
 
 }
@@ -1307,15 +1301,19 @@ sub backup_pax {
 	my $time = &get_last_date($label, $level, 'numeric');
 	$cmd = "$main::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= " $stamp";
     } else {
 	$stamp = &get_last_date($label, $level, 'filename');
     }
 
-    # Kludge a title by replacing / with - in the title
-    # then touch a file in the dir we are going to back up.
-    $title =~ s%/%-%g;
-    $cmd = "$main::path{touch} \"$dir/$title\"";
-    push(@cmds, &maybe_remote_cmd($cmd, $remote));
+    if ($cfg::label ne 'false') {
+        # Kludge a title by replacing / with - in the title
+        # then touch a file in the dir we are going to back up.
+        $title =~ s%/%-%g;
+        $cmd = "$main::path{touch} \"$dir/$title\"";
+        push(@cmds, &maybe_remote_cmd($cmd, $remote));
+        $remove .= " \"$dir/$title\"";
+    }
 
     $cmd = "cd \"$dir\" && ";
     $cmd .= &file_list_cmd( $dir, $stamp, 'newline', $level, $remote);
@@ -1342,11 +1340,6 @@ sub backup_pax {
 
     push(@cmds, $cmd);
 
-    $remove = "\"$dir/$title\"";
-    if (defined($remote) and ($level != 0)) {
-	$remove .= " $stamp";
-    }
-
     return($remove, @cmds);
 
 }
@@ -1371,15 +1364,19 @@ sub backup_zip {
 	my $time = &get_last_date($label, $level, 'numeric');
 	$cmd = "$main::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= " $stamp";
     } else {
 	$stamp = &get_last_date($label, $level, 'filename');
     }
 
-    # Kludge a title by replacing / with - in the title
-    # then touch a file in the dir we are going to back up.
-    $title =~ s%/%-%g;
-    $cmd = "$main::path{touch} \"$dir/$title\"";
-    push(@cmds, &maybe_remote_cmd($cmd, $remote));
+    if ($cfg::label ne 'false') {
+        # Kludge a title by replacing / with - in the title
+        # then touch a file in the dir we are going to back up.
+        $title =~ s%/%-%g;
+        $cmd = "$main::path{touch} \"$dir/$title\"";
+        push(@cmds, &maybe_remote_cmd($cmd, $remote));
+        $remove .= " \"$dir/$title\"";
+    }
 
     $cmd = "cd \"$dir\" && ";
     $cmd .= &file_list_cmd($dir, $stamp, 'newline', $level, $remote);
@@ -1409,10 +1406,7 @@ sub backup_zip {
 
     push(@cmds, $cmd);
 
-    $remove = "$tmpzip \"$dir/$title\"";
-    if (defined($remote) and ($level != 0)) {
-	$remove .= " $stamp";
-    }
+    $remove .= " $tmpzip";
 
     return($remove, @cmds);
 
@@ -1441,16 +1435,20 @@ sub backup_ar {
 	my $time = &get_last_date($label, $level, 'numeric');
 	$cmd = "$main::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= " $stamp";
     } else {
 	$stamp = &get_last_date($label, $level, 'filename');
     }
 
-    # Kludge a title by replacing / with - in the title
-    # then touch a file in the dir we are going to back up.
-    $title =~ s%/%-%g;
-    $title =~ s% %_%g;
-    $cmd = "$main::path{touch} \"$dir/$title\"";
-    push(@cmds, &maybe_remote_cmd($cmd, $remote));
+    if ($cfg::label ne 'false') {
+        # Kludge a title by replacing / with - in the title
+        # then touch a file in the dir we are going to back up.
+        $title =~ s%/%-%g;
+        $title =~ s% %_%g;
+        $cmd = "$main::path{touch} \"$dir/$title\"";
+        push(@cmds, &maybe_remote_cmd($cmd, $remote));
+        $remove .= " \"$dir/$title\"";
+    }
 
     $cmd = "cd \"$dir\" && ";
     $cmd .= &file_list_cmd( $dir, $stamp, 'newline', $level, $remote, '-maxdepth 1 ! -type d');
@@ -1475,10 +1473,7 @@ sub backup_ar {
 
     push(@cmds, $cmd);
 
-    $remove = "\"$dir/$title\" $filelist $tmpfile";
-    if (defined($remote) and ($level != 0)) {
-	$remove .= " $stamp";
-    }
+    $remove .= " $filelist $tmpfile";
 
     return($remove, @cmds);
 
@@ -1503,6 +1498,7 @@ sub backup_shar {
 	my $time = &get_last_date($label, $level, 'numeric');
 	$cmd = "$main::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= " $stamp";
     } else {
 	$stamp = &get_last_date($label, $level, 'filename');
     }
@@ -1513,7 +1509,9 @@ sub backup_shar {
 
     $cmd .= "$main::path{shar} ";
     $cmd .= "$main::shar_verb_flag ";
-    $cmd .= "-n \"$title\" ";
+    if ($cfg::label ne 'false') {
+        $cmd .= "-n \"$title\" ";
+    }
     $cmd .= "-S ";
     $cmd .= "$main::z";
 
@@ -1529,10 +1527,6 @@ sub backup_shar {
     $cmd = &append_writer_cmd($cmd);
 
     push(@cmds, $cmd);
-
-    if (defined($remote) and ($level != 0)) {
-	$remove .= " $stamp";
-    }
 
     return($remove, @cmds);
 
@@ -1560,16 +1554,20 @@ sub backup_lha {
 	my $time = &get_last_date($label, $level, 'numeric');
 	$cmd = "$main::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= " $stamp";
     } else {
 	$stamp = &get_last_date($label, $level, 'filename');
     }
 
-    # Kludge a title by replacing / with - in the title
-    # then touch a file in the dir we are going to back up.
-    $title =~ s%/%-%g;
-    $title =~ s% %_%g;
-    $cmd = "echo \"$title\" > \"$dir/$title\"";
-    push(@cmds, &maybe_remote_cmd($cmd, $remote));
+    if ($cfg::label ne 'false') {
+        # Kludge a title by replacing / with - in the title
+        # then touch a file in the dir we are going to back up.
+        $title =~ s%/%-%g;
+        $title =~ s% %_%g;
+        $cmd = "echo \"$title\" > \"$dir/$title\"";
+        push(@cmds, &maybe_remote_cmd($cmd, $remote));
+        $remove .= " \"$dir/$title\"";
+    }
 
     $cmd = "cd \"$dir\" && ";
     $cmd .= &file_list_cmd( $dir, $stamp, 'newline', $level, $remote);
@@ -1594,10 +1592,7 @@ sub backup_lha {
 
     push(@cmds, $cmd);
 
-    $remove = "\"$dir/$title\" $filelist $tmpfile";
-    if (defined($remote) and ($level != 0)) {
-	$remove .= " $stamp";
-    }
+    $remove .= " $filelist $tmpfile";
 
     return($remove, @cmds);
 
@@ -1623,6 +1618,7 @@ sub backup_filelist {
 	my $time = &get_last_date($label, $level, 'numeric');
 	$cmd = "$main::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= " $stamp";
     } else {
 	$stamp = &get_last_date($label, $level, 'filename');
     }
@@ -1647,10 +1643,7 @@ sub backup_filelist {
 
     push(@cmds, $cmd);
 
-    $remove = "$filelist";
-    if (defined($remote) and ($level != 0)) {
-	$remove .= " $stamp";
-    }
+    $remove .= " $filelist";
 
     return($remove, @cmds);
 
@@ -2424,6 +2417,7 @@ sub optioncheck {
     &check(\$cfg::compr_level,'compr_level','exist');
     &check(\$cfg::verbose,'verbose');
     &check(\$cfg::sparse,'sparse');
+    &check(\$cfg::label,'label');
     &check(\$cfg::atime_preserve,'atime_preserve');
     &check(\$cfg::indexes,'indexes');
     &check(\$cfg::staticfiles,'staticfiles');
