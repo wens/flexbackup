@@ -3626,18 +3626,7 @@ sub maybe_delete_old_index {
 
     $key = &get_tape_key('quiet');
     if ($key ne '') {
-	foreach (sort keys %main::index) {
-	    ($tape,$filenum) = split(/\|/,$_);
-	    if ($tape eq $key) {
-		&log("| Deleting record for file $filenum");
-		if (defined($main::opt{'n'})) {
-		    &log("| (debug) delete \$main::index{$tape|$filenum}");
-		} else {
-		    delete $main::index{"$tape|$filenum"};
-		}
-	    }
-	}
-
+        &rmindex($key);
     }
 
 }
