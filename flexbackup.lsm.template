@@ -6,7 +6,7 @@ Description:
 Flexible backup script.
 Features:
    o Easy to configure
-   o Uses dump, afio, tar, or cpio with the flick of a switch
+   o Uses dump, afio, tar, cpio, or zip
    o Compression and buffering for all backup types
    o Handles multivolume backups
    o Backup, extract, compare, list modes
@@ -18,7 +18,7 @@ Features:
 Keywords:       backup dump restore afio tar cpio ftape
 Author:         edwinh@computer.org (Edwin Huffstutler)
 Maintained-by:  flexbackup@home.com (Edwin Huffstutler)
-Primary-site:   members.home.net /flexbackup/tarball
+Primary-site:   flexbackup.sourceforge.net /flexbackup/tarball
                 SIZE
 Alternate-site: metalab.unc.edu /pub/linux/system/backup
                 SIZE

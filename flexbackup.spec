@@ -5,7 +5,7 @@ Version: %{version}
 Release: 1
 Packager: Edwin Huffstutler <flexbackup@home.com>
 Source: http://members.home.com/flexbackup/tarball/flexbackup-%{version}.tar.gz
-Url: http://members.home.com/flexbackup/
+Url: http://flexbackup.sourceforge.net
 Copyright: GPL
 Group: Applications/Archiving
 BuildRoot: /var/tmp/flexbackup-root

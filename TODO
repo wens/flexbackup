@@ -4,25 +4,36 @@ $Name$
 Flexbackup to-do list
 Some of these might not happen, but figured I should jot them down
 
+alternate paths to commands
+  modify checkinpath
+  modify all places that use the commands
+
+when using files
+  act like tapes!
+  make higher numbered level nuke lower ones & rm index
+  make index not have numbers, but filenames.
+  make -num give ignored message
 
 finish & test multibuf support
-how does multibuf interact with indexes???
-makefile rpm etc.
-
+  how does multibuf interact with indexes???
+  makefile rpm etc.
+  compiles on other systems?
 
 Features to add:
+ - differential mode (all since previous higher level)
+     interaction w/ logs
+     interaction w/ files
+ - "no blocking at all" option
+ - move CVS to sourceforge
  - make a manual page!  too many options now :)
- - mailing list
  - interactive restore-like shell for types besides dump
       see notes below
  - arbitratry "groups" that act sort of like "all"
  - multiple tapes for levels that aren't 0
- - configurable path for programs (gtar=tar, etc)
-      remote vs local too
  - Gnome driver/configurator utility
       I have a "picture" of what I want this to look like
       use glade + libglade
-      will be a seperate program that just manipulates flexbackup
+      will be a separate program that just manipulates flexbackup
  - extract options to not overwrite existing files
  - remote extract/compare/restore
       just install s/w on client w/remote tape device. need config file
@@ -33,17 +44,10 @@ Features to add:
       up any file not in a package OR changed from a package. and the rpm list.
  - once the above works make it work for debian packages
  - add switch to remove all index entries for all tapes
- - make file-based backups act like a tape - "erase" would remove all files
-      in a dir, etc.  configurable?
+
 
 Cleanup/fix:
- - if using files, make -num grab the right file from disk using the index
-      now -num with files is just ignored
  - zip/unzip backend, use fifos rather than temp files
- - indexes and using files can sometimes mess up if the filenames
-      clobber each other.  (2 packups on same day) use full time? a counter?
-      same thing goes for log files actually.
- - when using files, maybe I want "erase" to clean out a dir?
  - do a debian package
  - make -extract -files for afio/cpio/zip recurse dirs
       dump/tar already to this.

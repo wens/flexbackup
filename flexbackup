@@ -152,7 +152,7 @@ chomp($main::uname = `uname -s`);
 &set_tape_operation_defaults();
 
 # Get current date string
-$main::date = &current_time("short");
+$main::date = &current_time("numeric");
 
 # Decide what to do
 if (defined($main::opt{'restore'})) {
@@ -183,6 +183,7 @@ if (defined($main::opt{'restore'})) {
     &log('| Rewinding & erasing tape...');
     &mt('rewind');
     &maybe_delete_old_index();
+    &mt('rewind');
     &mt('generic-erase');
     &new_tape_key();
     &line();
@@ -232,7 +233,7 @@ sub backup_routine {
     opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $OS_ERROR");
     @files = readdir(DIR);
     foreach (reverse sort @files) {
-        next if (! m/^$cfg::sprefix$label\.([0-9])$/);
+        next if (! m/^$cfg::sprefix$label\.([0-9\.])$/);
         if ($1 > $main::level) {
             $oldstamps{"$cfg::stampdir/$_"} = $1
         }
@@ -244,7 +245,7 @@ sub backup_routine {
     opendir(DIR,"$cfg::logdir") or die("Can't open cfg::logdir: $OS_ERROR");
     @files = readdir(DIR);
     foreach (reverse sort @files) {
-        next if (! m/^$cfg::prefix$label\.([0-9])\.([0-9]+)(\.gz|\.bz2|\.Z)?$/);
+        next if (! m/^$cfg::prefix$label\.([0-9])\.([0-9\.]+)(\.gz|\.bz2|\.Z)?$/);
         if ($1 > $main::level) {
             $oldlogs{"$cfg::logdir/$_"} = $1 . "|" . $2;
         }
@@ -275,6 +276,7 @@ sub backup_routine {
                 &log('| Rewinding & erasing tape...');
                 &mt('rewind');
                 &maybe_delete_old_index();
+                &mt('rewind');
                 &mt('generic-erase');
                 $tape_key = &new_tape_key();
             } else {
@@ -353,6 +355,7 @@ sub backup_routine {
             &log('| Rewinding & erasing tape...');
             &mt('rewind');
             &maybe_delete_old_index();
+            &mt('rewind');
             &mt('generic-erase');
             $tape_key = &new_tape_key();
         } else {
@@ -430,7 +433,7 @@ sub backup {
     my $dir = shift(@_);
     my $tape_key = shift(@_);
     my $title;
-    my $notagtitle;
+    my $title_without_type;
     my @cmds;
     my @echo_cmds;
     my $cmd;
@@ -443,8 +446,10 @@ sub backup {
     if ($localdir =~ s/^(.+):(.+)$/$2/) {
 	$main::remote = $1;
 	chomp($main::tapehost = `hostname`);
-        if ($main::tapehost eq $main::remote) {
-            die("Remote host and this host are the same! no banana for you!");
+        if (($main::tapehost eq $main::remote)
+            or
+            ($main::remote =~ /^localhost/)) {
+            die("Remote host and this host are the same! No scooby snack for you!");
         }
 
     } else {
@@ -486,7 +491,7 @@ sub backup {
     $_ = $cfg::type . "+" . $cfg::compress;
     $_ =~ s/\+false//;
     $title = "level $main::level $dir $main::date_at_start $_ from $host";
-    $notagtitle = "level $main::level $dir $main::date_at_start from $host";
+    $title_without_type = "level $main::level $dir $main::date_at_start from $host";
 
     # Modify table of contents
     if (($tape_key ne '')
@@ -497,9 +502,9 @@ sub backup {
             @_ = split(/\//,$main::device);
             $_ = pop(@_);
             if (defined($main::opt{'n'})) {
-                &log("| (debug) \$main::index{$tape_key|$main::nextfile} = $notagtitle ($_)");
+                &log("| (debug) \$main::index{$tape_key|$_} = $title_without_type");
             } else {
-                $main::index{"$tape_key|$main::nextfile"} = "$notagtitle ($_)";
+                $main::index{"$tape_key|$_"} = "$title_without_type";
             }
         } else {
             if (defined($main::opt{'n'})) {
@@ -507,8 +512,8 @@ sub backup {
             } else {
                 $main::index{"$tape_key|$main::nextfile"} = $title;
             }
+            &log("| File number $main::nextfile, index key $tape_key");
         }
-        &log("| File number $main::nextfile, index key $tape_key");
     }
 
     &log("| Backup of: $dir");
@@ -556,7 +561,9 @@ sub backup {
     $_ = &current_time();
     &log("| Backup start: $main::date_at_start");
     &log("| Backup end:   $_");
-    system("touch $main::touch_flag \"$main::date_at_start\" $cfg::stampdir/$cfg::sprefix$label.$main::level");
+    if (!defined($main::opt{'n'})) {
+        system("touch $main::touch_flag \"$main::date_at_start\" $cfg::stampdir/$cfg::sprefix$label.$main::level");
+    }
     &line();
 
     # Got errors unless I paused before trying to access the tape right way...
@@ -798,7 +805,6 @@ sub backup_zip {
     my $cmd = '';
     my @cmds;
     my $tmpstamp = "$cfg::tmpdir/refdate.$$";
-    my $tmp = "$cfg::tmpdir/tmp$$.zip";
 
     $_ = &get_last_date($label);
 
@@ -823,20 +829,16 @@ sub backup_zip {
     $cmd .= "$main::zip_compr_flag ";
     $cmd .= "$main::zip_noz_flag "; # nocompress list
     $cmd .= "$main::zip_verb_flag "; # verbose flag
-    $cmd .= "$tmp";
+    $cmd .= "-";
 
-    # Wrap all that together
-    $cmd = &maybe_remote_cmd($cmd);
-    push(@cmds,$cmd);
-
-    $cmd = "cat $tmp ";
     if ($main::remote and ($cfg::buffer eq "buffer")) {
         $cmd .= "$main::buffer_cmd";
     }
-    $cmd .= " ; rm -f $tmpstamp \"$dir/$title\" $tmp";
+    $cmd .= " ; rm -f $tmpstamp \"$dir/$title\"";
 
     # Wrap all that together
     $cmd = &maybe_remote_cmd($cmd);
+
 
     # Append writer stuff
     $cmd .= "$main::buffer_cmd $main::buffer_write_flags" . "$main::device";
@@ -1297,7 +1299,9 @@ sub mt {
                 if ($main::ftape == 1) {
                     $operation = 'getsize';
                 }
-            } elsif ($main::uname =~ /BSD/) {
+            } elsif ($main::uname =~ /OpenBSD/) {
+                $operation = 'status';
+            } elsif ($main::uname =~ /FreeBSD/) {
                 $operation = 'rdhpos';
             } elsif ($main::uname =~ /OSF1/) {
                 $operation = 'status';
@@ -1321,7 +1325,9 @@ sub mt {
                 if ($main::ftape == 1) {
                     $operation = 'eom';
                 }
-            } elsif ($main::uname =~ /BSD/) {
+            } elsif ($main::uname =~ /OpenBSD/) {
+                $operation = 'eod';
+            } elsif ($main::uname =~ /FreeBSD/) {
                 $operation = 'eod';
             } elsif ($main::uname =~ /OSF1/) {
                 $operation = 'seod';
@@ -1345,7 +1351,9 @@ sub mt {
                 next;
             } elsif ($main::uname =~ /Linux/) {
                 $operation = 'erase';
-            } elsif ($main::uname =~ /BSD/) {
+            } elsif ($main::uname =~ /OpenBSD/) {
+                $operation = 'erase';
+            } elsif ($main::uname =~ /FreeBSD/) {
                 $operation = 'erase';
             } elsif ($main::uname =~ /OSF1/) {
                 next;
@@ -1366,7 +1374,9 @@ sub mt {
         if ($operation =~ /generic-blocksize/) {
             if ($main::uname =~ /Linux/) {
                 $operation =~ s/generic-blocksize/setblk/;
-            } elsif ($main::uname =~ /BSD/) {
+            } elsif ($main::uname =~ /OpenBSD/) {
+                $operation =~ s/generic-blocksize/blocksize/;
+            } elsif ($main::uname =~ /FreeBSD/) {
                 $operation =~ s/generic-blocksize/blocksize/;
             } elsif ($main::uname =~ /OSF1/) {
                 next;
@@ -1552,7 +1562,7 @@ sub optioncheck {
         $cfg::exclude_expr[0] = $cfg::exclude_expr;
     }
     if (defined($cfg::exclude_expr[0])) {
-        &checkinpath("egrep");
+        &checkinpath('egrep');
         my @excl_array;
         my $expr;
         foreach $expr (@cfg::exclude_expr) {
@@ -2029,7 +2039,6 @@ sub versionstring {
 ######################################################################
 # Return current time in ctime format if normal
 # in YYYYMMDDHHMM.SS format if on BSD or arg "numeric" is given
-# just YYYYMMMDD if argument "short" is given
 ######################################################################
 sub current_time {
 
@@ -2038,9 +2047,7 @@ sub current_time {
     my $current_time = time;
 
     if (defined($format)) {
-	if ($format eq "short") {
-	    $string = strftime("%Y%m%d", localtime($current_time));
-	} elsif ($format eq "numeric") {
+	if ($format eq "numeric") {
 	    $string = strftime("%Y%m%d%H%M.%S", localtime($current_time));
 	}
     } elsif ($main::touch_flag eq "-t") {
@@ -2502,15 +2509,20 @@ sub new_tape_key {
 
     if (defined($main::use_file)) {
         $_ = "<tape index key, dir=$cfg::device>";
+        if (defined($main::opt{'n'})) {
+            &log("| (debug) \$main::index{$key|index-key} = $_");
+        } else {
+            $main::index{"$key|index-key"} = $_;
+        }
     } else {
         $_ = "<tape index key>";
+        if (defined($main::opt{'n'})) {
+            &log("| (debug) \$main::index{$key|0} = $_");
+        } else {
+            $main::index{"$key|0"} = $_;
+        }
     }
 
-    if (defined($main::opt{'n'})) {
-        &log("| (debug) \$main::index{$key|0} = $_");
-    } else {
-        $main::index{"$key|0"} = $_;
-    }
 
     return($key);
 }
@@ -2570,17 +2582,22 @@ sub get_tape_key {
 
     # Find the number of existing files
     $main::nextfile = 0;
-    foreach (sort keys %main::index) {
-        my ($tape,$filenum) = split(/\|/,$_);
-        if ($tape eq $key) {
-            if ($filenum > $main::nextfile) {
-                $main::nextfile = $filenum;
+
+    unless (defined($main::use_file)) {
+        foreach (sort keys %main::index) {
+            my ($tape,$filenum) = split(/\|/,$_);
+            if ($tape eq $key) {
+                if ($filenum > $main::nextfile) {
+                    $main::nextfile = $filenum;
+                }
             }
         }
+        # Set for the next file
+        $main::nextfile++;
+        &log("| Found index key $key, next file is $main::nextfile");
+    } else {
+        &log("| Found directory index key $key");
     }
-    # Set for the next file
-    $main::nextfile++;
-    &log("| Found index key $key, next file is $main::nextfile");
 
     return($key);
 
