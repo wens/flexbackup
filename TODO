@@ -76,9 +76,11 @@ Features to add:
 
  - Destdir option for compare / extract
 
- - Umask spec for on-disk archives/logs/stamps.  check tmpfiles too.
+ - Umask spec for on-disk archives/logs/stamps/index.  check tmpfiles too.
 
  - Spiff up the contributed CGI program?
+
+ - Autoloader/mtx support? Need somonewho has one to do this
 
  - Split main program; use separate libs for archiver types that are stored
    in different files?  downside: install then requires more than just program + conf file.
