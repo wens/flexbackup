@@ -2888,7 +2888,7 @@ sub toc_routine {
 	foreach $dir (sort bynumber keys %disk_files) {
 	    if ($dir eq $desired) {
 		$found = 1;
-		&log("File  Contents    (tape index $dir)");
+		&log("File  Contents    (dir index $dir)");
 		&log("-" x $length);
 		foreach $file (sort keys %{$disk_files{$dir}}) {
 		    $_ = sprintf("%-04s",$file);
