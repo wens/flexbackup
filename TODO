@@ -41,12 +41,23 @@ Misc:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
 
 Features to add:
+ - Add a "-test-drive" switch that write a couple known pieces of data to tape
+     and then reads & compares.  Shoudl help people having drive, blksize etc. 
+     problems that aren't related to the rest of the program
+
+     will do this post 1.0
+
  - Some "level" that uses rpm, verifies all packages, and just backs
       up any file not in a package OR changed from a package. and the rpm list.
       once the above works make it work for debian packages
 
       Will do this post 1.0
 
+ - Have an mt op. overide in the config (tell = status for debugging, platform
+     specific junk).  just act like path stuff does now.
+     
+     Will do this post 1.0
+     
  - Handle multi-volume backups (original idea w/ 'multibuf' never panned out)
 
       Found "multivol" program solution!  It also used a slightly different
@@ -68,11 +79,10 @@ Features to add:
        zip nope
       will hose indexes - no index on second volume
       what about read/restore?
-
-- If we detect an error and are using tapes, do seomthing intelligent with
+ - If we detect an error and are using tapes, do seomthing intelligent with
      to reposition tape, add another filmark etc to get tape to known state
      and avoid the maybe-error in the index & what 'nextfile" is on the tape
-- smbtar?
+ - smbtar?
      doable - overload type 'tar'. smbtar triggers with a fs spec of something like
                smb:user:pass@host/share:dir
      smbtar has "files newer than" option, test
