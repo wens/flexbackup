@@ -3212,7 +3212,7 @@ sub optioncheck {
     if (($main::mode !~ m/^(list|extract|restore|compare|test-tape-drive)$/) and
 	($cfg::indexes eq "true")) {
 	tie(%main::index,"AnyDBM_File",$cfg::index,O_CREAT|O_RDWR,0640) or
-	    push(@main::errors,"Can't tie DB $cfg::index: $OS_ERROR");
+	    push(@main::errors,"Can't tie DB $cfg::index");
     }
 
     # Test
