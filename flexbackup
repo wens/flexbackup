@@ -237,18 +237,24 @@ sub backup_routine {
     my $logext = '';
     my $comp_cmd;
     my $tape_key;
+    my $logsuffix = '';
 
     # Get rid of trailing /
     $main::opt{'fs'} = &nuke_trailing_slash($main::opt{'fs'});
 
-
     # Figure out log file name & empty log file
     $label = &get_label($main::opt{'fs'});
-    if ($cfg::staticlogs eq 'true' ) {
-	$logfile = "$cfg::prefix$label.$main::level";
-    } else {
-	$logfile = "$cfg::prefix$label.$main::level.$main::date";
+
+    if ($cfg::staticlogs eq 'false' ) {
+	$logsuffix = ".$main::date";
     }
+
+    if (!defined($main::incremental_all)) {
+	$logfile = "$cfg::prefix$label.$main::level" . $logsuffix;
+    } else {
+	$logfile = "$cfg::prefix$label.incremental" . $logsuffix;
+    }
+
     $symlink = "$cfg::prefix$label.latest";
     $main::log = "$cfg::logdir/$logfile";
     if (! open(LOG,">$main::log")) {
@@ -262,21 +268,38 @@ sub backup_routine {
 
     # Remember old log files (will remove at end of job)
     # ("old" = any higher- or equal-numbered logs for this label)
-    opendir(DIR,"$cfg::logdir") or die("Can't open cfg::logdir: $OS_ERROR");
-    @files = readdir(DIR);
-    foreach (reverse sort @files) {
-	next if (m/^$logfile(\.gz|\.bz2|\.Z)?$/);
-	next if (! m/^$cfg::prefix$label\.(\d+)(\.(\d+))?(\.gz|\.bz2|\.Z)?$/);
-	if ($1 >= $main::level) {
-	    # Might be from $staticlogs=true or false
-	    if (defined($3)) {
-		$oldlogs{"$cfg::logdir/$_"} = $1 . "|" . $3;
-	    } else {
-		$oldlogs{"$cfg::logdir/$_"} = $1;
+    if (!defined($main::incremental_all)) {
+	opendir(DIR,"$cfg::logdir") or die("Can't open cfg::logdir: $OS_ERROR");
+	@files = readdir(DIR);
+	foreach (reverse sort @files) {
+
+	    # Skip our own log
+	    next if (m/^$logfile(\.gz|\.bz2|\.Z)?$/);
+
+	    # Find normal old logs
+	    if (m/^$cfg::prefix$label\.(\d+)(\.(\d+))?(\.gz|\.bz2|\.Z)?$/) {
+		if ($1 >= $main::level) {
+		    # Might be from $staticlogs=true or false
+		    if (defined($3)) {
+			$oldlogs{"$cfg::logdir/$_"} = $1 . "|" . $3;
+		    } else {
+			$oldlogs{"$cfg::logdir/$_"} = $1;
+		    }
+		}
+	    }
+
+	    # If this is a level 0, we can nuke incremental logs
+	    if (($main::level == 0) and (m/^$cfg::prefix$label\.(incremental)(\.(\d+))?(\.gz|\.bz2|\.Z)?$/)) {
+		# Might be from $staticlogs=true or false
+		if (defined($3)) {
+		    $oldlogs{"$cfg::logdir/$_"} = $1 . "|" . $3;
+		} else {
+		    $oldlogs{"$cfg::logdir/$_"} = $1;
+		}
 	    }
 	}
+	close(DIR);
     }
-    close(DIR);
 
 
     ##########################
@@ -285,7 +308,11 @@ sub backup_routine {
     #
     ##########################
     # Spew some info
-    &log("| Doing level $main::level backup of $main::opt{fs} using $cfg::type");
+    if (!defined($main::incremental_all)) {
+	&log("| Doing level $main::level backup of $main::opt{fs} using $cfg::type");
+    } else {
+	&log("| Doing incremental backup of all using $cfg::type");
+    }
 
     if ($main::opt{'fs'} eq 'all') {
 
@@ -317,7 +344,7 @@ sub backup_routine {
 	    }
 
 	    # Multiple tapes are only for level 0
-	    if ($main::level == 0) {
+	    if (!defined($main::incremental_all) and ($main::level == 0)) {
 		&log("| Tape \#$tapecounter");
 	    }
 
@@ -331,19 +358,27 @@ sub backup_routine {
 	    }
 
 	    # Iterate over the filesystems and back 'em up
-	    foreach $fs (split(/\s+/,$list)) {
+	    foreach my $fs (split(/\s+/,$list)) {
+
+		my $level;
 
 		# Get rid of trailing /
 		$fs = &nuke_trailing_slash($fs);
 
-		&backup($fs,$tape_key);
+		if (!defined($main::incremental_all)) {
+		    $level = $main::level;
+		} else {
+		    $level = &get_incremental_level($fs);
+		}
+
+		&backup($fs, $tape_key, $level);
 		if ($cfg::indexes eq "true") {
 		    $main::nextfile++;
 		}
 	    }
 
 	    # Prompt for new tape if more than one set in list & level 0
-	    if ($main::level == 0) {
+	    if (!defined($main::incremental_all) and ($main::level == 0)) {
 		if ($tapecounter < $main::num_tapes) {
 
 		    # Maybe rewind (usually true)
@@ -410,7 +445,7 @@ sub backup_routine {
 	    &mt('generic-query');
 	}
 
-	&backup($main::opt{'fs'},$tape_key);
+	&backup($main::opt{'fs'}, $tape_key, $main::level);
 
     } # end all or single fs
 
@@ -478,6 +513,7 @@ sub backup {
 
     my $dir = shift(@_);
     my $tape_key = shift(@_);
+    my $level = shift(@_);
     my $title;
     my $title_without_type;
     my @cmds;
@@ -512,7 +548,7 @@ sub backup {
     @files = readdir(DIR);
     foreach (reverse sort @files) {
 	next if (! m/^$cfg::sprefix$label\.(\d+)$/);
-	if ($1 > $main::level) {
+	if ($1 > $level) {
 	    $oldstamps{"$cfg::stampdir/$_"} = $1
 	}
     }
@@ -525,9 +561,9 @@ sub backup {
 	my $filename;
 
 	if ($cfg::staticfiles eq 'true') {
-	    $filename = $main::level . "." . $cfg::type;
+	    $filename = $level . "." . $cfg::type;
 	} else {
-	    $filename = $main::level . "." . $main::date . "." . $cfg::type;
+	    $filename = $level . "." . $main::date . "." . $cfg::type;
 	}
 
 	if ($cfg::type =~ m/^(tar|dump|cpio)$/) {
@@ -560,8 +596,8 @@ sub backup {
     chomp($host = `hostname`);
     $_ = $cfg::type . "+" . $cfg::compress;
     $_ =~ s/\+false//;
-    $title = "level $main::level $dir $main::date_at_start $_ from $host";
-    $title_without_type = "level $main::level $dir $main::date_at_start from $host";
+    $title = "level $level $dir $main::date_at_start $_ from $host";
+    $title_without_type = "level $level $dir $main::date_at_start from $host";
 
     # Modify table of contents
     if (($tape_key ne '')
@@ -588,13 +624,13 @@ sub backup {
 
     &log("| Backup of: $dir");
     if ($cfg::type eq 'dump') {
-	@cmds = &backup_dump($label,$localdir);
+	@cmds = &backup_dump($label, $localdir, $level);
     } elsif ($cfg::type eq 'afio') {
-	@cmds = &backup_afio($label,$localdir,$title);
+	@cmds = &backup_afio($label, $localdir, $title, $level);
     } elsif ($cfg::type eq 'tar') {
-	@cmds = &backup_tar($label,$localdir,$title);
+	@cmds = &backup_tar($label, $localdir, $title, $level);
     } elsif ($cfg::type eq 'cpio') {
-	@cmds = &backup_cpio($label,$localdir,$title);
+	@cmds = &backup_cpio($label, $localdir, $title, $level);
     }
 
     # Strip multiple spaces
@@ -649,7 +685,7 @@ sub backup {
     &log("| Backup start: $main::date_at_start");
     &log("| Backup end:   $_");
     if (!defined($main::opt{'n'})) {
-	system("$main::path{touch} $main::touch_flag \"$main::date_at_start\" $cfg::stampdir/$cfg::sprefix$label.$main::level");
+	system("$main::path{touch} $main::touch_flag \"$main::date_at_start\" $cfg::stampdir/$cfg::sprefix$label.$level");
     }
 
     &line();
@@ -671,10 +707,17 @@ sub backup_dump {
 
     my $label = shift(@_);
     my $dir = shift(@_);
+    my $level = shift(@_);
     my $cmd = '';
     my @cmds;
     my $tmpstamp = "$cfg::tmpdir/refdate.$$";
     my $date_flag;
+
+
+    # Need this check here in case fs=all, level=incremental, and we go beyond 9
+    if ($level > 9) {
+	die("Can't use level > 9 and type=dump");
+    }
 
     # Warnings
     if (defined($cfg::exclude_expr[0])) {
@@ -686,16 +729,16 @@ sub backup_dump {
 
     # With this one we don't have to put a stampfile on the remote system
     # since we only need the date string
-    if ($main::level == 0) {
+    if ($level == 0) {
 	&get_last_date($label, 0); # Just to print dates, don't need result
 	$date_flag = "";
     } else {
-	$_ = &get_last_date($label, $main::level);
+	$_ = &get_last_date($label, $level);
 	$date_flag = "-T \"$_\" ";
     }
 
     $cmd = '';
-    $cmd .= "dump -$main::level ";
+    $cmd .= "dump -$level ";
     $cmd .= "$main::dump_blk_flag ";
     if ($cfg::dump_use_dumpdates eq "true") {
 	$cmd .= "-u ";
@@ -730,6 +773,7 @@ sub backup_afio {
     my $label = shift(@_);
     my $dir = shift(@_);
     my $title = shift(@_);
+    my $level = shift(@_);
     my $cmd = '';
     my @cmds;
     my $tmpstamp = "$cfg::tmpdir/refdate.$$";
@@ -738,7 +782,7 @@ sub backup_afio {
     my $remove;
     my $no_compress = '';
 
-    $_ = &get_last_date($label, $main::level);
+    $_ = &get_last_date($label, $level);
 
     $cmd = "$main::path{touch} $main::touch_flag \"$_\" $tmpstamp";
     push(@cmds, &maybe_remote_cmd($cmd));
@@ -801,11 +845,12 @@ sub backup_cpio {
     my $label = shift(@_);
     my $dir = shift(@_);
     my $title = shift(@_);
+    my $level = shift(@_);
     my $cmd = '';
     my @cmds;
     my $tmpstamp = "$cfg::tmpdir/refdate.$$";
 
-    $_ = &get_last_date($label, $main::level);
+    $_ = &get_last_date($label, $level);
 
     $cmd = "$main::path{'touch'} $main::touch_flag \"$_\" $tmpstamp";
     push(@cmds, &maybe_remote_cmd($cmd));
@@ -857,11 +902,12 @@ sub backup_tar {
     my $label = shift(@_);
     my $dir = shift(@_);
     my $title = shift(@_);
+    my $level = shift(@_);
     my $cmd = '';
     my @cmds;
     my $tmpstamp = "$cfg::tmpdir/refdate.$$";
 
-    $_ = &get_last_date($label, $main::level);
+    $_ = &get_last_date($label, $level);
 
     $cmd = "$main::path{'touch'} $main::touch_flag \"$_\" $tmpstamp";
     push(@cmds, &maybe_remote_cmd($cmd));
@@ -1205,7 +1251,7 @@ sub get_last_date {
 	    $string_val = strftime("%a %b %d %H:%M:%S %Y", localtime($mtime));
 	    $numeric_val = strftime("%Y%m%d%H%M.%S", localtime($mtime));
 	} else {
-	    die("Can't do a level $main::level backup - no level 0 timestamp found");
+	    die("Can't do a level $thislevel backup - no level 0 timestamp found");
 	}
 
     }
@@ -1755,6 +1801,7 @@ sub optioncheck {
 
     # Check for type of touch flag
     # Only GNU fileutils has the touch -d flag
+    # We could use touch -t globally but pre-4.0 fileutils had bug with touch -t
     if ($main::uname =~ /Linux/) {
 	$main::touch_flag = "-d";
     } else {
@@ -1948,57 +1995,37 @@ sub optioncheck {
 	    push(@main::errors,"-level must be numeric, or full/differential/incremental");
 	}
 
-	# Change full/incr/diff to level number
+	# Check for digits or change full/diff to level number
+	# Incremental + fs=all we have to handle later since it might be
+	# different for each fs
 	if ($main::opt{'level'} =~ m/^\d+$/) {
 	    # Make string variable numeric
 	    $main::level = POSIX::strtod($main::opt{'level'});
+	    if (($cfg::type eq 'dump') and ($main::level > 9)) {
+		push(@main::errors,"can't use level > 9 and type=dump");
+	    }
 	} elsif ($main::opt{'level'} eq "full") {
 	    $main::level = 0;
 	} elsif ($main::opt{'level'} eq "differential") {
 	    $main::level = 1;
 	} elsif ($main::opt{'level'} eq "incremental") {
 
-	    # Find last stamp file, add one to the level
-	    opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $OS_ERROR");
-	    my @files = readdir(DIR);
-	    my $highestlevel = 0;
-
-	    # FIXME
-	    #
-	    # $label not defined at this point. In order to get it, we need the fs label.
-	    # but it might have been 'all', in which case the latest level per fs might
-	    # all be different numbers.
-	    #
-	    # ACK! we also need to do this in the backup() sub.  but by that point we already
-	    # used the logfile etc; which means we needed the level number already.  chicken, egg.
-	    #
-	    # Can't use a global $main::level anymore either!
-	    #
-	    # Just use -fs flag now, incremental will be broken for 'all' till I figure a solution.
-	    if (defined($main::opt{'fs'}))  {
-		if ($main::opt{'fs'} ne 'all') {
-		    my $label = &get_label($main::opt{'fs'});
-		    foreach my $file (reverse sort @files) {
-			next if ($file !~ m/^$cfg::sprefix$label\.(\d+)$/);
-			if ($1 > $highestlevel) {
-			    $highestlevel = $1;
-			}
-		    }
-		    close(DIR);
-		    $main::level = $highestlevel + 1;
-		} else {
-		    push(@main::errors,"-level incremental is broken when fs=all");
+	    # If incremental + one fs, we can find the level now.
+	    if (defined($main::opt{'fs'}) and ($main::opt{'fs'} ne 'all')) {
+		$main::level = &get_incremental_level($main::opt{'fs'});
+		if (($cfg::type eq 'dump') and ($main::level > 9)) {
+		    push(@main::errors,"can't use level > 9 and type=dump");
 		}
 	    } else {
-		push(@main::errors,"-level incremental is broken when fs=all");
+		# If we are doing 'all', have to postpone till later; each
+		# fs might have a different level...
+		undef $main::level;
+		$main::incremental_all = 1;
 	    }
 
 	}
 
-	if (($cfg::type eq 'dump') and ($main::level > 9)) {
-	    push(@main::errors,"can't use level > 9 and type=dump");
-	}
-    }
+    } # levels
 
     # Check toc/rmindex flags
     if (defined($main::opt{'toc'}) or defined($main::opt{'rmindex'})) {
@@ -2282,8 +2309,8 @@ sub checkinpath {
 		}
 	    }
 
-            push(@main::errors,"$cfg::path{$file} not found in \$PATH");
-            return(0);
+	    push(@main::errors,"$cfg::path{$file} not found in \$PATH");
+	    return(0);
 
 	}
 
@@ -2297,8 +2324,8 @@ sub checkinpath {
 	    }
 	}
 
-        push(@main::errors,"$file not found in \$PATH");
-        return(0);
+	push(@main::errors,"$file not found in \$PATH");
+	return(0);
     }
 
 }
@@ -2472,7 +2499,7 @@ sub set_tape_operation_defaults {
     # Assume stuff based on how we are called first
     if (defined($main::opt{'fs'})) {
 	if ($main::opt{'fs'} eq 'all') {
-	    if ($main::level == 0) {
+	    if (!defined($main::incremental_all) and ($main::level == 0)) {
 		# All level zero - retension, and erase a new tape
 		# (config file may tell us not to erase)
 		if ($cfg::erase_tape_all_level_zero eq "true") {
@@ -3061,4 +3088,31 @@ sub maybe_delete_old_index {
 ######################################################################
 sub bynumber {
     $a <=> $b;
+}
+
+
+######################################################################
+# Figure out numeric level for '-level incremental', for a certain fs.
+# Try to find last the stamp file, then add one to the level
+######################################################################
+sub get_incremental_level {
+
+    my $fs = shift(@_);
+
+    my $label = &get_label($fs);
+    my $highestlevel = 0;
+
+    opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $OS_ERROR");
+    foreach my $file (readdir(DIR)) {
+	next if ($file !~ m/^$cfg::sprefix$label\.(\d+)$/);
+	if ($1 > $highestlevel) {
+	    $highestlevel = $1;
+	}
+    }
+    close(DIR);
+
+    $highestlevel++;
+
+    return($highestlevel);
+
 }
