@@ -3,8 +3,9 @@ Name: flexbackup
 %define version 0.9.4
 Version: %{version}
 Release: 1
-Source: http://members.home.net/edwinh/flexbackup/flexbackup-%{version}.tar.gz
-Url: http://members.home.net/edwinh/flexbackup/
+Packager: Edwin Huffstutler <edwinh+flexbackup@computer.org>
+Source: http://members.home.com/edwinh/flexbackup/flexbackup-%{version}.tar.gz
+Url: http://members.home.com/edwinh/flexbackup/
 Copyright: GPL
 Group: Applications/Archiving
 BuildRoot: /var/tmp/flexbackup-root

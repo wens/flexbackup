@@ -2,6 +2,9 @@ Flexbackup to-do list as of version 0.9.4
 
 Some of these might not happen, but figured I should jot them down
 
+ - test file-based + multiple tapes (get rid of prompt)
+
+
 Features:
  - exclude regexp's
      dump won't be able to do this
@@ -26,12 +29,14 @@ Features:
  - remote extract/compare/restore
      possible at all?
      just install s/w on client w/remote tape device. need config file option
- - GUI driver/configurator utility
-     "linux backup" util looked like the right kind of interface
-     http://mirrors.darkelf.net. contact author.
+ - Gnome driver/configurator utility
+     I have a "picture" of what I want this to look like
+     use glade + libglade perl bindings
+     will be a seperate program that just manipulates flexbackup
  - cd-rom burning (or just .iso type?) for full backups?
 
 Cleanup/fix:
+ - remove old logs only after success. timestamps stay where they are.
  - mt takes an array of commands.  clean up calls to it.
  - use -print0 and make cpio,tar,afio use null terminated lists
  - resurrect my old drive and test ftape stuff again

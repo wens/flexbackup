@@ -111,6 +111,8 @@ chomp($main::uname = `uname -s`);
 # Get current date string
 $main::date = &current_time("short");
 
+&line();
+
 # Set tape blocksize
 &mt("generic-blksize $main::mt_blksize");
 
@@ -158,18 +160,13 @@ sub backup_routine {
     my $label;
     my $list;
     my $tapecounter = 0;
+    my $olddate;
 
     # Get backup level...
     if (defined($main::opt{'level'})) {
         $main::level = $main::opt{'level'};
     } else {
         $main::level = 0;
-    }
-
-    # Die if no fs specified
-    if (!defined($main::opt{'fs'})) {
-        &usage();
-        exit(0);
     }
 
     # Figure out log file name & empty log file
@@ -179,20 +176,6 @@ sub backup_routine {
         die "Can't write to $main::log: $OS_ERROR\n";
     }
     close(LOG);
-
-    # Remove old log files
-    # ("old" = any higher-numbered logs for this label)
-    opendir(DIR,"$cfg::logdir") or die("Can't open cfg::logdir: $OS_ERROR\n");
-    @files = readdir(DIR);
-    foreach (reverse sort @files) {
-        next if (! m/^$cfg::prefix$label\.([0-9])\.([0-9]+)(\.gz|\.bz2)?$/);
-        my $olddate = $2;
-        if ($1 > $main::level) {
-            print "Removing old level $1 log of $main::opt{fs} ($olddate)\n";
-            unlink("$cfg::logdir/$_") or warn("Can't remove $_: $OS_ERROR\n");
-        }
-    }
-    close(DIR);
 
     # Remove old stamp files
     # ("old" = any higher-numbered stamps for this label)
@@ -215,8 +198,8 @@ sub backup_routine {
     ##########################
     # Spew some info
     $_ = &current_time();
-    &log("Current time: $_");
-    &log("Doing level $main::level backup of $main::opt{fs} using $cfg::type");
+    &log("| Current time: $_");
+    &log("| Doing level $main::level backup of $main::opt{fs} using $cfg::type");
 
     if ($main::opt{'fs'} eq 'all') {
 
@@ -226,41 +209,38 @@ sub backup_routine {
 
             if ($main::level eq "0") {
 
-                &log("Tape \#$tapecounter filesystems = $list");
+                &log("| Tape \#$tapecounter filesystems = $list");
 
                 # All
                 # Level zero - rewind and erase a new tape
                 if (!defined($main::opt{'noreten'})) {
-                    &log('Retensioning tape...');
+                    &log('| Retensioning tape...');
                     &mt('retension');
                 }
                 if (!defined($main::opt{'noerase'})) {
-                    &log('Rewinding & erasing tape...');
-                    &mt('rewind');
-                    &mt('erase');
                     $main::nextfile = 0;
+                    &log('| Rewinding & erasing tape...');
+                    &mt('rewind','erase');
                 }
 
             } else {
 
-                &log("Filesystems = $list");
+                &log("| Filesystems = $list");
 
                 # All
                 # Incremental backup - list what's on it, then go to end of tape
                 if (!defined($main::opt{'erase'})) {
                     $main::nextfile = &contents();
-                    &log('Making sure tape is at end of data...');
+                    &log('| Making sure tape is at end of data...');
                     &mt('generic-eod');
                 } else {
                     $main::nextfile = 0;
-                    &log('Rewinding & erasing tape...');
-                    &mt('rewind');
-                    &mt('erase');
+                    &log('| Rewinding & erasing tape...');
+                    &mt('rewind','erase');
                 }
             }
 
             # Show tape position
-            &line();
             &mt('generic-query');
 
             # Iterate over the filesystems and back 'em up
@@ -276,21 +256,24 @@ sub backup_routine {
 
                     # Rewind
                     &line();
-                    &log("Rewinding...");
+                    &log("| Rewinding...");
                     &mt('rewind');
 
                     &update_toc();
 
                     $tapecounter++;
-                    print "\n---> Insert tape \#$tapecounter\n";
-                    $_ = <STDIN>;
+#                    if (defined$main::use_file)) {
+                        print "\n---> Insert tape \#$tapecounter\n";
+                        $_ = <STDIN>;
+                        print "\n";
+#                    }
                }
             }
         }
 
         # Rewind
         &line();
-        &log("Rewinding...");
+        &log("| Rewinding...");
         &mt('rewind');
 
         &update_toc();
@@ -301,17 +284,16 @@ sub backup_routine {
 	&line();
 
         if (defined($main::opt{'reten'})) {
-            &log('Retensioning tape...');
+            &log('| Retensioning tape...');
             &mt("retension");
         }
         if (defined($main::opt{'erase'})) {
             $main::nextfile = 0;
-            &log('Rewinding & erasing tape...');
-            &mt('rewind');
-            &mt('erase');
+            &log('| Rewinding & erasing tape...');
+            &mt('rewind','erase');
         } else {
             $main::nextfile = &contents();
-            &log('Making sure tape is at end of data...');
+            &log('| Making sure tape is at end of data...');
             &mt('generic-eod');
         }
         &line();
@@ -321,7 +303,7 @@ sub backup_routine {
         &log("Rewinding...");
         &mt('rewind');
         if ($cfg::ftape eq 'true') {
-            &log('Updating table of contents...');
+            &log('| Updating table of contents...');
             &tag($main::nextfile,"$cfg::type $main::opt{'fs'} ($main::level)");
         }
     }
@@ -331,13 +313,28 @@ sub backup_routine {
 
     # compress log file
     if ($cfg::comp_log ne 'false') {
-        print "Compressing log file ($main::log)\n";
+        print "| Compressing log file ($main::log)\n";
         system("$cfg::comp_log -f $main::log");
         if ($CHILD_ERROR) {
             warn("error compressing log file\n");
         }
     }
 
+    # Remove old log files
+    # ("old" = any higher-numbered logs for this label)
+    opendir(DIR,"$cfg::logdir") or die("Can't open cfg::logdir: $OS_ERROR\n");
+    @files = readdir(DIR);
+    foreach (reverse sort @files) {
+        next if (! m/^$cfg::prefix$label\.([0-9])\.([0-9]+)(\.gz|\.bz2)?$/);
+        $olddate = $2;
+        if ($1 > $main::level) {
+            print "| Removing old level $1 log of $main::opt{fs} ($olddate)\n";
+            unlink("$cfg::logdir/$_") or warn("Can't remove $_: $OS_ERROR\n");
+        }
+    }
+    close(DIR);
+
+    &line();
     exit(0);
 
 }
@@ -396,19 +393,22 @@ sub tag {
 sub backup {
 
     my $dir = shift(@_);
+    my @cmds;
     my $cmd;
-    my $tapehost;
-    my $remote;
     my $localdir = $dir;
     my $label = &get_label($dir);
 
     &line();
 
     if ($localdir =~ s/^(.+):(.+)$/$2/) {
-	$remote = $1;
-	chomp($tapehost = `hostname`);
+	$main::remote = $1;
+	chomp($main::tapehost = `hostname`);
+        if ($main::tapehost eq $main::remote) {
+            die("Remote host and this host are the same! no banana for you!");
+        }
+
     } else {
-        $remote = '';
+        $main::remote = '';
     }
 
     # Create file name if writing to a file
@@ -438,13 +438,13 @@ sub backup {
     $main::date_at_start = &current_time();
 
     if ($cfg::type eq 'dump') {
-	$cmd = &backup_dump($label,$localdir,$remote,$tapehost);
+	@cmds = &backup_dump($label,$localdir);
     } elsif ($cfg::type eq 'afio') {
-	$cmd = &backup_afio($label,$localdir,$remote,$tapehost);
+	@cmds = &backup_afio($label,$localdir);
     } elsif ($cfg::type eq 'tar') {
-	$cmd = &backup_tar($label,$localdir,$remote,$tapehost);
+	@cmds = &backup_tar($label,$localdir);
    } elsif ($cfg::type eq 'cpio') {
-	$cmd = &backup_cpio($label,$localdir,$remote,$tapehost);
+	@cmds = &backup_cpio($label,$localdir);
     }
 
     # If we started with level 0, and "all", and -noerase not given,
@@ -456,29 +456,35 @@ sub backup {
         ($cfg::ftape eq "true")
         or
         ($main::opt{'erase'})) {
-        &log("This will be file number $main::nextfile");
+        &log("| This will be file number $main::nextfile");
     }
 
     # Enough fooling around... run it
-    &log("$cmd");
+    foreach (@cmds) {
+        &log("| $_");
+    }
     &line();
     if (!defined($main::opt{'n'})) {
-        system("($cmd) 2>&1 | tee -a $main::log");
-        if ($CHILD_ERROR) {
-            &log("$cfg::type: error from backup, exiting....\n");
-            exit(1);
+        foreach $cmd (@cmds) {
+            system("$cmd 2>&1 | tee -a $main::log");
+            if ($CHILD_ERROR) {
+                &log("$cfg::type: error from backup, exiting");
+                &log("offending command: $cmd");
+                exit(1);
+            }
         }
     } else {
         &log("(debug) command output would be here");
     }
+    &line();
 
     # Create timestamp file, but use date from before the backup started
     # so next time we will catch files that might have been toucehd during the run
-    &line();
-    &log("Timestamp $cfg::stampdir/$cfg::sprefix$label.$main::level: $main::date_at_start");
-    system("touch -t $main::date_at_start $cfg::stampdir/$cfg::sprefix$label.$main::level");
     $_ = &current_time();
-    &log("Current time: $_");
+    &log("| Timestamp $cfg::sprefix$label.$main::level: $main::date_at_start");
+    &log("| Current time: $_");
+    system("touch -t $main::date_at_start $cfg::stampdir/$cfg::sprefix$label.$main::level");
+    &line();
 
     # tar is causing me fits; mt right after archive operations is giving i/o errors
     if ($cfg::type eq 'tar') {
@@ -486,7 +492,6 @@ sub backup {
     }
 
     # Show where we are on the tape
-    &line();
     &mt('generic-query');
 
 }
@@ -498,40 +503,33 @@ sub backup_dump {
 
     my $label = shift(@_);
     my $dir = shift(@_);
-    my $remote = shift(@_);
-    my $tapehost = shift(@_);
-    my $cmd = '';
-    my $tmpstamp;
-    my $length = $cfg::dump_length;
+    my @cmds;
+    my $archive_cmd;
+    my $tmpstamp = "/tmp/refdate.$label";
+    my $len_flag = $cfg::dump_length;
 
-    if ($remote) {
-        $cmd .= "$cfg::remoteshell $remote \'";
-    }
+    $_ = &get_last_date($label);
+    push(@cmds,&possibly_remote_command("touch -t $_ $tmpstamp"));
 
-    if ($length eq "0") {
-        $length = "-a";
+    $archive_cmd  = "dump -$main::level ";
+    $archive_cmd .= "-b $cfg::blksize ";
+    $archive_cmd .= "-u ";
+    $archive_cmd .= "$main::dump_len_flag ";
 
-    } else {
-        $length = "-B $cfg::dump_length";
-    }
-
-    $cmd .= "dump -$main::level -u $length -b $cfg::blksize";
-
-    if ($remote) {
+    if ($main::remote) {
         if ($cfg::remoteshell =~ /ssh/) {
-            $cmd .= " -f - $dir | ssh $tapehost \"dd of=$cfg::device bs=$main::dd_blksize\"";
+            $archive_cmd .= "-f - $dir | ssh $main::tapehost \"dd of=$cfg::device bs=$main::dd_blksize\"";
         } else {
-            $cmd .= " -f $tapehost:$cfg::device $dir";
+            $archive_cmd .= "-f $main::tapehost:$cfg::device $dir";
         }
     } else {
-        $cmd .= " -f $cfg::device $dir";
+        $archive_cmd .= "-f $cfg::device $dir";
     }
 
-    if ($remote) {
-        $cmd .= "\'";
-    }
+    push(@cmds,&possibly_remote_command($archive_cmd));
+    push(@cmds,&possibly_remote_command("rm -f $tmpstamp"));
 
-    return($cmd);
+    return(@cmds);
 
 }
 
@@ -542,43 +540,41 @@ sub backup_afio {
 
     my $label = shift(@_);
     my $dir = shift(@_);
-    my $remote = shift(@_);
-    my $tapehost = shift(@_);
-    my $cmd = '';
-    my $tmpstamp;
+    my @cmds;
+    my $archive_cmd;
+    my $tmpstamp = "/tmp/refdate.$label";
     my $double;
 
-    if ($remote) {
-	$cmd  .= "$cfg::remoteshell $remote \'";
-    }
+    $_ = &get_last_date($label);
+    push(@cmds,&possibly_remote_command("touch -t $_ $tmpstamp"));
 
-    if ($remote) {
+    # afio double buffering does not work w/ remote
+    if ($main::remote) {
 	$double = '';
     } else {
         $double = $main::afio_dbl_flag;
     }
 
-    $tmpstamp = "/tmp/refdate.$label";
-    $_ = &get_last_date($label);
-    $cmd .= "touch -t $_ $tmpstamp && ";
+    $archive_cmd  = "cd $dir && ";
+    $archive_cmd .= "find . -xdev -newer $tmpstamp ";
+    $archive_cmd .= "-print0 | ";
+    $archive_cmd .= "afio -o ";
+    $archive_cmd .= "-0 ";
+    $archive_cmd .= "-s $main::afio_length ";
+    $archive_cmd .= "-b $main::afio_blksize ";
+    $archive_cmd .= "-c $main::afio_buffer ";
+    $archive_cmd .= "$double $main::afio_z_flag $main::afio_verb_flag ";
 
-    $cmd .= "cd $dir && find . -xdev -newer $tmpstamp -print | ";
-
-    $cmd .= "afio -o -s $main::afio_length $main::afio_z_flag $double $main::afio_verb_flag -b $main::afio_blksize -c $main::afio_buffer";
-
-    if ($remote) {
-        $cmd .= " -B $tapehost%$cfg::remoteshell:$cfg::device";
+    if ($main::remote) {
+        $archive_cmd .= "-B $main::tapehost%$cfg::remoteshell:$cfg::device";
     } else {
-        $cmd .= " -B $cfg::device";
+        $archive_cmd .= "-B $cfg::device";
     }
 
-    $cmd .= " && rm -f $tmpstamp";
+    push(@cmds,&possibly_remote_command($archive_cmd));
+    push(@cmds,&possibly_remote_command("rm -f $tmpstamp"));
 
-    if ($remote) {
-        $cmd .= "\'";
-    }
-
-    return($cmd);
+    return(@cmds);
 
 }
 
@@ -589,43 +585,40 @@ sub backup_cpio {
 
     my $label = shift(@_);
     my $dir = shift(@_);
-    my $remote = shift(@_);
-    my $tapehost = shift(@_);
-    my $cmd = '';
-    my $tmpstamp;
+    my @cmds;
+    my $archive_cmd;
+    my $tmpstamp = "/tmp/refdate.$label";
 
-    if ($remote) {
-        $cmd .= "$cfg::remoteshell $remote \'";
-    }
-
-    $tmpstamp = "/tmp/refdate.$label";
     $_ = &get_last_date($label);
-    $cmd .= "touch -t $_ $tmpstamp && ";
+    push(@cmds,&possibly_remote_command("touch -t $_ $tmpstamp"));
 
-    $cmd .= "cd $dir && find . -xdev -newer $tmpstamp -print | ";
+    $archive_cmd  = "cd $dir && ";
+    $archive_cmd .= "find . -xdev -newer $tmpstamp ";
+    $archive_cmd .= "-print0 | ";
+    $archive_cmd .= "cpio -o ";
+    $archive_cmd .= "-0 ";
+    $archive_cmd .= "-H $cfg::cpio_format ";
+    $archive_cmd .= "-C $main::cpio_blksize ";
+    $archive_cmd .= "$main::cpio_verb_flag ";
 
-    $cmd .= "cpio -o $main::cpio_verb_flag -H $cfg::cpio_format -C $main::cpio_blksize";
-
-    if ($remote) {
+    if ($main::remote) {
         if ($cfg::remoteshell =~ /ssh/) {
-            $cmd .= " | $cfg::remoteshell $tapehost \"dd of=$cfg::device bs=$main::dd_blksize\"";
+            $archive_cmd .= "| $cfg::remoteshell $main::tapehost \"dd of=$cfg::device bs=$main::dd_blksize\"";
             if ($cfg::cpio_verbose eq "true") {
                 &log("Note \$cpio_verbose flag is ignored when using remote host over ssh");
             }
         } else {
-            $cmd .= " -F $tapehost:$cfg::device";
+            $archive_cmd .= "-F $main::tapehost:$cfg::device";
         }
     } else {
-        $cmd .= " -F $cfg::device";
+        $archive_cmd .= "-F $cfg::device";
     }
 
-    $cmd .= " && rm -f $tmpstamp";
+    push(@cmds,&possibly_remote_command($archive_cmd));
+    push(@cmds,&possibly_remote_command("rm -f $tmpstamp"));
 
-    if ($remote) {
-        $cmd .= "\'";
-    }
+    return(@cmds);
 
-    return($cmd);
 }
 
 ######################################################################
@@ -635,36 +628,34 @@ sub backup_tar {
 
     my $label = shift(@_);
     my $dir = shift(@_);
-    my $remote = shift(@_);
-    my $tapehost = shift(@_);
-    my $cmd = '';
-    my $tmpstamp;
+    my @cmds;
+    my $archive_cmd;
+    my $tmpstamp= "/tmp/refdate.$label";
 
-    if ($remote) {
-        $cmd .= "$cfg::remoteshell $remote \'";
-    }
-
-    $tmpstamp = "/tmp/refdate.$label";
     $_ = &get_last_date($label);
-    $cmd .= "touch -t $_ $tmpstamp && ";
+    push(@cmds,&possibly_remote_command("touch -t $_ $tmpstamp"));
 
-    $cmd .= "cd $dir && find . -xdev -newer $tmpstamp -print | ";
+    $archive_cmd  = "cd $dir && ";
+    $archive_cmd .= "find . -xdev -newer $tmpstamp ";
+    $archive_cmd .= "-print0 | ";
+    $archive_cmd .= "tar -c ";
+    $archive_cmd .= "-p ";
+    $archive_cmd .= "--null ";
+    $archive_cmd .= "-T - ";
+    $archive_cmd .= "-b $main::tar_blksize ";
+    $archive_cmd .= "-V \"$label\" ";
+    $archive_cmd .= "$main::tar_verb_flag $main::tar_z_flag ";
 
-    $cmd .= "tar -c -T - -p -V \"$label\" $main::tar_verb_flag $main::tar_z_flag -b $main::tar_blksize";
-
-    if ($remote) {
-        $cmd .= " --rsh-command $cfg::remoteshell -f $tapehost:$cfg::device";
+    if ($main::remote) {
+        $archive_cmd .= "--rsh-command $cfg::remoteshell -f $main::tapehost:$cfg::device";
     } else {
-        $cmd .= " -f $cfg::device";
+        $archive_cmd .= "-f $cfg::device";
     }
 
-    $cmd .= " && rm -f $tmpstamp";
+    push(@cmds,&possible_remote_command($archive_cmd));
+    push(@cmds,&possibly_remote_command("rm -f $tmpstamp"));
 
-    if ($remote) {
-        $cmd .= "\'";
-    }
-
-    return($cmd);
+    return(@cmds);
 
 }
 
@@ -695,15 +686,7 @@ sub list_routine {
 
     }
 
-    if (!defined($main::opt{'n'})) {
-        system($cmd);
-    } else {
-        &log("$cmd");
-    }
-
-    &line();
-    &mt('generic-query');
-    exit;
+    &run_or_echo_then_query_and_exit($cmd);
 
 }
 
@@ -733,15 +716,7 @@ sub extract_routine {
         $cmd = "cpio -i -m -d $main::cpio_verb_flag -H $cfg::cpio_format -C $main::cpio_blksize -F $cfg::device";
     }
 
-    if (!defined($main::opt{'n'})) {
-        system($cmd);
-    } else {
-        &log("$cmd");
-    }
-
-    &line();
-    &mt('generic-query');
-    exit;
+    &run_or_echo_then_query_and_exit($cmd);
 
 }
 
@@ -772,15 +747,7 @@ sub compare_routine {
 
     }
 
-    if (!defined($main::opt{'n'})) {
-        system($cmd);
-    } else {
-        &log("$cmd");
-    }
-
-    &line();
-    &mt('generic-query');
-    exit;
+    &run_or_echo_then_query_and_exit($cmd);
 
 }
 
@@ -804,15 +771,7 @@ sub restore_routine {
         die("Interactive restore for $cfg::type not implemented yet\n");
     }
 
-    if (!defined($main::opt{'n'})) {
-        system($cmd);
-    } else {
-        &log("$cmd");
-    }
-
-    &line();
-    &mt('generic-query');
-    exit;
+    &run_or_echo_then_query_and_exit($cmd);
 
 }
 
@@ -883,8 +842,8 @@ sub get_last_date {
 
     }
 
-    &log("Date of last level $lastlevel backup: $print_val");
-    &log("Date of this level $main::level backup: $main::date_at_start");
+    &log("| Date of last level $lastlevel backup: $print_val");
+    &log("| Date of this level $main::level backup: $main::date_at_start");
     &line();
     return($val);
 }
@@ -909,10 +868,10 @@ sub log {
 # Echo a line to both screen and log
 ######################################################################
 sub line {
-    print "---------------------------------------\n";
+    print "|-------------------------------------------\n";
     if (defined($main::log)) {
         open(LOG,">>$main::log");
-        print LOG "---------------------------------------\n";
+        print LOG "|-------------------------------------------\n";
         close(LOG);
     }
 }
@@ -958,72 +917,76 @@ sub readconfigfile {
 ######################################################################
 sub mt {
 
-    my $operation = shift(@_);
+    my (@operations) = (@_);
+    my $operation;
     my $oldoperation;
     my $out;
 
-    # mt & ftmt slightly different
-    if ($operation eq 'generic-query') {
-        if ($cfg::ftape eq 'true') {
-            $operation = 'getsize';
-        } else {
-            $operation = 'status';
-        }
-    }
-
-    # mt & ftmt slightly different
-    if ($operation eq 'generic-eod') {
-        if ($cfg::ftape eq 'true') {
-            $operation = 'eom';
-        } else {
-            $operation = 'eod';
-        }
-    }
-
-    # BSD mt is slightly different
-    if ($operation =~ /generic-blksize/) {
-        if ($main::uname =~ /BSD/) {
-            $operation =~ s/generic-blksize/blocksize/;
-        } else {
-            $operation =~ s/generic-blksize/setblk/;
-        }
-    }
-
-    if (defined($main::use_file)) {
-        &log("Archiving to file; \"mt $operation\" skipped");
-    } elsif (defined($main::opt{'n'})) {
-        &log("(debug) $main::mt -f $cfg::device $operation");
-    } else {
-
-        # Try and see which of setblksize/defblksize will work
-        # This is kludgy, but doable
-        chomp($out = `$main::mt -f $cfg::device $operation 2>&1`);
-        if ($CHILD_ERROR) {
-            &log("Trying \"mt defblksize\" instead of \"mt setblk\"");
-            $oldoperation = $operation;
-            $operation =~ s/setblk/defsetblk/;
-            chomp($out = `$main::mt -f $cfg::device $operation 2>&1`);
-            if ($CHILD_ERROR) {
-                &log("Error setting block size");
-                &log("Neither of these commands worked:");
-                &log("  $main::mt -f $cfg::device $oldoperation");
-                &log("  $main::mt -f $cfg::device $operation");
-                exit(1);
-
+    foreach $operation (@operations) {
+        # mt & ftmt slightly different
+        if ($operation eq 'generic-query') {
+            if ($cfg::ftape eq 'true') {
+                $operation = 'getsize';
+            } else {
+                $operation = 'status';
             }
         }
 
-        if (defined($main::log)) {
-            system("$main::mt -f $cfg::device $operation 2>&1 | tee -a $main::log");
-        } else {
-            system("$main::mt -f $cfg::device $operation 2>&1");
+        # mt & ftmt slightly different
+        if ($operation eq 'generic-eod') {
+            if ($cfg::ftape eq 'true') {
+                $operation = 'eom';
+            } else {
+                $operation = 'eod';
+            }
         }
 
-        if ($CHILD_ERROR) {
-            &log("Error from $main::mt $operation\n");
-            exit(1);
+        # BSD mt is slightly different
+        if ($operation =~ /generic-blksize/) {
+            if ($main::uname =~ /BSD/) {
+                $operation =~ s/generic-blksize/blocksize/;
+            } else {
+                $operation =~ s/generic-blksize/setblk/;
+            }
+        }
+
+        if (defined($main::use_file)) {
+            &log("| Archiving to file; \"mt $operation\" skipped");
+        } elsif (defined($main::opt{'n'})) {
+            &log("| (debug) $main::mt -f $cfg::device $operation");
+        } else {
+
+            # Try and see which of setblksize/defblksize will work
+            # This is kludgy, but doable
+            chomp($out = `$main::mt -f $cfg::device $operation 2>&1`);
+            if ($CHILD_ERROR) {
+                &log("Trying \"mt defblksize\" instead of \"mt setblk\"");
+                $oldoperation = $operation;
+                $operation =~ s/setblk/defsetblk/;
+                chomp($out = `$main::mt -f $cfg::device $operation 2>&1`);
+                if ($CHILD_ERROR) {
+                    &log("Error setting block size");
+                    &log("Neither of these commands worked:");
+                    &log("  $main::mt -f $cfg::device $oldoperation");
+                    &log("  $main::mt -f $cfg::device $operation");
+                    exit(1);
+
+                }
+            }
+
+            if (defined($main::log)) {
+                system("$main::mt -f $cfg::device $operation 2>&1 | tee -a $main::log");
+            } else {
+                system("$main::mt -f $cfg::device $operation 2>&1");
+            }
+
+            if ($CHILD_ERROR) {
+                &log("Error from $main::mt $operation\n");
+                exit(1);
+            }
         }
     }
+
 }
 
 ######################################################################
@@ -1071,8 +1034,12 @@ sub optioncheck {
     if (-c $cfg::device) {
         # ok
     } elsif (-d $cfg::device) {
-        $main::use_file = 1;
-        $cfg::device =~ s:/$::; # nuke trailing slash
+        if ($cfg::device !~ m:^[/\.]:) {
+            push(@main::errors,"Please give full path, not relative (\$device=$cfg::device)");
+        } else {
+            $main::use_file = 1;
+            $cfg::device =~ s:/$::; # nuke trailing slash if any
+        }
     } else {
         push(@main::errors,"\$device must be set to a directory or a device");
     }
@@ -1085,6 +1052,8 @@ sub optioncheck {
     &checkinpath('date');
     &checkinpath('hostname');
     &checkinpath('dd');
+    &checkinpath('rm');
+    &checkinpath('find');
 
     # can we write to it?
     if (! -w $cfg::device) {
@@ -1208,6 +1177,13 @@ sub optioncheck {
             push(@main::errors,"\$dump_length must be set to integer number of kilobytes");
         }
 
+        # If length set to 0 will will try autosize
+        if ($cfg::dump_length eq "0") {
+            $main::dump_len_flag = "-a";
+        } else {
+            $main::dump_len_flag = "-B $cfg::dump_length";
+        }
+
     } elsif ($cfg::type eq 'tar') {
 
         &checkinpath('tar');
@@ -1288,7 +1264,7 @@ sub optioncheck {
         push(@main::errors,"Can't specify more than one mode (given \"-$_\")");
     }
     if ($modecount == 0) {
-        push(@main::errors,"Nothing to do!");
+        push(@main::errors,"Nothing to do (see -help)");
     }
 
     # test
@@ -1339,7 +1315,7 @@ sub versionstring {
     if ($ver eq '') {
         $ver = "devel";
     }
-    return($ver);
+    return($ver . " <edwinh+flexbackup\@computer.org>");
 
 }
 
@@ -1475,5 +1451,40 @@ sub checkinpath {
     }
     push(@main::errors,"$file not found in \$PATH");
     return(0);
+
+}
+
+######################################################################
+# Run  a command, or echo it depending on the -n flag
+# Then show tape drive position and exit
+######################################################################
+sub run_or_echo_then_query_and_exit {
+
+    my $cmd = shift(@_);
+
+    if (!defined($main::opt{'n'})) {
+        system($cmd);
+    } else {
+        &log("$cmd");
+    }
+
+    &line();
+    &mt('generic-query');
+    exit(0)
+
+}
+
+######################################################################
+# REturn a command possibly wrapped in ssh/rsh
+######################################################################
+sub possibly_remote_command {
+
+    my $cmd = shift(@_);
+
+    if ($main::remote) {
+	$cmd  = "$cfg::remoteshell $main::remote \'$cmd\'";
+    }
+
+    return($cmd);
 
 }

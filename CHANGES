@@ -1,3 +1,16 @@
+Version
+
+New features:
+
+
+
+Bug fixes/cleanup:
+ - commands are an array
+ - mt takes multiple commands
+ - error if remote host and this host are the same
+ - error if device is dir and its relative
+
+---------------------------------------------------------------
 Version 0.9.4 (19990924)
 
 New features:

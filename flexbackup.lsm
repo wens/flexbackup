@@ -11,13 +11,13 @@ Features:
    o Full (0) and 1-9 levels of incremental backup
    o Filesystem-oriented (won't traverse devices)
    o Does remote filesystems (over rsh/ssh; no special service)
-   o Works with IDE/SCSI tapes on Linux/FreeBSD
-     or Linux ftape (allows table of contents support)
+   o Works with IDE/SCSI tapes on Linux/FreeBSD,
+     Linux ftape, or on-disk files
    o Nice log files
 Keywords:       backup dump restore afio tar cpio ftape
-Author:         edwinh@computer.org (Edwin Huffstutler)
-Maintained-by:  edwinh@computer.org (Edwin Huffstutler)
-Primary-site:   members.home.net /edwinh/flexbackup
+Author:         edwinh+flexbackup@computer.org (Edwin Huffstutler)
+Maintained-by:  edwinh+flexbackup@computer.org (Edwin Huffstutler)
+Primary-site:   members.home.com /edwinh/flexbackup
                 24k flexbackup-0.9.4.tar.gz
 Alternate-site: metalab.unc.edu /pub/linux/system/backup
                 24k flexbackup-0.9.4.tar.gz
