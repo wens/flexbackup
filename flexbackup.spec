@@ -42,7 +42,7 @@ make all
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/etc
 mkdir -p $RPM_BUILD_ROOT/usr/bin
-mkdir -p $RPM_BUILD_ROOT/var/state/flexbackup
+mkdir -p $RPM_BUILD_ROOT/var/lib/flexbackup
 mkdir -p $RPM_BUILD_ROOT/var/log/flexbackup
 install -m 0644 flexbackup.conf $RPM_BUILD_ROOT/etc/flexbackup.conf
 install -m 0755 fb.install $RPM_BUILD_ROOT/usr/bin/flexbackup
@@ -55,7 +55,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/bin/flexbackup
 %defattr(-,root,root)
 %doc CHANGES COPYING TODO README CREDITS flexbackup.lsm INSTALL
-%dir /var/state/flexbackup
+%dir /var/lib/flexbackup
 %dir /var/log/flexbackup
 %config /etc/flexbackup.conf
 

@@ -1,6 +1,13 @@
 $Id$
 $Name$
 
+Version 0.9.9 (200301XX)
+
+Bug Fixes:
+  - syntax with the -cnewer find addition
+
+
+----------------------------------------------------------------------
 Version 0.9.8.3 (20020824)
 
 Revive the tree
