@@ -8,6 +8,9 @@ Bug fixes:
   - Fix it for commands in ( .. ) subshells also (echo + find for afio
       volume header input for example)
 
+Cleanup:
+  - Don't do status collection work for non-pipelined remote commands
+
 ----------------------------------------------------------------------
 Version 1.0pre4 (20030121)
 

@@ -701,6 +701,7 @@ sub backup {
 
     # Replace piped commands with exit status collector if we need to
     foreach my $cmd (@cmds) {
+
 	if (defined($catchexit)) {
 
 	    # Save ssh commands temporarily so we don't replace pipes inside them
@@ -3087,26 +3088,34 @@ sub run_or_echo_then_query {
 }
 
 ######################################################################
-# Return a command possibly wrapped in ssh/rsh, or else just ()
+# Return a command possibly wrapped in ssh/rsh
 ######################################################################
 sub maybe_remote_cmd {
 
     my $cmd = shift(@_);
     my $host = shift(@_);
     my $quote = shift(@_);
+    my $is_pipeline = 0;
 
     if (!defined($quote)) {
 	$quote = "'";
     }
 
+    if ($cmd =~ m:\s+(\||&&)\s+:) {
+	$is_pipeline = 1;
+    }
+
     if (defined($host) and ($host ne '')) {
-	if ($main::shelltype{$host} eq 'bash2') {
+
+	# If remote shell is smart enough use pipeline exit detectors
+	if (($is_pipeline == 1) and ($main::shelltype{$host} eq 'bash2')) {
 	    $cmd  = "$main::remoteshell $host " . $quote . $cmd . $main::bash_pipe_exit . $quote;
-	} elsif ($main::shelltype{$host} eq 'zsh') {
+	} elsif (($is_pipeline == 1) and ($main::shelltype{$host} eq 'zsh')) {
 	    $cmd  = "$main::remoteshell $host " . $quote . $cmd . $main::zsh_pipe_exit . $quote;
 	} else {
 	    $cmd  = "$main::remoteshell $host " . $quote . $cmd . $quote;
 	}
+
     } else {
 	$cmd  = "$cmd";
     }
