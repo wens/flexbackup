@@ -1,6 +1,14 @@
 $Id$
 $Name$
 
+IN CVS but not released
+
+Bug fixes:
+  - Fix sh status collector for the front of remote commands
+  - Fix it for commands in ( .. ) subshells also (echo + find for afio
+      volume header input for example)
+
+----------------------------------------------------------------------
 Version 1.0pre4 (20030121)
 
 Bug Fixes:
