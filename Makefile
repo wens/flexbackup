@@ -45,8 +45,8 @@ rpm: version tar
 	rm $(RPM)/SRPMS/flexbackup-$(VER)-1.src.rpm
 
 rsync:
-	rsync --archive --verbose --delete $(SITE)/ edwinh.org:public_html/flexbackup
-	rsync --archive --verbose --delete $(SITE)/ flexbackup.sourceforge.net:/home/groups/f/fl/flexbackup/htdocs
+	rsync --archive --verbose --cvs-exclude --delete-excluded --delete $(SITE)/ edwinh.org:public_html/flexbackup
+	rsync --archive --verbose --cvs-exclude --delete-excluded --delete $(SITE)/ flexbackup.sourceforge.net:/home/groups/f/fl/flexbackup/htdocs
 
 upload: version lsm
 	test -e www/tarball/flexbackup-$(VER).tar.gz
