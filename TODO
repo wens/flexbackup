@@ -31,8 +31,7 @@ Misc:
      http://myezserver.com/downloads/mitel/howto/flexbackup-howto.html
      http://www.cyber-euskadi.com/howtos/contrib/flexbackup-restore-from-disk-howto.html
      how about french?  http://sgmf.free.fr/flexbackup_doc.html
- - Someone needs to put a bunch of stuff in a faq
-     Started... not much at this point
+   Better faq in the works
  - Try bfr? (buffer seems unmaintained; no O_LARGEFILE)
      Maybe document how to recompile buffer
      bfr looks like it will work.  will need dd too to block...

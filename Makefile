@@ -33,6 +33,7 @@ tar: version tag lsm
 	cp /tmp/flexbackup-$(VER)/CHANGES /tmp/flexbackup-$(VER)/README /tmp/flexbackup-$(VER)/TODO $(SITE)
 	./flexbackup -h > $(SITE)/usage.txt
 	cp ./flexbackup.conf $(SITE)/flexbackup.conf.txt
+	cd $(SITE); makefaq.py
 	rm -rf /tmp/flexbackup-$(VER)
 
 rpm: version tar
