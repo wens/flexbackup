@@ -14,18 +14,18 @@ Features:
    o Uses dump, afio, tar (gnu), cpio, star, pax, or zip archivers
    o Backup, list, compare, extract, extract list of files modes
    o Compression and buffering options for all backup types
-   o Full (0) and numbered levels of incremental backup (like "dump")
+   o Full and numbered levels of incremental backup (acts like "dump")
    o Keeps a table of contents so you know what's on each tape
    o Does remote filesystems (over rsh/ssh; no special service)
-   o Works with IDE/SCSI tapes, Linux ftape,
-     or archives to normal on-disk files rather than a device
+   o Works with IDE/SCSI tapes, or archives to normal on-disk files 
+       rather than a device
    o Nice log files
 
 Software needed:
    o perl
-   o fileutils, findutils
+   o fileutils, findutils (a "find" capable of using the -regex switch)
    o one or more of
-       dump/restore, afio, gnu tar, star, pax, cpio
+       dump/restore, afio, GNU tar, star, pax, cpio, zip
    o mt (if using tapes)
    o gzip, bzip2, or compress (optional)
    o buffer (optional) [needs patches for 2+GB file support]
