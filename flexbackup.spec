@@ -10,7 +10,6 @@ Copyright: GPL
 Group: Applications/Archiving
 BuildRoot: /var/tmp/flexbackup-root
 BuildArch: noarch
-Requires: mt-st
 Requires: gzip
 Requires: bzip2
 Requires: fileutils

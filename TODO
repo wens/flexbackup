@@ -16,7 +16,7 @@ Cleanup/fix:
  - when levels > 9 and using files, -toc sorts it wrong (cosmetic nit)
  - when levels > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
  - fix 'incremental' with fs=all.  non-trivial (see FIXME in code)
-
+ - try to use dump combined flags (for older dumps that want abc not -a -b -c)
 
 Misc:
  - make a manual page (or other enchanced doc)! too many options now :)
@@ -31,8 +31,10 @@ Misc:
 
 
 Features to add:
- - remote tape drive (rmt) support
+ - remote tape drive support
      0.9.8 patch from Caleb Crome <caleb@crome.org>
+     use ssh not rmt
+     could do remote dirs too...
  - non-root use (remote too)
     document sudo workaround from Alex
     maybe works using the path overrides I put in?
