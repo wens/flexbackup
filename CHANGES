@@ -1,7 +1,7 @@
 $Id$
 $Name$
 
-Version TBD
+Version 1.0pre1 (20030118)
 
 Changes:
   - Allow non-root execution along with "sudo". Set
