@@ -4,25 +4,19 @@ $Name$
 Flexbackup to-do list
 Some of these might not happen, but figured I should jot them down
 
-fix restore logs to not stomp on each other
 
-multiple -fs flags
+test everything again since it's been so long since I used it
 
-use && rather than ;
 
-dont continue if indexes true and the tape doesn't have an index.
+Fix so if backup errors out we know it (errors lost right now)
+Big command chain is the problem -need to trap errors.
 
 alternate paths to commands
   modify checkinpath
   modify all places that use the commands
 
-
 when using files
-  act like tapes!
-  make higher numbered level nuke lower ones & rm index
-  make index not have numbers, but filenames.
-  make -num give ignored message
-
+  make lower numbered level nuke higher ones & rm index?
 
 Features to add:
  - differential mode (all since previous higher level)
@@ -49,17 +43,14 @@ Features to add:
       up any file not in a package OR changed from a package. and the rpm list.
  - once the above works make it work for debian packages
  - add switch to remove all index entries for all tapes
+ - put .zip back in if I can make it behave
 
 
 Cleanup/fix:
- - zip/unzip backend, use fifos rather than temp files
- - do a debian package
  - make -extract -files for afio/cpio/zip recurse dirs
       dump/tar already to this.
  - try restore -D for comparing subdirs w/ restore
  - check that dir we are backing up exists
- - config file in just text?  Wondering if anyone is bothered by the
-      perl syntax.
 
 
 -------------------

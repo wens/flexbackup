@@ -3,10 +3,39 @@ $Name$
 
 Version 0.9.9 (200301XX)
 
+
+Wonder of wonders... I'm actually using this again.  The guy who registered
+flexbackup.org never picked up the files or updates his page so I'm
+flipping pointers back to sf.net I guess.
+
+
+Changes:
+  - changed the index delete flags worked, it was too confusing overloading
+      the -toc flag (WTF was I smoking 2 years ago?).
+      Now toc only lists stuff, and db-fixing can be done with:
+         flexbackup -rmindex all
+         flexbackup -rmindex <key>
+         flexbackup -rmindex <key> -f <file>
+  - added "-rmfile <file>" option if we are backing up to disk.  nukes
+      archive and its related index entry
+  - take the seconds filed out of the archive + log names... it was just
+      too long to interact with, and who really does more than 1 backup in a
+      minute?
+  - removed zip archive support.  They just don't like to work with
+      stdout/stdin like other unix tools and are a pain to special case.
+  - "-newtape" when using files will rm the files in the dir
+
+
 Bug Fixes:
-  - syntax with the -cnewer find addition. Whoops...
+  - doh - can't use -cnewer since touching a reference file with touch -d
+      since the change time is still "now".  I remembered the suggestion but
+      the long lapse in devel time made me forget to see if it worked.
+      REMOVED cnewer mistake.
   - default config uses /var/lib rather than /var/state (FHS spec on this
-    went away long ago)
+      went away long ago)
+  - was using numeric sort when listing alphanumeric files
+  - "-num" invalid when using files
+  - newer cpio didn't like sparse in --create mode
 
 ----------------------------------------------------------------------
 Version 0.9.8.3 (20020824)

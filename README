@@ -12,7 +12,7 @@ Flexible backup script.
 
 Features:
    o Easy to configure
-   o Uses dump, afio, tar, cpio, or zip archivers
+   o Uses dump, afio, tar, or cpio archivers
    o Backup, list, compare, extract, extract list of files modes
    o Compression and buffering options for all backup types
    o Handles multivolume backups
