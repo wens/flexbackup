@@ -49,11 +49,11 @@ rsync:
 	rsync --archive --verbose --cvs-exclude --delete-excluded --delete $(SITE)/ flexbackup.sourceforge.net:/home/groups/f/fl/flexbackup/htdocs
 
 upload: version lsm
-	test -e www/tarball/flexbackup-$(VER).tar.gz
-	ncftpput ibiblio.org /incoming/Linux www/tarball/flexbackup-$(VER).tar.gz
+	test -e $(SITE)/tarball/flexbackup-$(VER).tar.gz
+	ncftpput ibiblio.org /incoming/Linux $(SITE)/tarball/flexbackup-$(VER).tar.gz
 	ncftpput ibiblio.org /incoming/Linux flexbackup.lsm
-	ncftpput incoming.redhat.com /libc6 www/RPMS/flexbackup-$(VER)-1.noarch.rpm
-	ncftpput incoming.redhat.com /libc6 www/RPMS/flexbackup-$(VER)-1.src.rpm
+	ncftpput incoming.redhat.com /libc6 $(SITE)/RPMS/flexbackup-$(VER)-1.noarch.rpm
+	ncftpput incoming.redhat.com /libc6 $(SITE)/RPMS/flexbackup-$(VER)-1.src.rpm
 
 version:
 	test -n "$(VER)"
