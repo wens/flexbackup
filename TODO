@@ -15,9 +15,7 @@ post 1.0:
 
 Misc: 
  - Contact Paul and get flexbackup.org updated
-    freshmeat entry to sf.net otherwise?
  - Check lsm template/ibiblio.org stuff
- - Move CVS to sourceforge.net
  - Try bfr or dbuffer (buffer seems unmaintained; no O_LARGEFILE)
  - Try against torture-test list:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
