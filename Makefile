@@ -40,7 +40,7 @@ lsm: tag
 	tar -C /tmp -z -c -v -X tar.exclude -f $(SITE)/flexbackup-$(VER).tar.gz flexbackup-$(VER)
 	cd /tmp; echo yes | cvs release -d flexbackup-$(VER)
 	cp flexbackup.lsm.template flexbackup.lsm
-	perl -pi -e 'chomp($size=`cd $(SITE);ls -sh flexbackup-$(VER).tar.gz`);s/^(\s+)SIZE/$1$size/' flexbackup.lsm
+	perl -pi -e 'chomp(\$size=`cd $(SITE);ls -sh flexbackup-$(VER).tar.gz`);s/^(\s+)SIZE/\$1\$size/' flexbackup.lsm
 	cvs commmit -m "" flexbackup.lsm
 
 version:
