@@ -56,7 +56,13 @@ Changes beyond stable release:
 
   - "-extract -files" -> "-extract -flist" to hopefully avoid confusion
 
+  - db/file rm flags tweaked:
+       Redid rmindex semantics again, see help 
+       -rmfile can be specified multiple times
+       -rmindex can be specified multiple times
+
   - Added support for lha, shar, and ar archives just to be stupid
+
 
 Cleanup:
   - Don't check for writeable stampdir for non-backup

@@ -41,9 +41,9 @@
 #  flexbackup -toc all             : list all known table of contents
 #  flexbackup -toc <key>           : list table of contents for specific key
 #  flexbackup -rmindex all         : force db delete of all index info
-#  flexbackup -rmindex <key>       : force db delete of specified tape
-#  flexbackup -rmindex <key> -f <file>
-#                                  : force db delete of specified tape/filenumber
+#  flexbackup -rmindex <key>       : force db delete of specified tape/dir index
+#  flexbackup -rmindex <key>:<x>   : force db delete of specified tape:filenumber
+#                                    or dir:filename
 # TESTING/DEBUG:
 #  flexbackup -test-tape-drive     : tries writing/reading files to make sure you
 #                                    have tape driver & parameters set up right
@@ -64,7 +64,7 @@
 #  flexbackup -dir <x> -norewind   : don't rewind tape after a single backup
 #  flexbackup -set <x> -noreten    : don't retension for level 0 set backups
 #  flexbackup -set <x> -noerase    : don't rewind/erase for level 0 set backups
-#  flexbackup [operation] -reten   : force a retension before read
+#  flexbackup [...] -reten         : force a retension before read
 #  flexbackup -version             : show version
 #
 ######################################################################
@@ -136,7 +136,6 @@ if (! &main::GetOptions(\%main::opt,
 			"differential",
 			"erase!",
 			"extract:s",
-			"f=s",
 			"flist=s",
 			"full",
 			"help",
@@ -150,8 +149,8 @@ if (! &main::GetOptions(\%main::opt,
 			"restore:s",
 			"reten!",
 			"rewind!",
-			"rmfile:s",
-			"rmindex:s",
+			"rmfile:s@",
+			"rmindex:s@",
 			"set=s",
 			"test-tape-drive",
 			"toc:s",
@@ -225,7 +224,9 @@ if (defined($main::opt{'restore'})) {
 
 } elsif (defined($main::opt{'rmindex'})) {
     &line();
-    &rmindex($main::opt{'rmindex'}, $main::opt{'f'});
+    foreach my $arg (@{$main::opt{'rmindex'}}) {
+	&rmindex($arg);
+    }
 
 } elsif (defined($main::opt{'newtape'})) {
     &line();
@@ -682,7 +683,7 @@ sub backup {
 	$title = "level $level $dir $main::date_at_start $title from $host";
 	$title_without_type = "level $level $dir $main::date_at_start from $host";
     } else {
-	$pkglist = "flexbackup.packagelist.$main::pkgdelta";
+	$pkglist = "flexbackup.$main::pkgdelta.packagelist";
 	$title = "level $level+$main::pkgdelta $dir $main::date_at_start $title from $host";
 	$title_without_type = "level $level+$main::pkgdelta $dir $main::date_at_start from $host";
     }
@@ -3146,16 +3147,13 @@ sub optioncheck {
     # Check toc/rmindex/rmfile flags
     if (defined($main::opt{'toc'}) or defined($main::opt{'rmindex'})) {
 	if ($cfg::indexes eq "false") {
-	    push(@main::errors,"Can't do -toc with \$indexes set to false");
+	    push(@main::errors,"Can't do -toc/rmindex with \$indexes set to false");
 	}
     }
-    if (!defined($main::opt{'rmindex'}) and defined($main::opt{'f'})) {
-	    push(@main::errors,"-f only goes with -rmindex");
+    if (defined($main::opt{'rmindex'}) and (${$main::opt{'rmindex'}}[0] eq '')) {
+	    push(@main::errors,"-rmindex requires 'key:filenum', 'key' or 'all'");
     }
-    if (defined($main::opt{'rmindex'}) and ($main::opt{'rmindex'} eq '')) {
-	    push(@main::errors,"-rmindex requires a key value or 'all'");
-    }
-    if (defined($main::opt{'rmfile'}) and ($main::opt{'rmfile'} eq '')) {
+    if (defined($main::opt{'rmfile'}) and (${$main::opt{'rmfile'}}[0] eq '')) {
 	    push(@main::errors,"-rmfile requires a filename or 'all'");
     }
 
@@ -3180,7 +3178,7 @@ sub optioncheck {
     }
 
     # Check log/stamp dirs (only if we are in a 'write' mode)
-    if ($main::mode !~ m/^(list|extract|restore|compare|toc|test-tape-drive)$/) {
+    if ($main::mode =~ m/^(set|dir|newtape)$/) {
 	$main::path{$cfg::comp_log} = &checkinpath($cfg::comp_log) if ($cfg::comp_log ne "false");
 	$cfg::logdir = &nuke_trailing_slash($cfg::logdir);
 	$cfg::stampdir = &nuke_trailing_slash($cfg::stampdir);
@@ -4144,12 +4142,35 @@ sub toc_routine {
 ######################################################################
 sub rmindex {
 
-    my $key = shift(@_);
-    my $file = shift(@_);
+    my $arg = shift(@_);
+    my $key;
     my $tape;
     my $filenum;
+    my $file;
+    my $found = 0;
 
     return if $cfg::indexes eq "false";
+
+    # Figure out if we delete all for one tape, single entry for one tape,
+    # or the entire db
+    if ($arg =~ m/^(\d+)(:all)?$/) {
+	$key = $1;
+    } elsif ($arg =~ m/^(\d+):(\S+)$/) {
+	$key = $1;
+	$file = $2;
+    } elsif ($arg eq "all") {
+	&log("| Removing all in database!!!");
+	&log("| Hit CTRL-C to abort within 5 seconds..");
+	&line();
+	sleep(5);
+	foreach (keys %main::index) {
+	    delete $main::index{$_};
+	}
+	return;
+    } else {
+	die("Invalid key or key:fileno spec $arg");
+    }
+
 
     if ($key =~ m/^\d+$/) {
 
@@ -4165,7 +4186,8 @@ sub rmindex {
 		    (defined($main::use_file) or ($filenum != 0))
 		    and
 		    ($filenum eq $file)) {
-		    &log("| Deleting record for tape $tape file $filenum");
+		    &log("| Deleting record for $tape file $filenum");
+                    $found++;
 		    if (defined($main::opt{'n'})) {
 			&log("(debug) delete \$main::index{$tape|$filenum}");
 		    } else {
@@ -4177,7 +4199,8 @@ sub rmindex {
 
 		# Whole tape/dir entry
 		if ($tape eq $key) {
-		    &log("| Deleting record for tape $tape file $filenum");
+		    &log("| Deleting record for $tape file $filenum");
+                    $found++;
 		    if (defined($main::opt{'n'})) {
 			&log("(debug) delete \$main::index{$tape|$filenum}");
 		    } else {
@@ -4187,24 +4210,13 @@ sub rmindex {
 	    }
 	}
 
+        if ($found eq 0) {
+            &log("| Record for $arg not found");
+        }
+
 	&line();
 	return;
-
-    } elsif ($key eq "all") {
-
-	&log("| Removing all in database!!!");
-	&log("| Hit CTRL-C to abort within 5 seconds..");
-	&line();
-	sleep(5);
-	foreach (keys %main::index) {
-	    delete $main::index{$_};
-	}
-
-    } else {
-	die("Invalid key or key|fileno spec $key");
     }
-
-
 }
 
 ######################################################################
@@ -4218,39 +4230,37 @@ sub rmfile {
 
     return if !defined($main::use_file);
 
-    my $file = "$cfg::device/$main::opt{'rmfile'}";
-
     $key = &get_tape_key('quiet');
 
-    if ($main::opt{'rmfile'} eq 'all') {
+    foreach my $arg (@{$main::opt{'rmfile'}}) {
 
-	# Nuke all files in this dir
-	opendir(DIR,$cfg::device) or die ("Can't open dir $cfg::device: $OS_ERROR");
-	foreach my $f (readdir(DIR)) {
-	    next if ($f =~ m:^\.\.?$:);
-	    next if ($f =~ m%^$cfg::keyfile$%);
-	    &log("| Erasing archive $f");
-	    unlink("$cfg::device/$f") or die ("Can't rm $cfg::device/$f: $OS_ERROR");
+	my $file = "$cfg::device/$arg";
+
+	if ($arg eq 'all') {
+	    # Nuke all files in this dir
+	    opendir(DIR,$cfg::device) or die ("Can't open dir $cfg::device: $OS_ERROR");
+	    foreach my $f (readdir(DIR)) {
+		next if ($f =~ m:^\.\.?$:);
+		next if ($f =~ m%^$cfg::keyfile$%);
+		&log("| Erasing archive $f");
+		unlink("$cfg::device/$f") or die ("Can't rm $cfg::device/$f: $OS_ERROR");
+	    }
+	    closedir(DIR);
+	    # Nuke all db entries for this key
+	    if ($key ne '') {
+		&rmindex("$key:all");
+	    }
+	} elsif (-e $file) {
+	    &log("| Deleting file $file");
+	    unlink($file) or die ("Can't rm $file: $OS_ERROR");
+	    if ($key ne '') {
+		# Nuke db entry for this file
+		&rmindex("$key:$arg");
+	    }
+	} else {
+	    warn("Error: $file doesn't exist");
 	}
-	closedir(DIR);
-
-	# Nuke db entry for this key
-	if ($key ne '') {
-	    &rmindex($key);
-	}
-
-    } elsif (-e $file) {
-
-	&log("| Deleting file $file");
-	unlink($file) or die ("Can't rm $file: $OS_ERROR");
-	if ($key ne '') {
-	    &rmindex($key, $main::opt{'rmfile'});
-	}
-
-    } else {
-	die ("Error: $file doesn't exist");
     }
-
 }
 
 ######################################################################
@@ -4266,7 +4276,7 @@ sub maybe_delete_old_index {
 
     $key = &get_tape_key('quiet');
     if ($key ne '') {
-	&rmindex($key);
+	&rmindex("$key:all");
     }
 
 }
@@ -4954,7 +4964,6 @@ sub test_tape_drive {
 sub check_wday {
 
     if (defined($main::opt{'wday'})) {
-	my @week_days = qw(Sunday Monday Tuesday Wednesday Thursday Friday Saturday);
 	my @now = localtime;
 	my $wday_now = $now[6];
 
