@@ -19,7 +19,8 @@ Cleanup/fix:
  - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
  - Split main program; use separate libs for archiver types that are stored
    in different files?  install then requires more than just program + conf file.
-
+ - zip -z for label
+ 
 Misc:
  - Make a manual page (AND other enchanced documentation, more than a README)
    someone made a good start or two:
@@ -70,8 +71,16 @@ Features to add:
  - Extract options to not overwrite existing files
  - Handle multi-volume backups (original idea never panned out)
       Maybe figure out which archivers support & try to add
-      won't work with pipelines probably
+      won't work with pipelines probably - TEST
+      use short write detection, or do we need to spec tape length?
       needs testing
+       dump - depends on flavor
+       afio: -s size
+       cpio -M? uses short write detection for length?
+       tar -M & -L?
+       star tsize=
+       pax -B
+       zip nope
  - Arbitrary "groups" that act sort of like "all"
  - Store the index db on the tapes?
       But we don't know the size ahead of time unless hard-limited resperved size.
