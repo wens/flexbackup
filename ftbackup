@@ -45,24 +45,24 @@ $archivetype = "afio";
 # Just a simple space-separated list
 # remote filesystems should denoted as "host:dir"
 # $filesystems = "/ /usr /home";
-$filesystems = "/etc goliath:/etc";
+$filesystems	= "/etc goliath:/etc";
 
 # Log files
-$prefix = "";                # log files will start with this prefix
-$logdir = "/var/log/backup"; # directory where log files will be stored
+$prefix	= "";			# log files will start with this prefix
+$logdir	= "/var/log/backup";	# directory where log files will be stored
 
-$stampdir = "/var/log/backup/timestamps";
+$stampdir	= "/var/log/backup/timestamps";
 
 # Tape parameters
-$device    = "/dev/nqft0";  # device to dump to (non-rewinding)
-$rawdevice = "/dev/rawft0"; # raw version of the above
-$blksize   = "10";          # blocksize (k) to use
+$device		= "/dev/nqft0";	# device to dump to (non-rewinding)
+$rawdevice	= "/dev/rawft0";# raw version of the above
+$blksize	= "10";		# blocksize (k) to use
 
 # For "afio" only
-$buffer = "500";             # Number of blocks to buffer
+$buffer	= "500";		# Number of blocks to buffer
 
 # For "dump" only
-$length    = "3100000";     # estimated tape size (k). This number doesn't really
+$length	= "3100000";		# estimated tape size (k). This number doesn't really
                             # do much but help "dump" get size estimates
 
 #
