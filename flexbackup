@@ -11,16 +11,19 @@
 #
 #  flexbackup -help                : this message
 #
-#  flexbackup -dump all            : dump all filesystems, level 0
-#  flexbackup -dump <x>            : dump filesystem <x>, level 0
-#  flexbackup -dump all -level <n> : dump all filesystems, level n
-#  flexbackup -dump <x> -level <n> : dump filesystem <x>, level n
+#  flexbackup -fs all              : dump all filesystems, level 0
+#  flexbackup -fs <x>              : dump filesystem <x>, level 0
+#  flexbackup -fs all -level <n>   : dump all filesystems, level n
+#  flexbackup -fs <x> -level <n>   : dump filesystem <x>, level n
 #
 #  flexbackup -list                : list files in archive at current
 #                                    tape position
 #
-#  flexbackup -restore             : restore from current tape position
+#  flexbackup -extract             : restore from current tape position
 #                                    into your current working directory
+#
+#  flexbackup -restore             : as above, but interactive restore
+#                                    (dump type only for now)
 #
 #  flexbackup -compare             : compare archive at current tape position
 #                                    with the files in your current directory
@@ -28,10 +31,12 @@
 #  flexbackup -toc                 : list tape table of contents
 #                                    with Linux ftape only
 #
-#  flexbackup [options] -c <file>  : use <file> instead of /etc/flexbackup.conf
+#  flexbackup [opt] -c <file>      : use <file> instead of /etc/flexbackup.conf
 #                                    for configuration
 #
-#  flexbackup [optiions] -type <x> : override $backuptype form config file
+#  flexbackup [opt] -type <x>      : override $backuptype from config file
+#
+#  flexbackup -fs <x> -noreten     : don't retension for level 0 backups
 #
 ######################################################################
 
@@ -48,12 +53,14 @@ if (! &GetOptions(\%opt,
 		  "help",
 		  "c=s",
 		  "level=i",
-		  "dump=s",
+		  "fs=s",
+                  "extract",
                   "restore",
                   "list",
                   "compare",
                   "toc",
-                  "type=s"
+                  "type=s",
+                  "noreten"
 		  )) {
     &usage();
     exit(0);
@@ -89,6 +96,10 @@ if (defined($opt{'restore'})) {
 
     &restoreroutine();
 
+} elsif (defined($opt{'extract'})) {
+
+    &extractroutine();
+
 } elsif (defined($opt{'compare'})) {
 
     &compareroutine();
@@ -97,7 +108,7 @@ if (defined($opt{'restore'})) {
 
     &listroutine();
 
-} elsif (defined($opt{'dump'})) {
+} elsif (defined($opt{'fs'})) {
 
     &dumproutine();
 
@@ -106,9 +117,9 @@ if (defined($opt{'restore'})) {
     if ($ftape eq 'true') {
 	system("$mt -f $device rewind");
 	exec("vtblc -p -f $rawdevice");
-	die('Failed exec of vtblc');
+	die("Failed exec of vtblc\n");
     } else {
-	die("-toc only implemented for ftape under Linux");
+	die("-toc only implemented for ftape under Linux\n");
     }
 
 } else {
@@ -131,14 +142,14 @@ sub dumproutine {
     }
 
     # Die if no fs specified
-    if (!defined($opt{'dump'})) {
+    if (!defined($opt{'fs'})) {
         &usage();
         exit(0);
     }
 
     # Figure out log file name
-    $tag = $opt{'dump'};
-    if ($opt{'dump'} ne 'all') {
+    $tag = $opt{'fs'};
+    if ($opt{'fs'} ne 'all') {
         $tag =~ s:^/::;
         $tag =~ s:/:-:g;
         if ($tag eq '') {
@@ -146,8 +157,8 @@ sub dumproutine {
         } elsif ($tag =~ m/^(.+):-$/) {
             $tag = "$1:root";
         }
-        if (! -d "$opt{'dump'}" && ($opt{'dump'} !~ m/^.+:.+/)) {
-            print "Can't dump $opt{'dump'}, no such directory\n";
+        if (! -d "$opt{'fs'}" && ($opt{'fs'} !~ m/^.+:.+/)) {
+            print "Can't dump $opt{'fs'}, no such directory\n";
             exit(1);
         }
     }
@@ -167,7 +178,7 @@ sub dumproutine {
     foreach (@files) {
         next if (! m/^$prefix$tag\.([0-9])\.([0-9]+)$/);
         if ($1 > $level) {
-            print "Removing old level $1 log of $opt{'dump'} ($date)\n";
+            print "Removing old level $1 log of $opt{'fs'} ($date)\n";
             unlink("$logdir/$_") or warn("Can't remove $_: $!\n");
         }
     }
@@ -180,15 +191,19 @@ sub dumproutine {
     #
     ##########################
     &log('$Name$ $Id$ ');
-    &log("Doing level $level backup of $opt{dump} using $backuptype");
+    &log("Doing level $level backup of $opt{fs} using $backuptype");
 
-    if ($opt{'dump'} eq 'all') {
+    if ($opt{'fs'} eq 'all') {
+
+        &log("(all = $filesystems)");
 
         # All filesystems
         if ($level eq "0") {
             # Level zero - rewind and erase a new tape
-            &log('Retensioning tape...');
-            &mt('retension');
+            if (!defined($opt{'noreten'})) {
+                &log('Retensioning tape...');
+                &mt('retension');
+            }
             &log('Erasing tape...');
             &mt('erase');
             $nextfile = 0;
@@ -201,6 +216,9 @@ sub dumproutine {
             &mt('endofdata');
         }
 
+        &line();
+        &mt('query');
+
         # Iterate over the filesystems and back 'em up
         foreach (split(/\s+/,$filesystems)) {
             &backup($backuptype,$_,$nextfile);
@@ -208,11 +226,13 @@ sub dumproutine {
             $nextfile++;
         }
 
-        # Onlt ftape has the toc capability
+        &line();
+        &log("Rewinding...\n");
+        &mt('rewind');
+
+        # Only ftape has the toc capability
         if ($ftape eq 'true') {
-            &line();
             &log('Updating table of contents...');
-            &mt('rewind');
             foreach (keys %tag) {
                 &tag($_,$tag{$_});
             }
@@ -224,12 +244,15 @@ sub dumproutine {
         $nextfile = &contents();
         &log('Making sure tape is at end of data...');
         &mt('endofdata');
-        &backup($backuptype,$opt{'dump'},$nextfile);
         &line();
-        &log('Updating table of contents...');
+        &mt('query');
+        &backup($backuptype,$opt{'fs'},$nextfile);
+        &line();
+        &log("Rewinding...");
         &mt('rewind');
         if ($ftape eq 'true') {
-            &tag($nextfile,"$backuptype $opt{fs} ($level)");
+            &log('Updating table of contents...');
+            &tag($nextfile,"$backuptype $opt{'fs'} ($level)");
         }
     }
 
@@ -345,9 +368,9 @@ sub backup_dump {
 	$host = $1;
 	chomp($tapehost = `hostname`);
 	$string  = "$remoteshell $host \"";
-        $string .= "rdump $level" . "uBbf $length $blksize $tapehost:$device $dir\"";
+        $string .= "rdump $level" . "uBbf $dump_length $blksize $tapehost:$device $dir\"";
     } else {
-	$string  = "dump $level" . "uBbf $length $blksize $device $dir";
+	$string  = "dump $level" . "uBbf $dump_length $blksize $device $dir";
     }
     return($string);
 }
@@ -379,10 +402,10 @@ sub backup_afio {
 	chomp($tapehost = `hostname`);
 	$string  = "$remoteshell $host -n \"";
 	$string .= "cd $dir; find . -xdev -print | ";
-        $string .= "afio -o $comp $verb -b $blksize" . "k -c $buffer -B $tapehost:$device\"";
+        $string .= "afio -o $comp $verb -b $blksize" . "k -c $afio_buffer -B $tapehost:$device\"";
     } else {
 	$string  = "cd $dir ; find . -xdev -print | ";
-	$string .= "afio -o $comp $verb -b $blksize" . "k -c $buffer -B $device";
+	$string .= "afio -o $comp $verb -b $blksize" . "k -c $afio_buffer -B $device";
     }
     return($string);
 }
@@ -437,9 +460,11 @@ sub backup_cpio {
 sub log {
     my($msg) = @_;
     print "$msg\n";
-    open(LOG,">>$log");
-    print LOG "$msg\n";
-    close(LOG);
+    if (defined($log)) {
+        open(LOG,">>$log");
+        print LOG "$msg\n";
+        close(LOG);
+    }
 }
 
 ######################################################################
@@ -447,9 +472,11 @@ sub log {
 ######################################################################
 sub line {
     print "----------------------------------------\n";
-    open(LOG,">>$log");
-    print LOG "----------------------------------------\n";
-    close(LOG);
+    if (defined($log)) {
+        open(LOG,">>$log");
+        print LOG "----------------------------------------\n";
+        close(LOG);
+    }
 }
 
 ######################################################################
@@ -474,7 +501,11 @@ sub mt {
         }
     }
 
-    system("$mt -f $device $operation 2>&1 | tee -a $log");
+    if (defined($log)) {
+        system("$mt -f $device $operation 2>&1 | tee -a $log");
+    } else {
+        system("$mt -f $device $operation 2>&1");
+    }
     if ($?) {
 	&log("Error from $mt $operation, exiting....\n");
         exit(1);
@@ -509,44 +540,44 @@ sub optioncheck {
 	} elsif ($ftape eq 'false') {
 	    $mt = 'mt';
 	} else {
-	    die('$ftape must be defined as true or false');
+	    die("\$ftape must be defined as true or false\n");
 	}
     } else {
-	die('$ftape must be defined as true or false');
+	die("\$ftape must be defined as true or false\n");
     }
 
     # log/stamp files
     if (defined($logdir)) {
 	if (! -d $logdir) {
-	    die("$logdir does not exist");
+            mkdir("$logdir",0755) or die("Can't mkdir $logdir: $!");
 	}
     } else {
-	die('$logdir must be defined');
+	die("$logdir must be defined\n");
     }
-    if ($backuptype ne 'dump') {
-	if (defined($stampdir)) {
-	    if (! -d $stampdir) {
-		mkdir("$stampdir",0755) or die("Can't mkdir $stampdir: $!");
-	    }
-	} else {
-	    die('$stampdir must be defined');
-	}
+    if (defined($stampdir)) {
+        if (! -d $stampdir) {
+            mkdir("$stampdir",0755) or die("Can't mkdir $stampdir: $!");
+        }
+    } else {
+        die("$stampdir must be defined\n");
     }
 
     # archive type
     if (defined($opt{'type'})) {
         $backuptype = $opt{'type'};
     }
+
+    # Placeholders if I have to do checking
     if (defined($backuptype)) {
 	if ($backuptype eq 'afio') {
 	} elsif ($backuptype eq 'dump') {
 	} elsif ($backuptype eq 'tar') {
 	} elsif ($backuptype eq 'cpio') {
 	} else {
-	    die("backuptype must be defined as afio, dump, tar, or cpio\n");
+	    die("\$backuptype must be defined as afio, dump, tar, or cpio\n");
 	}
     } else {
-	die("backuptype must be defined as afio, dump, tar, or cpio\n");
+	die("\$backuptype must be defined as afio, dump, tar, or cpio\n");
     }
 
 
@@ -575,11 +606,70 @@ sub readconfigfile {
 ######################################################################
 #
 ######################################################################
+sub extractroutine {
+
+    if ($backuptype eq 'dump') {
+        &mt('query');
+        &line();
+	system("restore -r -v -b $blksize -f $device");
+        &line();
+        &mt('query');
+	exit;
+    } elsif ($backuptype eq 'afio') {
+        if ($afio_compress eq "true") {
+            $_ = "-Z";
+        } else {
+            $_ = "";
+        }
+        &mt('query');
+        &line();
+        system("afio -i $_ -v -b $blksize" . "k -B $device");
+        &line();
+        &mt('query');
+        exit;
+    } else {
+        die("Restore for $backuptype not done yet\n");
+    }
+}
+
+######################################################################
+#
+######################################################################
 sub restoreroutine {
 
     if ($backuptype eq 'dump') {
-	exec("restore -v -i -b $blksize -f $device");
-	die('Failed exec of restore');
+        &mt('query');
+        &line();
+	system("restore -i -v -b $blksize -f $device");
+        &line();
+        &mt('query');
+	exit;
+    } else {
+        die("Restore for $backuptype not done yet\n");
+    }
+}
+
+######################################################################
+#
+######################################################################
+sub listroutine {
+
+    if ($backuptype eq 'dump') {
+        &mt('query');
+        &line();
+	system("restore -t -b $blksize -f $device");
+        &line();
+        &mt('query');
+        exit;
+    } elsif ($backuptype eq 'afio') {
+        &mt('query');
+        &line();
+        system("afio -t -b $blksize" . "k -B $device");
+        &line();
+        &mt('query');
+        exit;
+    } else {
+        die("List for $backuptype not done yet\n");
     }
 }
 
@@ -589,7 +679,11 @@ sub restoreroutine {
 sub compareroutine {
 
     if ($backuptype eq 'dump') {
-	exec("restore -C -b $blksize -f $device");
-	die('Failed exec of restore');
+        &mt('query');
+	system("restore -C -b $blksize -f $device");
+        &mt('query');
+	exit;
+    } else {
+        die("Compare for $backuptype not done yet\n");
     }
 }

@@ -1,26 +1,25 @@
-      __ _           _                _
-     / _| | _____  _| |__   __ _  ___| | ___   _ _ __
-    | |_| |/ _ \ \/ / '_ \ / _` |/ __| |/ / | | | '_ \
-    |  _| |  __/>  <| |_) | (_| | (__|   <| |_| | |_) |
-    |_| |_|\___/_/\_\_.__/ \__,_|\___|_|\_\\__,_| .__/
+   _____ _           _                _
+  |  ___| | _____  _| |__   __ _  ___| | ___   _ _ __
+  | |_  | |/ _ \ \/ / '_ \ / _` |/ __| |/ / | | | '_ \
+  |  _| | |  __/>  <| |_) | (_| | (__|   <| |_| | |_) |
+  |_|   |_|\___/_/\_\_.__/ \__,_|\___|_|\_\\__,_| .__/
                                                 |_|
-
-README for version $Name$
 ----------------------------------------------------------------------
+README for version $Name$
 
 Flexible backup script.
 I did this to to help automate my life.
 
 Looked at many other packages/scripts and didn't really find anything
-that worked the way I wanted it to. For my needs I felt the existing 
+that worked the way I wanted it to. For my needs I felt the existing
 packages I looked at at were any combination of:
    o Too complex to setup/use
    o Lacked documentation
    o Too simplistic
    o Didn't have features I wanted
-   
+
 Flexbackup's features:
-   o Easy to configure
+   o Easy to configure (at least I think so)
    o Uses dump, afio, tar, or cpio with the flick of a switch
    o It's just perl
    o Full (0) and 1-9 levels of incremental backup
@@ -30,19 +29,41 @@ Flexbackup's features:
        ftape allows table of contents support
 
 Software needed:
-   o perl 
+   o perl
    o mt (or ftmt if using ftape)
    o one or more of
        dump/restore afio tar cpio
    o possibly ftape and ftape-tools
-   
-   
-Notes:
- Level 0 backups assume a new tape - will trigger
- tape retension and erasure.  Other level dumps move tape to
- current end of data and start the dump there
 
- rsh or ssh is used for remote bakcups
+Install:
+   o Copy flexbackup.conf to /etc
+   o Put the flexbackup program someplace in your PATH
+   o Edit flexbackup.conf as desired. See the comments
+
+----------------------------------------------------------------------
+
+Use:  See "flexbackup -help". Examples below
+
+To do a full backup of /home:
+   flexbackup -fs /home
+
+To do an level 5 incremental dump of all filesystems:
+   flexbackup -fs all -level 5
+
+For nightly incremental dumps, run this via cron:
+   flexbackup -fs all -level 9
+
+Restore all files from archive into current directory:
+   (position tape w/mt - use logs to find filenum or block)
+   flexbackup -extract
+
+Notes:
+ Level 0 backups of "all" assume a new tape - will trigger
+ tape retension and erasure.  Other backups move tape to
+ current end of data and start the backup there
+
+ rsh or ssh is used for remote backups.  Backups of remote machines
+ are to be run from the machine with the tape drive!
 
  Log files are of the format <prefix><fs>.<level>.<yyyymmdd>
  Lower-level dumps will wipe out all higher-level log files in
