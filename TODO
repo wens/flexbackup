@@ -99,9 +99,11 @@ Features to add:
      top level of shares only?
  - Spiff up the contributed CGI program?
  - autoconf it (esp if we pkg multivol)
- - Better way to spec fs, multiple tapes
+ - Better way to spec fs,
+     be bale to h ave spaces in dirs in the conf file
+     beeter way for multiple tapes
      Maybe take out the multiple tape fs array parts if we can do mutivol?
- - Redo include/exclude paths, not just expressions?
+ - Redo include/exclude paths, not just expressions?  per-fs?
  - Do we want to count on perl (or flexbackup for that matter) being
      installed on remote machines?  We could do some built-in replacements
      for the 'find' for instance and make things more standardized. although
