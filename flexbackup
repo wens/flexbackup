@@ -66,6 +66,7 @@
 #  flexbackup -set <x> -noreten    : don't retension for level 0 set backups
 #  flexbackup -set <x> -noerase    : don't rewind/erase for level 0 set backups
 #  flexbackup [...] -reten         : force a retension before read
+#  flexbackup [...] -nodefaults    : don't use any default values for config variables
 #  flexbackup -version             : show version
 #
 ######################################################################
@@ -109,6 +110,9 @@ if (defined($ARGV[0]) and ($ARGV[0] =~ /flexbackup.volume_header_info/)) {
 # This is changed during "make install"
 $main::CONFFILE="/etc/flexbackup.conf";
 
+# Default fd for messages (we might have stdout as archive output - not working yet, FIXME)
+$main::msg = *STDOUT;
+
 # This took awhile to figure out.  if the shell is capable of it, we use
 # this on the end of any pipelines to see if any of the commands in the
 # pipeline failed, rather than just the last one.
@@ -146,6 +150,7 @@ if (! &main::GetOptions(\%main::opt,
 			"onefile=s",
 			"n",
 			"newtape",
+			"nodefaults",
 			"num:i",
 			"restore:s",
 			"reten!",
@@ -170,8 +175,8 @@ if (defined($main::opt{'help'})) {
 
 # Version
 if (defined($main::opt{'version'})) {
-    print "flexbackup version " . &versionstring() . "\n";
-    print '$Id$ ' . "\n";
+    print $main::msg "flexbackup version " . &versionstring() . "\n";
+    print $main::msg '$Id$ ' . "\n";
     exit(0);
 }
 
@@ -179,9 +184,9 @@ if (defined($main::opt{'version'})) {
 &check_wday();
 
 # Get/read config file
-print "\nflexbackup version " . &versionstring() . "\n";
+print $main::msg "\nflexbackup version " . &versionstring() . "\n";
 &readconfigfile();
-print "\n";
+print $main::msg "\n";
 
 # Set OS type
 chomp($main::uname = `uname -s`);
@@ -459,13 +464,13 @@ sub backup_routine {
 
 		    $tapecounter++;
 		    if (defined($main::tapedevice)) {
-			print "\n";
+			print $main::msg "\n";
 			while(1) {
-			    print "---> Insert tape \#$tapecounter (enter y to continue) ";
+			    print $main::msg "---> Insert tape \#$tapecounter (enter y to continue) ";
 			    chomp($_ = <STDIN>);
 			    last if ($_ =~ m/^y/i);
 			}
-			print "\n";
+			print $main::msg "\n";
 			&line();
 		    }
 
@@ -920,7 +925,7 @@ sub backup {
 
     # Actually remove the old stamp files now that we are done
     foreach my $ts (sort keys %oldstamps) {
-	print "| Removing out of date level $oldstamps{$ts} timestamp for $dir\n";
+	print $main::msg "| Removing out of date level $oldstamps{$ts} timestamp for $dir\n";
 	if (!defined($main::debug)) {
 	    unlink("$ts") or warn("Can't remove $ts: $OS_ERROR\n");
 	}
@@ -2208,7 +2213,7 @@ sub log {
     }
 
     if ($do_screen == 1) {
-	print "$msg\n";
+	print $main::msg "$msg\n";
     }
 
     if (($do_log == 1) and defined($main::log)) {
@@ -2243,9 +2248,9 @@ sub line {
     }
 
     if ($do_screen == 1) {
-	print '|';
-	print '-' x $length;
-	print "\n";
+	print $main::msg '|';
+	print $main::msg '-' x $length;
+	print $main::msg "\n";
     }
 
     if (($do_log == 1) and defined($main::log)) {
@@ -2276,7 +2281,7 @@ sub readconfigfile {
     if (! -r "$configfile") {
 	die("config file $configfile: $OS_ERROR");
     }
-    system("perl -c \"$configfile\" 2>&1");
+    system("perl -c \"$configfile\"");
     if ($CHILD_ERROR) {
 	die("syntax error in config file $configfile");
     }
@@ -2572,9 +2577,9 @@ sub optioncheck {
     &checkvar(\$cfg::sprefix,'sprefix','exist','');
 
     if (@main::errors) {
-	print "Errors:\n";
+	print $main::msg "Errors:\n";
 	while(@main::errors) {
-	    print " " . shift(@main::errors) . "\n";
+	    print $main::msg " " . shift(@main::errors) . "\n";
 	}
 	exit(1);
     }
@@ -2646,6 +2651,16 @@ sub optioncheck {
 	    $cfg::device =~ s:/$::;            # nuke trailing slash if any
 	}
 
+    } elsif ($cfg::device eq '-') {
+
+	# Dump to stdout.
+	# Disable indexing, all messages to stderr
+	# FIXME this doesn't work yet
+	$main::msg = *STDERR;
+	$main::use_file = 1;
+	$main::use_stdout = 1;
+	$cfg::indexes = 'false';
+
     } elsif ($cfg::device =~ m%(\S+):(/dev/.*)%) {
 
 	$main::remotetapehost = $1;
@@ -2658,7 +2673,7 @@ sub optioncheck {
     $main::device = $cfg::device;
 
     # Can we write to it?
-    if (! -w $main::device and !defined($main::remotetapehost)) {
+    if (! -w $main::device and !defined($main::remotetapehost) and !defined($main::use_stdout)) {
 	push(@main::errors,"Can't write to $main::device");
     }
 
@@ -2894,19 +2909,19 @@ sub optioncheck {
 	    $main::buffer_cmd = " | $bufcmd";
 	    $main::write_cmd = "$bufcmd | $main::path{dd} $main::dd_blk_flag $main::dd_write_pad_flag of=";
 	    $main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_read_pad_flag if=";
-        }
+	}
     } else {
 
-        # If buffering disabled, use dd or cat depending on if blocking turned off on not
-        if ($cfg::blksize eq '0') {
-            $main::buffer_cmd = "";
-            $main::write_cmd = "$main::path{cat} > ";
-            $main::read_cmd = "$main::path{cat} ";
-        } else {
-            $main::buffer_cmd = "";
-            $main::write_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_write_pad_flag of=";
-            $main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_read_pad_flag if=";
-        }
+	# If buffering disabled, use dd or cat depending on if blocking turned off on not
+	if ($cfg::blksize eq '0') {
+	    $main::buffer_cmd = "";
+	    $main::write_cmd = "$main::path{cat} > ";
+	    $main::read_cmd = "$main::path{cat} ";
+	} else {
+	    $main::buffer_cmd = "";
+	    $main::write_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_write_pad_flag of=";
+	    $main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_read_pad_flag if=";
+	}
     }
 
     # Sets / filesystems
@@ -3417,9 +3432,9 @@ sub optioncheck {
     }
 
     if (@main::errors) {
-	print "\nErrors:\n";
+	print $main::msg "\nErrors:\n";
 	while(@main::errors) {
-	    print " " . shift(@main::errors) . "\n";
+	    print $main::msg " " . shift(@main::errors) . "\n";
 	}
 	exit(1);
     }
@@ -3440,9 +3455,9 @@ sub test_before_run {
     &check_remote_progs(\%main::remotehosts, \@main::remoteprogs);
 
     if (@main::errors) {
-	print "\nErrors:\n";
+	print $main::msg "\nErrors:\n";
 	while(@main::errors) {
-	    print " " . shift(@main::errors) . "\n";
+	    print $main::msg " " . shift(@main::errors) . "\n";
 	}
 	exit(1);
     }
@@ -3675,8 +3690,8 @@ sub checkvar {
     }
 
     if (!defined($$ref)) {
-	if (defined($default)) {
-	    print " \$$varname not found in config: default=$default\n";
+	if (!defined($main::opt{'nodefaults'}) and defined($default)) {
+	    print $main::msg " \$$varname not found in config: default=$default\n";
 	    $$ref = $default;
 	} else {
 	    push(@main::errors,"\$$varname not defined");
@@ -3712,7 +3727,7 @@ sub checkinpath {
 
 	    # Starts with /; full path override
 	    if (-e $cfg::path{$file} && -x _) {
-		print "path $file = $cfg::path{$file}\n";
+		print $main::msg "path $file = $cfg::path{$file}\n";
 		return "$cfg::path{$file}";
 	    } else {
 		push(@main::errors,"$cfg::path{$file} not found");
@@ -3729,7 +3744,7 @@ sub checkinpath {
 
 	    # sudo with full pathname
 	    if (($prog =~ m:^/:) and (-e $prog) and (-x _)) {
-		print "path $file = $cfg::path{$file}\n";
+		print $main::msg "path $file = $cfg::path{$file}\n";
 		return "$cfg::path{$file}";
 	    }
 	    # sudo with just command name
@@ -3854,10 +3869,14 @@ sub append_writer_cmd {
 
     # Possibly override device
     if (!defined($dev)) {
-        $dev = $main::device;
+	$dev = $main::device;
     }
 
-    if (!defined($main::remotetapehost)) {
+    if (defined($main::use_stdout)) {
+
+	$cmd .= $main::buffer_cmd;
+
+    } elsif (!defined($main::remotetapehost)) {
 
 	$cmd .= " | " . $main::write_cmd . '"' . $dev . '"' ;
 
@@ -4000,7 +4019,7 @@ sub nuke_trailing_slash {
 ######################################################################
 sub print_afio_volume_header {
     # for now just echo our stdin
-    print "\n";
+    print $main::msg "\n";
     while(<STDIN>) {
 	print;
     }
@@ -4472,7 +4491,7 @@ sub rmfile {
 	    opendir(DIR,$cfg::device) or die ("Can't open dir $cfg::device: $OS_ERROR");
 	    foreach my $f (readdir(DIR)) {
 		next if ($f =~ m:^\.\.?$:);
-		next if ($f =~ m%^$cfg::keyfile$%);
+		#next if ($f =~ m%^$cfg::keyfile$%);
 		if ( -f "$cfg::device/$f") {
 		    &log("| Erasing archive $f");
 		    unlink("$cfg::device/$f") or die ("Can't rm $cfg::device/$f: $OS_ERROR");
@@ -4942,10 +4961,10 @@ sub test_bufferprog {
     close(SCR);
 
     if ($host eq 'localhost') {
-	print "| Checking '$cfg::buffer' on this machine... ";
+	print $main::msg "| Checking '$cfg::buffer' on this machine... ";
 	$pipecmd = "sh $tmp_script ";
     } else {
-	print "| Checking '$cfg::buffer' on host $host... ";
+	print $main::msg "| Checking '$cfg::buffer' on host $host... ";
 	$pipecmd =  "cat $tmp_script | ($main::remoteshell $host 'cat > $tmp_script; sh $tmp_script; rm -f $tmp_script')";
     }
 
@@ -4978,13 +4997,13 @@ sub test_bufferprog {
 	close (PIPE);
 
     } else {
-	print "\n(debug) $pipecmd\n";
+	print $main::msg "\n(debug) $pipecmd\n";
     }
 
     if ($retval == 0) {
-	print "Ok\n";
+	print $main::msg "Ok\n";
     }  else {
-	print "Failed!\n";
+	print $main::msg "Failed!\n";
     }
     unlink("$tmp_script");
 
@@ -5017,10 +5036,10 @@ sub check_remote_progs {
     }
     my $string = join ('; ',@progs);
     foreach my $host (keys %$remotehost_ref) {
-	print "| Checking for required programs on host $host... ";
+	print $main::msg "| Checking for required programs on host $host... ";
 	my $cmd = "$main::remoteshell $host sh -c '$string'";
 	if (defined($main::debug)) {
-	    print "\n(debug) $cmd\n";
+	    print $main::msg "\n(debug) $cmd\n";
 	    next;
 	}
 	if (!(open(PIPE,"$cmd |"))) {
@@ -5038,9 +5057,9 @@ sub check_remote_progs {
 	close (PIPE);
 
 	if ($err == 0) {
-	    print "Ok\n";
+	    print $main::msg "Ok\n";
 	} else {
-	    print "Failed!\n";
+	    print $main::msg "Failed!\n";
 	}
 
     }
@@ -5065,16 +5084,16 @@ sub check_shell {
     $pipecmd = 'set x = 1 && test $x && echo csh:yes; echo tcsh:$tcsh; echo bash:$BASH_VERSION; echo zsh:$ZSH_VERSION; echo ksh:$KSH_VERSION';
 
     if ($host eq 'localhost') {
-	print "| Checking /bin/sh on this machine... ";
+	print $main::msg "| Checking /bin/sh on this machine... ";
     } else {
-	print "| Checking shell on $host... ";
+	print $main::msg "| Checking shell on $host... ";
 	$pipecmd = "$main::remoteshell $host '" . $pipecmd . "'";
     }
 
     $main::shelltype{$host} = 'unknown';
 
     if (defined($main::debug)) {
-	print "\n(debug) $pipecmd\n";
+	print $main::msg "\n(debug) $pipecmd\n";
     }
 
     if (!(open(PIPE,"$pipecmd 2>&1 |"))) {
@@ -5100,9 +5119,9 @@ sub check_shell {
     close (PIPE);
 
     if (($main::shelltype{$host} eq 'unknown') and ($main::uname !~ m/Linux/)) {
-	print "$main::shelltype{$host} (probably Bourne Shell)\n";
+	print $main::msg "$main::shelltype{$host} (probably Bourne Shell)\n";
     } else {
-	print "$main::shelltype{$host}\n";
+	print $main::msg "$main::shelltype{$host}\n";
     }
 }
 
@@ -5306,11 +5325,11 @@ sub test_tape_drive {
     unlink $tmp3;
 
     if ($fail != 0) {
-	print "\nFAILURE! Problem with tape driver or parameters.  Please see the FAQ\n";
-	print "or try changing the \$blksize, \$pad_blocks, or \$mt_blksize settings.\n";
+	print $main::msg "\nFAILURE! Problem with tape driver or parameters.  Please see the FAQ\n";
+	print $main::msg "or try changing the \$blksize, \$pad_blocks, or \$mt_blksize settings.\n";
 	exit(1);
     } else {
-	print "SUCCESS! Tape drive parameters seem to work just fine\n";
+	print $main::msg "SUCCESS! Tape drive parameters seem to work just fine\n";
     }
 
 }

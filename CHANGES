@@ -5,7 +5,12 @@ $Name$
 Version 1.2.0 ()
 
 Changes:
-  - devel -> stable
+  - Merge devel -> stable
+  - Added -nodefaults option for debug
+
+Bugfixes/cleanup:
+  - Fix if on-disk backups, and "-rmfile all", the index for the keyfile
+    was removed but not the keyfile itself
 
 ----------------------------------------------------------------------
 Version 1.1.8 (20030621)

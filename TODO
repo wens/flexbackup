@@ -6,12 +6,9 @@ Some of these might not happen
 
 Cleanup/fix:
 
- - Test %full, sleep additions
  - Check -regex with '\(a\|b\)' with freebsd find
  - Need to pad for reads?  test all types
  - Test mbuffer more ; possibly remove
- - If on-disk backups, and you use -rmfile all, the index for the keyfile
-   gets removed.
 
  - Better cleanup after error in backup
  - Clean up more $main:: vars, split into types or refactor code
@@ -60,7 +57,8 @@ Misc:
 
 Features to add:
 
- - Stdout output?
+  - Finish stdout output option.  Just need the archive itself I think, all
+    message output should be ok. Try a stdin input option as well.
 
   - Handle multi-volume backups (original idea w/ 'multibuf' never panned out)
 
