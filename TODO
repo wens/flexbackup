@@ -20,10 +20,6 @@ Cleanup/fix:
 Misc:
  - Add faq on -erase -newtape taking forever / erase_rewind_only
      could be mt erase, could be dd index hang (-test-tape-drive)
-
- - Fix description text in sf project, freshmeat for new features
-     sets pruning pkgdelta filelist copy pipe
-
  - Add faq on files changing underneath tar? sql db dump?
  - Create mbuffer rpm (if I can make it work reliably for myself)
  - Man page (create from -help perhaps)
@@ -31,7 +27,6 @@ Misc:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
  - Update mt manpages collection I keep in cvs
  - Get someone to do .debs?
-
 
 Features to add:
 
@@ -48,6 +43,8 @@ Features to add:
       other machines, for example.
 
  - Make package delta work with debian pkgs or others
+
+ - Use rsync for "copy" mode once it has a files-from type of flag
 
  - CD-ROM burning (or just .iso type?) for full backups? any?
       just act like to-file archives, and take those files & write to CD?

@@ -159,7 +159,7 @@ $set{'homes'} = "/home/user1 /home/user2 /home/user3";
 $set{'alletc'} = "/etc hercules:/etc thor:/etc gazelle:/etc";
 $set{'other'} = "/var/named /net/local /net/www";
 $set{'os'} = "/ hercules:/ thor:/ gazelle:/";
-$set{'laptop'} = "ehuff-mobl:/etc ehuff-mobl:/home/edwinh";
+$set{'laptop'} = "laptop:/etc laptop:/home/edwinh";
                           
 # Subtree pruning
 # A space-separated list of directories to prune from each backup.
