@@ -11,10 +11,11 @@
 #  flexbackup -help                : this message
 #
 # BACKUP:
-#  flexbackup -fs all              : backup all filesystems, level 0
-#  flexbackup -fs <x>              : backup filesystem <x>, level 0
-#  flexbackup -fs all -level <n>   : backup all filesystems, level n
-#  flexbackup -fs <x> -level <n>   : backup filesystem <x>, level n
+#  flexbackup -fs all              : backup all (defined in config file), level 0
+#  flexbackup -fs <x>              : backup directory <x>, level 0
+#  flexbackup -fs all -level <n>   : backup all (defined in config file), level n
+#  flexbackup -fs <x> -level <n>   : backup directory <x>, level n
+#    -level can be an integer, or full/differential/incremental
 #
 # READING ARCHIVES:
 #  flexbackup -list                : list files in archive at current
@@ -111,7 +112,7 @@ $main::bash_pipe_exit = '; x=(${PIPESTATUS[@]}); for index in `seq 0 $((${#x[@]}
 if (! &main::GetOptions(\%main::opt,
 			"help",
 			"c=s",
-			"level=i",
+			"level=s",
 			"fs=s",
 			"extract:s",
 			"files=s",
@@ -241,6 +242,7 @@ sub backup_routine {
     # Get rid of trailing /
     $main::opt{'fs'} = &nuke_trailing_slash($main::opt{'fs'});
 
+
     # Figure out log file name & empty log file
     $label = &get_label($main::opt{'fs'});
     $logfile = "$cfg::prefix$label.$main::level.$main::date";
@@ -255,11 +257,12 @@ sub backup_routine {
     &mt("generic-blocksize $main::mt_blksize");
 
     # Remember old stamp files (will remove at end of job)
-    # ("old" = any higher-numbered stamps for this label)
+    # "old" = any higher-numbered stamps for this label
+    # (we will be touching the one of equal level, so don't mark for removal)
     opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $OS_ERROR");
     @files = readdir(DIR);
     foreach (reverse sort @files) {
-	next if (! m/^$cfg::sprefix$label\.([0-9\.])$/);
+	next if (! m/^$cfg::sprefix$label\.(\d+)$/);
 	if ($1 > $main::level) {
 	    $oldstamps{"$cfg::stampdir/$_"} = $1
 	}
@@ -267,12 +270,13 @@ sub backup_routine {
     close(DIR);
 
     # Remember old log files (will remove at end of job)
-    # ("old" = any higher-numbered logs for this label)
+    # ("old" = any higher- or equal-numbered logs for this label)
     opendir(DIR,"$cfg::logdir") or die("Can't open cfg::logdir: $OS_ERROR");
     @files = readdir(DIR);
     foreach (reverse sort @files) {
-	next if (! m/^$cfg::prefix$label\.([0-9])\.([0-9\.]+)(\.gz|\.bz2|\.Z)?$/);
-	if ($1 > $main::level) {
+	next if (! m/^$cfg::prefix$label\.(\d+)\.(\d+)(\.gz|\.bz2|\.Z)?$/);
+	next if (m/^$logfile(\.gz|\.bz2|\.Z)?$/);
+	if ($1 >= $main::level) {
 	    $oldlogs{"$cfg::logdir/$_"} = $1 . "|" . $2;
 	}
     }
@@ -487,6 +491,7 @@ sub backup {
 
     &line();
 
+
     if ($localdir =~ s/^(.+):(.+)$/$2/) {
 	$main::remote = $1;
 	chomp($main::tapehost = `hostname`);
@@ -654,10 +659,10 @@ sub backup_dump {
     # With this one we don't have to put a stampfile on the remote system
     # since we only need the date string
     if ($main::level == 0) {
-	&get_last_date($label); # Just to print dates, don't need result
+	&get_last_date($label, 0); # Just to print dates, don't need result
 	$date_flag = "";
     } else {
-	$_ = &get_last_date($label);
+	$_ = &get_last_date($label, $main::level);
 	$date_flag = "-T \"$_\" ";
     }
 
@@ -705,7 +710,7 @@ sub backup_afio {
     my $remove;
     my $no_compress = '';
 
-    $_ = &get_last_date($label);
+    $_ = &get_last_date($label, $main::level);
 
     $cmd = "$main::path{touch} $main::touch_flag \"$_\" $tmpstamp";
     push(@cmds, &maybe_remote_cmd($cmd));
@@ -772,7 +777,7 @@ sub backup_cpio {
     my @cmds;
     my $tmpstamp = "$cfg::tmpdir/refdate.$$";
 
-    $_ = &get_last_date($label);
+    $_ = &get_last_date($label, $main::level);
 
     $cmd = "$main::path{'touch'} $main::touch_flag \"$_\" $tmpstamp";
     push(@cmds, &maybe_remote_cmd($cmd));
@@ -828,7 +833,7 @@ sub backup_tar {
     my @cmds;
     my $tmpstamp = "$cfg::tmpdir/refdate.$$";
 
-    $_ = &get_last_date($label);
+    $_ = &get_last_date($label, $main::level);
 
     $cmd = "$main::path{'touch'} $main::touch_flag \"$_\" $tmpstamp";
     push(@cmds, &maybe_remote_cmd($cmd));
@@ -1134,47 +1139,48 @@ sub get_label {
 sub get_last_date {
 
     my $label = shift(@_);
+    my $thislevel = shift(@_);
     my $readable = shift(@_);
-    my $file;
+    my $lastlevel;
+    my $targetfile = '';
     my $numeric_val;
     my $string_val;
     my $return_val;
-    my $lastlevel = 0;
-    my $targetfile = '';
     my $mtime;
 
-    # Find last stamp file
-    opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $OS_ERROR");
-    my @files = readdir(DIR);
-    ###
-    ### FIXME this should be a full loop, compared, no last.
-    ### will break when levels > one digit
-    foreach $file (reverse sort @files) {
-	next if ($file !~ m/^$cfg::sprefix$label\.([0-9])$/);
-	if ($1 < $main::level) {
-	    $targetfile = "$cfg::stampdir/$file";
-	    $lastlevel = $1;
-	    last;
-	}
-    }
-    close(DIR);
 
-    # get date from targetfile
-    # or complain if level > 0 and no timestamp
-    # or use the epoch for level 0
-    if ($main::level == 0) {
+    # use the epoch for level 0
+    if ($thislevel == 0) {
 	$numeric_val = '197001010000.00';
 	$string_val = "Thu Jan 01 00:00:00 1970";
 
-    } elsif ($targetfile ne '') {
-	$mtime = (stat($targetfile))[9];
-	$string_val = strftime("%a %b %d %H:%M:%S %Y", localtime($mtime));
-	$numeric_val = strftime("%Y%m%d%H%M.%S", localtime($mtime));
-
     } else {
-	die("Can't do a level $main::level backup - no level 0 timestamp found");
+
+	# Find last stamp file
+	opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $OS_ERROR");
+	close(DIR);
+	my $tmp = $thislevel - 1;
+	foreach my $lev (reverse (0..$tmp)) {
+	    my $file = "$cfg::stampdir/$cfg::sprefix" . "$label.$lev";
+	    if (-e "$file") {
+		$lastlevel = $lev;
+		$targetfile = $file;
+		last;
+	    }
+	}
+
+	# get date from targetfile
+	# or complain if no timestamp
+	if ($targetfile ne '') {
+	    $mtime = (stat($targetfile))[9];
+	    $string_val = strftime("%a %b %d %H:%M:%S %Y", localtime($mtime));
+	    $numeric_val = strftime("%Y%m%d%H%M.%S", localtime($mtime));
+	} else {
+	    die("Can't do a level $main::level backup - no level 0 timestamp found");
+	}
 
     }
+
 
     # what kind of touch flag we are using determines the return type
     # dump -T always expects the string type though
@@ -1186,9 +1192,9 @@ sub get_last_date {
 	$return_val = $numeric_val;
     }
 
-    &log("| Date of this level $main::level backup: $main::date_at_start");
-    if ($main::level == 0) {
-	&log("| Date of last level $lastlevel backup: the epoch");
+    &log("| Date of this level $thislevel backup: $main::date_at_start");
+    if ($thislevel == 0) {
+	&log("| Date of last level $thislevel backup: the epoch");
     } else {
 	&log("| Date of last level $lastlevel backup: $return_val");
     }
@@ -1905,8 +1911,60 @@ sub optioncheck {
 
     # Levels
     if (defined($main::opt{'level'})) {
-	if ($main::opt{'level'} !~ m/^\d$/) {
-	    push(@main::errors,"-level must be 0 through 9 only");
+	if (($main::opt{'level'} !~ m/^\d+$/) and
+	    ($main::opt{'level'} !~ m/^(full|differential|incremental)$/)) {
+	    push(@main::errors,"-level must be numeric, or full/differential/incremental");
+	}
+
+	# Change full/incr/diff to level number
+	if ($main::opt{'level'} =~ m/^\d+$/) {
+	    # Make string variable numeric
+	    $main::level = POSIX::strtod($main::opt{'level'});
+	} elsif ($main::opt{'level'} eq "full") {
+	    $main::level = 0;
+	} elsif ($main::opt{'level'} eq "differential") {
+	    $main::level = 1;
+	} elsif ($main::opt{'level'} eq "incremental") {
+
+	    # Find last stamp file, add one to the level
+	    opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $OS_ERROR");
+	    my @files = readdir(DIR);
+	    my $highestlevel = 0;
+
+	    # FIXME
+	    #
+	    # $label not defined at this point. In order to get it, we need the fs label.
+	    # but it might have been 'all', in which case the latest level per fs might
+	    # all be different numbers.
+	    #
+	    # ACK! we also need to do this in the backup() sub.  but by that point we already
+	    # used the logfile etc; which means we needed the level number already.  chicken, egg.
+	    #
+	    # Can't use a global $main::level anymore either!
+	    #
+	    # Just use -fs flag now, incremental will be broken for 'all' till I figure a solution.
+	    if (defined($main::opt{'fs'}))  {
+		if ($main::opt{'fs'} ne 'all') {
+		    my $label = &get_label($main::opt{'fs'});
+		    foreach my $file (reverse sort @files) {
+			next if ($file !~ m/^$cfg::sprefix$label\.(\d+)$/);
+			if ($1 > $highestlevel) {
+			    $highestlevel = $1;
+			}
+		    }
+		    close(DIR);
+		    $main::level = $highestlevel + 1;
+		} else {
+		    push(@main::errors,"-level incremental is broken when fs=all");
+		}
+	    } else {
+		push(@main::errors,"-level incremental is broken when fs=all");
+	    }
+
+	}
+
+	if (($cfg::type eq 'dump') and ($main::level > 9)) {
+	    push(@main::errors,"can't use level > 9 and type=dump");
 	}
     }
 
@@ -2346,10 +2404,8 @@ sub print_afio_volume_header {
 ######################################################################
 sub set_tape_operation_defaults {
 
-    # Get backup level...
-    if (defined($main::opt{'level'})) {
-	$main::level = $main::opt{'level'};
-    } else {
+    # Set backup level to 0 if not given
+    if (!defined($main::level)) {
 	$main::level = 0;
     }
 
