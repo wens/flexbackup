@@ -50,6 +50,7 @@ Misc:
      mt_blksize
      example for -wday use
  - add faq on max size
+ - add faq on mt erase taking forever / erase_rewind_only
  - Create mbuffer rpm. Add link/rpm for mbuffer
  - Do bfr again, maybe was blocking problem?
  - Make a manual page (AND other enchanced documentation, more than a README)
