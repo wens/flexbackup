@@ -20,7 +20,7 @@ Bugfixes/cleanup:
 ----------------------------------------------------------------------
 Version 1.1.6 (20030313)
 
-Changes beyond stable release:
+Changes beyond stable 1.0.3 release:
 
   - Different way to spec the filesystems. This lets us have arbitrarily
     named backup "sets".
