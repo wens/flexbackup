@@ -1,4 +1,3 @@
-Makefile
 flexbackup.lsm.template
 sizelsm.perl
 tar.exclude

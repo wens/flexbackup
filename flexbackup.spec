@@ -44,8 +44,7 @@ mkdir -p $RPM_BUILD_ROOT/etc
 mkdir -p $RPM_BUILD_ROOT/usr/bin
 mkdir -p $RPM_BUILD_ROOT/var/lib/flexbackup
 mkdir -p $RPM_BUILD_ROOT/var/log/flexbackup
-install -m 755 flexbackup.conf $RPM_BUILD_ROOT/etc
-install -m 755 flexbackup $RPM_BUILD_ROOT/usr/bin
+make install
 
 %clean
 rm -rf $RPM_BUILD_ROOT

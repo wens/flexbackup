@@ -1,7 +1,15 @@
+$Id$
+$Name$
+
 
 New Features:
+ - minimal Makefile that lets you set config path, bin path, etc. for install
 
 Bug fixes/cleanup:
+ - make better afio control file handling for volume labels
+ - dates back to string format )easier to read), use numeric only on BSD
+ - debug shows real mt command
+ - sleep at end of backup not done if file or debug
  - if -noerase, move to eod before starting
 
 ----------------------------------------------------------------------
@@ -113,7 +121,3 @@ Version 0.8
   - clean some duplicated code
   - rpm build, lsm file
   - previously just a local hack I had done for myself
-
-
-$Id$
-$Name$

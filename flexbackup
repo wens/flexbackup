@@ -5,7 +5,7 @@
 # $Id$
 # $Name$
 #
-#         >>>> See the README file <<<<
+#         >>>> Also see the README file <<<<
 #
 # USAGE:
 #
@@ -63,11 +63,8 @@ $OUTPUT_AUTOFLUSH = 1;
 package main;
 
 # See if afio is calling us as a control script
-# if so just echo our stdin
 if ($ARGV[0] =~ /flexbackup.volume_header_info/) {
-    while(<STDIN>) {
-        print;
-    }
+    &print_afio_volume_header();
     exit(0);
 }
 
@@ -492,7 +489,7 @@ sub backup {
     # we know the file number, since we erased the tape
     # (or if using ftape/vtblc, since we can find the file number)
     # (or if we had -erase on the commandline)
-    if ((($main::opt{'fs'} eq "all") and ($main::level eq "0") and (!defined($main::opt{'noerase'})))
+    if ((($main::opt{'fs'} eq "all") and ($main::level == 0) and (!defined($main::opt{'noerase'})))
         or
         ($cfg::ftape eq "true")
         or
@@ -631,8 +628,7 @@ sub backup_afio {
     $archive_cmd .= &maybe_remote_cmd("$main::buffer_cmd $main::buffer_flags -o $main::device",'"',$main::tapehost);
 
     push(@cmds,&maybe_remote_cmd($archive_cmd));
-    push(@cmds,&maybe_remote_cmd("rm -f $tmpstamp"));
-    push(@cmds,&maybe_remote_cmd("rm -f $tmplabel"));
+    push(@cmds,&maybe_remote_cmd("rm -f $tmpstamp $tmplabel"));
 
     if (($cfg::compress ne "false") and ($cfg::afio_nocompress_types ne "")) {
         push(@cmds,&maybe_remote_cmd("rm -f $tmpnocompress"));
@@ -678,8 +674,7 @@ sub backup_cpio {
     $archive_cmd .= &maybe_remote_cmd("$main::buffer_cmd $main::buffer_flags -o $main::device",'"',$main::tapehost);
 
     push(@cmds,&maybe_remote_cmd($archive_cmd));
-    push(@cmds,&maybe_remote_cmd("rm -f \'$dir/$title\'",'"'));
-    push(@cmds,&maybe_remote_cmd("rm -f $tmpstamp"));
+    push(@cmds,&maybe_remote_cmd("rm -f $tmpstamp \'$dir/$title\'",'"'));
 
     return(@cmds);
 
@@ -1184,7 +1179,10 @@ sub optioncheck {
     if ($cfg::buffer_megs =~ m/^\d+$/) {
         $main::buffer_megs = $cfg::buffer_megs . "m";
         $main::buffer_cmd = "buffer -m $main::buffer_megs -s $main::buffer_blksize";
-        $main::buffer_flags = "-t -p 75 -B -u 100";
+        $main::buffer_flags = "-t -p 75 -B";
+        if (!defined($main::use_file)) {
+            $main::buffer_flags .= "-u 100";
+        }
     } else {
         push(@main::errors,"\$buffer_megs must be set to integer number of megabytes");
     }
@@ -1299,7 +1297,7 @@ sub optioncheck {
         }
 
         # If length set to 0 will will try autosize
-        if ($cfg::dump_length eq "0") {
+        if ($cfg::dump_length == 0) {
             $main::dump_len_flag = "-a";
         } else {
             $main::dump_len_flag = "-B $cfg::dump_length";
@@ -1738,4 +1736,14 @@ sub nuke_trailing_slash {
 
     return($host . $path);
 
+}
+
+######################################################################
+# Print the volume label from an afio control file
+######################################################################
+sub print_afio_volume_header {
+    # for now just echo our stdin
+    while(<STDIN>) {
+        print;
+    }
 }
