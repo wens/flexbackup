@@ -1,6 +1,16 @@
 $Id$
 $Name$
 
+----------------------------------------------------------------------
+Version 0.9.9.2 (20030107)
+
+Bug fixes:
+
+ - 'Argument "200301072208|0" isn't numeric in numeric comparison'
+    when using tapes...  redid toc routine to use two hashes for disk/tape
+    files, sort them differently
+ - Existing tape indexes weren't found to a missed edit during the past few
+    days' cleanup
 
 ----------------------------------------------------------------------
 Version 0.9.9.1 (20030107)

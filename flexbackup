@@ -2560,7 +2560,7 @@ sub get_tape_key {
 	}
 	if (defined($key)) {
 	    chomp($key);
-	    if ($key !~ m/^\d+\.\d\d$/) {
+	    if ($key !~ m/^\d+$/) {
 		if (!defined($quiet)) {
 		    &log("| ERROR: This tape doesn't have an index! (use -erase?)");
 		}
@@ -2605,6 +2605,115 @@ sub get_tape_key {
 # Or uses command flag (specific key, current tape/dir, or "all")
 ######################################################################
 sub toc_routine {
+
+    my $arg = shift(@_);
+    my %desired_keys;
+    my $tape;
+    my $desired;
+    my $label;
+    my $dir;
+    my $file;
+    my $key;
+    my %tape_files;
+    my %disk_files;
+
+    return if $cfg::indexes eq "false";
+
+    if (defined($arg)) {
+
+	# Print toc for current tape if given argument
+	$desired_keys{$arg} = 1;
+
+    } elsif ($main::opt{'toc'} =~ m/^\d+$/) {
+
+	# Print toc for a specific tape
+	&log("| Listing specific index");
+	$desired_keys{"$main::opt{toc}"} = 1;
+	&line();
+
+    } elsif ($main::opt{'toc'} eq '') {
+
+	# Print toc for current tape/device
+	&mt('rewind');
+	$_ = &get_tape_key();
+	&mt('rewind');
+	if ($_ ne '') {
+	    $desired_keys{$_} = 1;
+	}
+	&line();
+
+    } elsif ($main::opt{'toc'} eq "all") {
+
+	# Print everything we know about
+	&log("| Listing all in database");
+	foreach (keys %main::index) {
+	    ($tape,$file) = split(/\|/,$_);
+	    $desired_keys{$tape} = 1;
+	}
+	&line();
+
+    } else {
+	die("Invalid key spec $main::opt{toc}");
+    }
+
+
+    # Go through the index and fill hashes
+    foreach $key (keys %main::index) {
+	($tape,$file) = split(/\|/,$key);
+	if ($file =~ m/^\d+$/) {
+	    $tape_files{$tape}{$file} = $main::index{$key};
+	} else {
+	    $disk_files{$tape}{$file} = $main::index{$key};;
+	}
+    }
+
+    &log('');
+
+    # Print the toc of each tape in our desired list
+    foreach $desired (sort bynumber keys %desired_keys) {
+
+	my $found = 0;
+
+	foreach $tape (sort bynumber keys %tape_files) {
+	    if ($tape eq $desired) {
+		$found = 1;
+		&log("File  Contents    (tape index $tape)");
+		&log("-----------------------------------------------");
+		foreach $file (sort bynumber keys %{$tape_files{$tape}}) {
+		    $_ = sprintf("%-04s",$file);
+		    &log($_ . " " . $tape_files{$tape}{$file});
+		}
+	    }
+	}
+
+	foreach $dir (sort bynumber keys %disk_files) {
+	    if ($dir eq $desired) {
+		$found = 1;
+		&log("File  Contents    (tape index $dir)");
+		&log("-----------------------------------------------");
+		foreach $file (sort keys %{$disk_files{$dir}}) {
+		    $_ = sprintf("%-04s",$file);
+		    &log($_ . " " . $disk_files{$dir}{$file});
+		}
+	    }
+	}
+
+	if ($found == 0) {
+	    &log("Key $desired not found in index");
+	}
+
+	&log('');
+
+    }
+
+}
+
+######################################################################
+# Print table of contents
+# Can give a specific key as argument
+# Or uses command flag (specific key, current tape/dir, or "all")
+######################################################################
+sub old_toc_routine {
 
     my $arg = shift(@_);
     my $key;
