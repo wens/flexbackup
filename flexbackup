@@ -273,7 +273,7 @@ sub backup_routine {
 
     # FIXME better on exit if error....
     # (clean the log, finish the fs loop, etc)
-    # Find any die/exit from wahtever this calls past logfile open,
+    # Find any die/exit from whatever this calls past logfile open,
     # and percolate it up...
 
     my @files;
@@ -1742,7 +1742,11 @@ sub backup_filelist {
 	$stamp = &get_last_date($label, $level, 'filename');
     }
 
-    &log("| NOTE: Writing list of files that would have been backed up to current directory");
+    if (defined $::use_pipe) {
+	&log("| NOTE: Writing list of files that would have been backed up to stdout");
+    } else {
+	&log("| NOTE: Writing list of files that would have been backed up to current directory");
+    }
 
     $cmd = "cd \"$dir\" && ";
     $cmd .= &file_list_cmd( $dir, $stamp, 'newline', $level, $remote);
@@ -2662,7 +2666,16 @@ sub optioncheck {
 
     # Check device (or dir)
     $::ftape = 0;
-    if ($cfg::type eq 'filelist') {
+    if (defined($::opt{'pipe'})) {
+
+	# Dump to stdout.
+	# Disable indexing, all messages to stderr
+	$::use_file = 1;
+	$::use_pipe = 1;
+	$cfg::indexes = 'false';
+	$cfg::device = '-';
+
+    } elsif ($cfg::type eq 'filelist') {
 
 	$::use_file = 1;
 	chomp($cfg::device = `pwd`);
@@ -2673,15 +2686,6 @@ sub optioncheck {
 	if (! -w $cfg::device) {
 	    push(@::errors,"Can't write to $cfg::device");
 	}
-
-    } elsif (defined($::opt{'pipe'})) {
-
-	# Dump to stdout.
-	# Disable indexing, all messages to stderr
-	$::use_file = 1;
-	$::use_pipe = 1;
-	$cfg::indexes = 'false';
-	$cfg::device = '-';
 
     } else {
 
@@ -3309,21 +3313,9 @@ sub optioncheck {
 
     } elsif ($cfg::type eq 'filelist') {
 
-	# FIXME allow this
-	if (defined($::use_pipe)) {
-	    push(@::errors,"Can't use type \"filelist\" with -pipe!");
-	}
+	# Nothing specific to check
 
-	# FIXME allow this
-	if ($cfg::compress =~ /^(gzip|bzip2|compress|zip)$/) {
-	    warn("Using type \"filelist\" with compress=$cfg::compress makes no sense");
-	    warn("Setting compression to false");
-	    $::unz = "";
-	    $::z = "";
-	    $cfg::compress = "false";
-	}
-
-    }                                             # type-specific
+    } # type-specific
 
 
     # Tmp dir
@@ -3601,9 +3593,16 @@ sub maybe_get_filename {
 	}
     }
 
-    # If reading from stdin and we have -pipe switch...
+    # If reading from stdin
     if (defined($::use_pipe)) {
-	return('-');
+	# -pipe and file arg doesn't make sense, yell
+	if ($arg ne '') {
+	    print STDERR "Error: when using -pipe, don't specify file name.\n";
+	    die();
+	} else {
+	    # Set file to "-" for stdin
+	    return('-');
+	}
     }
 
     # If the flag given but null, and $device was not set to a dir, just return
@@ -3658,7 +3657,7 @@ sub maybe_get_filename {
 
     # Try and guess file types and commpression scheme
     # might as well since we are reading from a file in this case
-    if ($file =~ m/\.(dump|cpio|tar|star|pax|a|shar)\.(gz|bz2|Z|zip)$/) {
+    if ($file =~ m/\.(dump|cpio|tar|star|pax|a|shar|filelist)\.(gz|bz2|Z|zip)$/) {
 	$cfg::type = $1;
 	$cfg::compress = $2;
 	$cfg::type =~ s/^a$/ar/;
