@@ -1252,11 +1252,10 @@ sub backup_copy_cpio {
     }
 
     $cmd = "cd \"$dir\" && ";
-    $cmd .= &file_list_cmd($dir, $stamp, 'null', $level, $remote);
+    $cmd .= &file_list_cmd($dir, $stamp, 'newline', $level, $remote);
     $cmd .= "| ";
 
     $cmd .= "$::path{cpio} -o ";
-    $cmd .= "-0 ";
     $cmd .= "-H $cfg::cpio_format ";
     $cmd .= "$::cpio_verb_flag ";
     $cmd .= "$::cpio_blk_flag ";
