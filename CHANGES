@@ -2,8 +2,8 @@ $Id$
 $Name$
 
 Bug fixes:
- - If using files, and multiple array entries for $filesystems, index was
-   getting hosed up.
+ - If using files, "all", and and multiple array entries for $filesystems,
+   index was getting hosed up.
 
 ----------------------------------------------------------------------
 Version 1.0.2 (20030219)
