@@ -3453,7 +3453,7 @@ sub toc_routine {
 	if ($file =~ m/^\d+$/) {
 	    $tape_files{$tape}{$file} = $main::index{$key};
 	} else {
-	    $disk_files{$tape}{$file} = $main::index{$key};;
+	    $disk_files{$tape}{$file} = $main::index{$key};
 	}
     }
 
