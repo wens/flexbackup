@@ -1,16 +1,39 @@
-Version 0.9.2
+Version 0.9.3 (19990921) (just for testing)
+
+ - can now archive to files instead of devices
+     just set $device to a directory for backup
+     compare/extract/list/restore can now take a filename argument
+ - timestamp changes:
+     use "touch -t" not "touch -d" so FreeBSD works
+     all dates now in YYYYMMDDhhmm.SS format
+     dump can use /etc/dumpdates or flexbackup's timestamps
+     use timestamps of the epoch for level 0 (simplifies code)
+ - add "-d var=val" for overriding config values
+ - if $dump_length set to 0 use dump -a
+ - tar mode uses "find" just like afio & cpio
+ - afio doublebuffering option
+ - FreeBSD fix for mt setblk
+ - error if level > 0 and no level 0 stamp exists
+ - fix label string for remote paths
+ - add -n option that doesn't run mt and the actual backup
+
+Version 0.9.2 (19990920)
+
  - initial release to the public
  - gzip log files option
  - fix afio buffer to be in units of k in cfg file
 
-Version 0.9.1
+Version 0.9.1 (1999019)
+
   - incrementals w/ afio cpio tar done (remote fs too!)
   - timestamp only after sucessful backup, but use the pre-backup time
   - noerase option
 
 Version 0.8
+
   - redone with "use strict"
   - incremental for non-dump types almost done
   - automated pacakging
   - clean some duplicated code
   - rpm build, lsm file
+  - previously just a local hack I had done for myself

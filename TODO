@@ -1,28 +1,37 @@
-Flexbackup todo list as of version 0.9.2
+Flexbackup todo list as of version 0.9.3
 
-Some of these might not happen, but I write them down anyway
+Some of these might not happen, but figured I should jot them down
 
- - FreeBSD checks out ok (hi john)
+ - test remote timestamps again
+ - test file-based stuff
+ - test FreeBSD again
+
+cut off 0.9.4 here
+
+ - support multiple tapes for "all"
  - exclude regexp's
      dump won't be able to do this
  - resurrect my old drive and test ftape stuff again
  - autodetect ftape and raw device to eliminate configuration
- - sanity check: device perms, make sure remoteshell,vtblc,etc in path
- - config option for dump to use flexbackup timestamps or /etc/dumpdates
- - what if you try to do incrementals and no level 0 exists?
- - does restore compare subdirectories of mountpoints correctly?
+ - sanity check: make sure remoteshell,vtblc,etc in path; check dir validity
  - nocompress list for afio
+ - arbitrary "list of files" extract
  - add reten switch
- - log files for extract?
+
+cut off 1.0 features here?
+
+ - use a global "title" per backup
+     work in a volume label scheme
+     ideas & code from Scott Penrose
+ - commands are an array.  use &remote_command subroutine
+     abstract away duplicated code in afio,cpio,tar
+ - does restore compare subdirectories of mountpoints correctly?
  - interactive restore-like shell for types besides dump
-     maybe also a "list of files" restore
- - compare/extract/restore take dir as argument 
- - transparent extract of remote volumes
- - transparent compare for remote volumes
- - transparent restore of remote volumes
-     this needs to be interactive, so wont work - put sw on client
- - add disk-file based method in addiation to tape device
- - support multiple tapes for "all"
+ - log files for extract/compare/etc?
+ - transparent extract/compare/restore of remote volumes
+     restore needs to be interactive, so wont work - put sw on client
  - support multiple tapes for a single archive
  - GUI driver/configurator utility
- - handle cd-rom burning for full backups
+     "linux backup" util looked like the right kind of interface
+     http://mirrors.darkelf.net. contact author.
+ - cd-rom burning (or just .iso type?) for full backups?

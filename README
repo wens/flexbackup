@@ -5,14 +5,13 @@
   |_|   |_|\___/_/\_\_.__/ \__,_|\___|_|\_\\__,_| .__/
                                                 |_|
  http://members.home.com/edwinh/flexbackup/
+ README for version 0.9.2
 
 ----------------------------------------------------------------------
-README for version 0.9.2
-
 Flexible backup script.
 
 Features:
-   o Easy to configure (at least I think so)
+   o Easy to configure
    o Uses dump, afio, tar, or cpio with the flick of a switch
    o Backup, extract, compare, list modes
    o Full (0) and 1-9 levels of incremental backup (ala "dump")
@@ -20,6 +19,7 @@ Features:
    o Does remote filesystems (over rsh/ssh; no special service)
    o Works with IDE/SCSI tapes
      or Linux ftape (allows table of contents support)
+     or archive to normal files rather than device
    o Nice log files
 
 Software needed:
@@ -48,8 +48,8 @@ packages were any combination of:
    o Didn't have features I wanted
 
 ----------------------------------------------------------------------
+USE
 
-USE:
 See "flexbackup -help". Examples below.
 
 To do a full backup of /home:
@@ -77,7 +77,9 @@ directory:
 
    flexbackup -compare -type afio
 
-Notes:
+----------------------------------------------------------------------
+NOTES
+
  Level 0 backups of "all" assume a new tape - will trigger
  tape retension and erasure.  Other backups move tape to
  current end of data and start the backup there
@@ -85,31 +87,37 @@ Notes:
  Backups rewind the tape when done.  Other operations leave it where
  it is.
 
- rsh or ssh is used for remote backups.  Backups of remote machines
- are to be run from the machine with the tape drive!
-
- Log files are of the format <prefix>.<fs>.<level>.<yyyymmdd>
+ Log files are of the format <prefix><fs>.<level>.<yyyymmdd>
  Lower-level backups will wipe out all higher-level log files in
  the log directory for that filesystem.
 
- I suggest using either the "dump" or "afio" types.  Dump would be
- perfect if it did compression and could exclude file patterns, but it
- isn't designed that way... afio is a good bet if you want
- compression one error will not corrupt your entire archive like
- with a compressed tar scheme.
+ Archiving to files - just set $device to a directory. Backups
+ will be called <filesystem>.<level>.<yyyymmdd>.<type>
+
+ You can give filenames as an argument to -compare/extract/list/restore
+
+ Remote: rsh or ssh is used for remote backups.  Backups of remote machines
+ are to be run from the machine with the tape drive!
+
+ I suggest using either the "dump" or "afio" types.  Dump would be perfect
+ if it did compression and could exclude file patterns, but it isn't
+ designed that way... afio is a good bet if you want compression.  One bit
+ error will not corrupt your entire archive like with a compressed tar
+ scheme.
 
 ----------------------------------------------------------------------
+MISC
 
-I did this to to help automate my life.
-See the TODO list for what I might be planning to do next
+ I did this to to help automate my life.
+ See the TODO list for what I might be planning to do next
 
-Comments/problems/suggestions to edwinh@computer.org
+ Comments/problems/suggestions to edwinh@computer.org
 
-Thanks,
-  Edwin Huffstutler <edwinh@computer.org>
+ Thanks,
+   Edwin Huffstutler <edwinh@computer.org>
 
 
-DISCLAIMER: This program is distributed in the hope that it will be
-useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-General Public License (See COPYING) for more details.
+ DISCLAIMER: This program is distributed in the hope that it will be
+ useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General
+ Public License (See COPYING) for more details.
