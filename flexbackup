@@ -359,16 +359,15 @@ sub backup_routine {
 		&mt('generic-eod');
 	    }
 
-	    # Multiple tapes are only for level 0
-	    if (!defined($main::incremental_all) and ($main::level == 0)) {
-		&log("| Tape \#$tapecounter");
-	    }
-
 	    # Print what "all" means
 	    &log("| Filesystems = $list");
 
 	    # Show tape position
 	    if (defined($main::tapedevice)) {
+                # Multiple tapes are only for level 0
+                if (!defined($main::incremental_all) and ($main::level == 0)) {
+                    &log("| Tape \#$tapecounter");
+                }
 		&line();
 		&mt('generic-query');
 	    }
@@ -3270,8 +3269,10 @@ sub set_tape_operation_defaults {
     # Assume stuff based on how we are called first
     if (defined($main::opt{'fs'})) {
 	if ($main::opt{'fs'} eq 'all') {
-	    if (!defined($main::incremental_all) and ($main::level == 0)) {
-		# All level zero - retension, and erase a new tape
+	    if (!defined($main::incremental_all) and
+		($main::level == 0) and
+		!defined($main::use_file)) {
+		# All level zero, using device. Retension & erase a new tape
 		# (config file may tell us not to erase)
 		if ($cfg::erase_tape_all_level_zero eq "true") {
 		    $main::do_reten = 1;
@@ -3282,7 +3283,8 @@ sub set_tape_operation_defaults {
 		}
 		$main::do_rewind_after = 1;
 	    } else {
-		# All incremental backup - go to end of tape
+		# Using files, all incremental backup, or all non-zero
+		# don't erase + go to end of tape
 		$main::do_reten = 0;
 		$main::do_erase = 0;
 		$main::do_rewind_after = 1;
@@ -3353,7 +3355,7 @@ sub split_and_echo {
 sub new_tape_key {
 
     my $key;
-    my $dev = $main::device;
+    my $dev = $cfg::device;
     my $old;
     my $string;
 
@@ -3429,7 +3431,7 @@ sub get_tape_key {
 
     # If writing to a file see if there is already an index key and use it
     if (defined($main::use_file)) {
-	my $dev = "$main::device/$cfg::keyfile";
+	my $dev = "$cfg::device/$cfg::keyfile";
 	if (-r $dev) {
 	    open(KEY,$dev) or die("Can't open existing key $dev: $OS_ERROR");
 	    chomp($key = <KEY>);
