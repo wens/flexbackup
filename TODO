@@ -5,10 +5,11 @@ Flexbackup to-do list
 Some of these might not happen, but figured I should jot them down
 
 Before next release:
- - test the block size 0 stuff
+ - get john's -regex fix...
  - auto-testing script for all archive types and compression
    during changes
- - mail new maintainer of dump now and ask about -T
+ - try dump -T again
+ - test incremntal tar
  - resurrect my old drive and test ftape stuff again
 
  - update web pages (move stuff into subdirs, etc)
@@ -61,10 +62,9 @@ Cleanup/fix:
  - try restore -D for comparing subdirs w/ restore
  - check that dir we are backing up exists
  - autodetect ftape and raw device to eliminate configuration
- - figure out why I can't get dump -T to work
- - related problem to the above bullet.  dump updates
-     /etc/dumpdates if you dump a subdir, so if you do another
-     backup of a different dir of the same fs your timestamps are hosed
+ - dump updates /etc/dumpdates if you dump a subdir, so if you do another
+     backup of a different dir of the same fs your timestamps are
+     hosed solved if we get -T to work.
  - config file in just text?  Wondering if anyone is bothered by the
      perl syntax.
 
