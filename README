@@ -98,7 +98,8 @@ NOTES
 
  Log files are of the format <prefix><fs>.<level>.<yyyymmdd>
  Lower-level backups will wipe out all higher-level log files in
- the log directory for that filesystem.
+ the log directory for that filesystem.  A symlink is made to the
+ "latest" log for a certain filesystem.
 
  Archiving to files - just set $device to a directory. Backups
  will be called <filesystem>.<level>.<yyyymmdd>.<type>
