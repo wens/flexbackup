@@ -3,7 +3,15 @@ edit CHANGES,TODO,README
 change verison header in CHANGES
 make all VER=x.x.x
 edit index.html
-upload files/web to sf.net
+
+upload files/web to edwinh.org
+  rsync --archive --verbose --delete www/ edwinh.org:public_html/flexbackup
+
+upload files/web to sourceforge.net
+  rsync --archive --verbose --delete www/ flexbackup.sourceforge.net:/home/groups/f/fl/flexbackup/htdocs
+
 upload files to sunsite
-upload to redhat
+
+upload to redhat contrib
+
 freshmeat notice
