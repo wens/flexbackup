@@ -9,7 +9,7 @@ Release:   1
 Epoch:     0
 License:   GPL
 Group:     Applications/Archiving
-URL:       http://flexbackup.sourceforge.net
+URL:       http://www.flexbackup.org
 Source0:   flexbackup-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
 BuildArch: noarch

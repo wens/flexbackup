@@ -4,7 +4,7 @@
   |  _| | |  __/>  <| |_) | (_| | (__|   <| |_| | |_) |
   |_|   |_|\___/_/\_\_.__/ \__,_|\___|_|\_\\__,_| .__/
                                                 |_|
- http://flexbackup.sourceforge.net
+ http://www.flexbackup.org
 
 ----------------------------------------------------------------------
 A flexible backup tool
@@ -48,8 +48,9 @@ interface to them.
 ----------------------------------------------------------------------
 USAGE EXAMPLES
 
---> Please see "flexbackup -help" and the config file comments
-There are many useful options that aren't appropriate to describe here.
+--> Please see "flexbackup -help" and the config file comments, or the
+flexbackup(1) and flexbackup.conf(5) manpages.  There are many useful
+options that aren't appropriate to describe here.
 
 To do a full backup of /home:
 
@@ -160,7 +161,7 @@ $set{'alletc'} = "/etc hercules:/etc thor:/etc gazelle:/etc";
 $set{'other'} = "/var/named /net/local /net/www";
 $set{'os'} = "/ hercules:/ thor:/ gazelle:/";
 $set{'laptop'} = "laptop:/etc laptop:/home/edwinh";
-                          
+
 # Subtree pruning
 # A space-separated list of directories to prune from each backup.
 # Key is a filesystem or host:dir spec as outlined above
@@ -170,7 +171,7 @@ $prune{'hercules:/'} = "tmp proc disk. mnt.? misc net";
 $prune{'thor:/'}     = "tmp proc disk. mnt.? misc net";
 $prune{'gazelle:/'}  = "tmp proc disk. mnt.? misc net";
 $prune{'/net/local'} = "games";
-                                                    
+
 ----------------------------------------------------------------------
 SAMPLE CRONTAB
 
@@ -185,7 +186,7 @@ user crontab... this is in /etc/crontab type format.)
 31   3    *     *  1-5 root flexbackup -set homes -incremental
 31   3    *     *    6 root flexbackup -set homes -differential
 31   3  1-7     *    * root flexbackup -wday 7 -set homes -full -type afio
- 
+
 # All /etc dirs at 3:01
 # Daily incremental backups weekdays (catch day-to-day changes)
 # Weekly differential backups Saturday (catch all changes since full)
@@ -193,7 +194,7 @@ user crontab... this is in /etc/crontab type format.)
 1    3    *     *  1-5 root flexbackup -set alletc -incremental
 1    3    *     *    6 root flexbackup -set alletc -differential
 1    3  1-7     *    * root flexbackup -wday 7 -set alletc -full -type afio
- 
+
 # Other filesystems at 2:31am
 # Daily incremental backups weekdays (catch day-to-day changes)
 # Weekly differential backups Saturday (catch all changes since full)
@@ -201,11 +202,11 @@ user crontab... this is in /etc/crontab type format.)
 31   2    *     *  1-5 root flexbackup -set other -incremental
 31   2    *     *    6 root flexbackup -set other -differential
 31   2  1-7     *    * root flexbackup -wday 7 -set other -full -type afio
- 
+
 # Unowned/changed package stuff on each machine at 1:01am
 # Only once a month
 1    1  1-7     *    * root flexbackup -wday 7 -set os -pkgdelta rpm -full
- 
+
 
 ----------------------------------------------------------------------
 MISCELLANEOUS
@@ -214,9 +215,9 @@ MISCELLANEOUS
  See the TODO list for what we might be planning to do next.
 
  Send problems/suggestions to:
-   flexbackup-help@lists.sourceforge.net 
+   flexbackup-help@lists.sourceforge.net
  Please check the FAQ!
- See http://flexbackup.sourceforge.net for contact information.  
+ See http://www.flexbackup.org for contact information.
 
  Thanks,
    Edwin Huffstutler <edwinh+flexbackup@edwinh.org>

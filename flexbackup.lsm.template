@@ -17,9 +17,9 @@ Features:
 Keywords: backup dump restore afio tar cpio pax ftape
 Author: edwinh+flexbackup@edwinh.org (Edwin Huffstutler)
 Maintained-by: edwinh+flexbackup@edwinh.org (Edwin Huffstutler)
-Primary-site: http://flexbackup.sourceforge.net /tarball
+Primary-site: http://www.flexbackup.org /tarball
               flexbackup-VERSION.tar.gz
-Alternate-site: http://flexbackup.org /tarball
+Alternate-site: http://flexbackup.sourceforge.net /tarball
                 flexbackup-VERSION.tar.gz
 Original-site:
 Platforms: Unix-like system with perl and standard archivers. tape drive optional.

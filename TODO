@@ -4,10 +4,6 @@ $Name$
 Flexbackup to-do list
 Some of these might not happen
 
-Pending:
- - Scrub manpage, mention in readme, etc.
- - Freebsd pkg changes
-
 Cleanup/fix:
  - Clean up more $main:: vars, split into types or refactor code
  - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
