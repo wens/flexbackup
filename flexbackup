@@ -2171,7 +2171,7 @@ sub optioncheck {
     $main::device = $cfg::device;
 
     # Can we write to it?
-    if (! -w $main::device) {
+    if (! -w $main::device and !defined($main::remotetapehost)) {
 	push(@main::errors,"Can't write to $main::device");
     }
 
