@@ -508,10 +508,8 @@ sub backup_routine {
 
     # Symlink the "latest" log file for this level
     unlink("$cfg::logdir/$symlink" . $logext);
-    if ($cfg::staticlogs eq 'false') {
-	&log("| Linking $symlink" . "$logext -> $logfile" . $logext, 'screen');
-	symlink("$logfile" . $logext,"$cfg::logdir/$symlink" . $logext);
-    }
+    &log("| Linking $symlink" . "$logext -> $logfile" . $logext, 'screen');
+    symlink("$logfile" . $logext,"$cfg::logdir/$symlink" . $logext);
 
     &line('screen');
 
@@ -1966,6 +1964,7 @@ sub optioncheck {
     &check(\$cfg::mt_var_blksize,'mt_var_blksize');
     &check(\$cfg::traverse_fs,'traverse_fs','false local all');
     &check(\$cfg::remoteshell,'remoteshell','ssh ssh2 ssh1 rsh');
+    &check(\$cfg::remoteuser,'remoteuser','exist');
     &check(\$cfg::erase_tape_all_level_zero,'erase_tape_all_level_zero');
     &check(\$cfg::erase_rewind_only,'erase_rewind_only');
     &check(\$cfg::logdir,'logdir','exist');
@@ -2007,6 +2006,11 @@ sub optioncheck {
 
     # Check we can find rsh or ssh
     $main::path{$cfg::remoteshell} = &checkinpath($cfg::remoteshell);
+    if ($cfg::remoteuser ne '') {
+	$main::remoteshell = "$main::path{$cfg::remoteshell} -l $cfg::remoteuser";
+    } else {
+	$main::remoteshell = $main::path{$cfg::remoteshell};
+    }
 
     # Check we can find common stuff
     $main::path{'touch'} = &checkinpath('touch');
@@ -2236,9 +2240,6 @@ sub optioncheck {
 	    my $buftest;
 	    my $out;
 	    my $megs = $cfg::buffer_megs . "m";
-
-	    print "Checking 'buffer' on this host...\n";
-	    &test_shared_mem_for_buffer($main::path{'buffer'}, $cfg::buffer_megs, 'localhost');
 
 	    if (defined($main::tapedevice)) {
 		$write_flags = "-u 100 -t -p 75 $buffer_pad_flag -o ";
@@ -2643,35 +2644,14 @@ sub optioncheck {
 	}
     }
 
-    # Last step - check any remote hosts for required programs
-    foreach (@remoteprogs) {
-	$_ = "type $_ 2>&1";
+    #
+    # Last step - check buffer and any remote hosts for required programs
+    #
+    &line('screen');
+    if ($cfg::buffer eq 'buffer') {
+	&test_bufferprog($main::path{'buffer'}, $cfg::buffer_megs, 'localhost');
     }
-    my $string = join ('; ',@remoteprogs);
-    foreach my $host (keys %remotehosts) {
-	print "Checking for required programs on host $host...\n";
-	my $cmd = "$cfg::remoteshell $host sh -c '$string'";
-	if (defined($main::opt{'n'})) {
-	    print "(debug) $cmd\n";
-	    next;
-	}
-	if (!(open(PIPE,"$cmd |"))) {
-	    push (@main::errors, "Could not open pipe to remote shell - $!");
-	    last;
-	}
-
-	while (<PIPE>) {
-	    if (m/(\S+): not found/) {
-		push(@main::errors, "Could not find program '$1' on remote machine '$host'");
-	    }
-	}
-	close (PIPE);
-
-	if ($cfg::buffer ne 'false') {
-	    print "Checking 'buffer' on host $host...\n";
-	    &test_shared_mem_for_buffer($main::path{'buffer'} ,$cfg::buffer_megs, $host);
-	}
-    }
+    &check_remote_progs(\%remotehosts, \@remoteprogs);
 
     if (@main::errors) {
 	print "\nErrors:\n";
@@ -3009,9 +2989,9 @@ sub maybe_remote_cmd {
 
     if (defined($host) and ($host ne '')) {
 	if ($ENV{SHELL} =~ m/bash/) {
-	    $cmd  = "$cfg::remoteshell $host " . $quote . $cmd . $main::bash_pipe_exit . $quote;
+	    $cmd  = "$main::remoteshell $host " . $quote . $cmd . $main::bash_pipe_exit . $quote;
 	} else {
-	    $cmd  = "$cfg::remoteshell $host " . $quote . $cmd . $quote;
+	    $cmd  = "$main::remoteshell $host " . $quote . $cmd . $quote;
 	}
     } else {
 	$cmd  = "$cmd";
@@ -3743,7 +3723,7 @@ sub file_list_cmd {
 # Actually test to see if we can run buffer. In situations where SysV shared
 # memory is low, or buffer can't run, buffer can fail
 #############################################################################
-sub test_shared_mem_for_buffer {
+sub test_bufferprog {
 
     my $buffer_prog = shift(@_);
     my $mem = shift(@_) . 'm';
@@ -3753,6 +3733,9 @@ sub test_shared_mem_for_buffer {
     my $out;
 
     if ($host eq 'localhost') {
+
+	print "| Checking '$buffer_prog' on this host... ";
+
 	if (!open(TMP, ">$tmp_name")) {
 	    printf (STDERR "Could not open tmp file '$tmp_name' for writing - $!\n");
 	    exit (2);
@@ -3774,8 +3757,9 @@ sub test_shared_mem_for_buffer {
 	unlink("$tmp_name");
 
 	if ($retval != 0) {
+	    print "Failed!\n";
 	    push(@main::errors, "Problems encountered testing 'buffer' command:");
-	    push(@main::errors, " --> " . $out);
+	    push(@main::errors, "  --> " . $out);
 	    if ($retval == 255) {
 		push(@main::errors, "  You don't have enough shared memory to run 'buffer' on this host, or");
 		push(@main::errors, "  have exceeded buffering limits. Try lowering the amount specified in");
@@ -3784,11 +3768,123 @@ sub test_shared_mem_for_buffer {
 	    } else {
 		push(@main::errors, "  Unknown problem trying to run 'buffer' (exit code $retval). Try disabling it.");
 	    }
+	} else {
+	    print "Ok\n";
 	}
+
+
 
     } else {
 
-	### FIXME checking buffer on remote hosts
+	print "| Checking 'buffer' on host $host... ";
+
+	my $tmpfile = "$cfg::tmpdir/test.$PROCESS_ID";
+
+	# Create a script which tests the buffer program
+	# FIXME
+	my $script  = "echo '#!/bin/sh' > $tmpfile; ";
+	$script .= "echo 'tmp_name=/tmp/bufftest\$\$.txt' >> $tmpfile; ";
+	$script .= "echo 'echo testme > \$tmp_name' >> $tmpfile; ";
+	$script .= "echo '$buffer_prog -m ${mem} -o /dev/null 2> /dev/null < \$tmp_name' >> $tmpfile; ";
+	$script .= "echo 'res=\$?' >> $tmpfile; ";
+	$script .= "echo 'if [ \$res -eq 0 ]; then' >> $tmpfile; ";
+	$script .= "echo 'echo \"buffer was successful\"' >> $tmpfile; ";
+	$script .= "echo 'else' >> $tmpfile; ";
+	$script .= "echo 'echo \"buffer was unsuccessful: exit code \$res\"' >> $tmpfile; ";
+	$script .= "echo 'fi' >> $tmpfile; ";
+	$script .= "echo '/bin/rm -f \$tmp_name' >> $tmpfile; ";
+	system("$script");
+
+	if (!(open PIPE,"cat $tmpfile | ($main::remoteshell $host 'cat > $tmpfile; chmod 755 $tmpfile; $tmpfile; /bin/rm -f $tmpfile') | ")) {
+	    push (@main::errors, "Could not open pipe to temporary script. - $!");
+	    $retval = 1;
+
+	} else {
+
+	    while (<PIPE>) {
+		chomp($out = $_);
+		if (/^$buffer_prog was unsuccessful: exit code (\d+)/) {
+		    $retval = $1;
+		    if ($retval != 0) {
+			print "Failed!\n";
+			push(@main::errors, "Problems encountered testing 'buffer' command on host '$host':");
+			push(@main::errors, "  --> " . $out);
+			if ($retval == 255) {
+			    push(@main::errors, "  You don't have enough shared memory to run 'buffer' on $host, or");
+			    push(@main::errors, "  have exceeded buffering limits. Try lowering the amount specified in");
+			    push(@main::errors, "  \$buffer_megs in your flexbackup.conf file, or reconfigure your");
+			    push(@main::errors, "  kernel to include more SysV shared memory pages if using *BSD.");
+			} else {
+			    push(@main::errors, "  Unknown problem trying to run 'buffer' (exit code $retval). Try disabling it.");
+			}
+		    } else {
+			print "Ok\n";
+		    }
+
+		}
+	    }
+	    close (PIPE);
+	}
+
+	unlink("$tmpfile");
+
+    }
+
+    return($retval);
+}
+
+
+#############################################################################
+# Check that programs exist on remote systems
+# Check buffer execution on them too
+#############################################################################
+sub check_remote_progs {
+
+    my $remotehost_ref = shift(@_);
+    my $remoteprogs_ref = shift(@_);
+    my $err = 0;
+    my @progs;
+
+    foreach (@$remoteprogs_ref) {
+	# Could be '0' if orginal checkinpath failed on localhost
+	if ($_ ne '0') {
+	    push(@progs,"type $_ 2>&1");
+	} else {
+	    $err++;
+	}
+    }
+    my $string = join ('; ',@progs);
+    foreach my $host (keys %$remotehost_ref) {
+	print "| Checking for required programs on host $host... ";
+	my $cmd = "$main::remoteshell $host sh -c '$string'";
+	if (defined($main::opt{'n'})) {
+	    print "(debug) $cmd\n";
+	    next;
+	}
+	if (!(open(PIPE,"$cmd |"))) {
+	    push (@main::errors, "Could not open pipe to remote shell - $!");
+	    $err++;
+	    last;
+	}
+
+	while (<PIPE>) {
+	    if (m/(\S+) not found/) {
+		push(@main::errors, "Could not find program '$1' on remote machine '$host'");
+		$err++;
+	    }
+	}
+	close (PIPE);
+
+	if ($err == 0) {
+	    print "Ok\n";
+	} else {
+	    print "Failed!\n";
+	}
+
+	if ($cfg::buffer eq 'buffer') {
+	    &test_bufferprog($main::path{'buffer'} ,$cfg::buffer_megs, $host);
+	}
+
 
     }
 
