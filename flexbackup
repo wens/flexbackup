@@ -2051,6 +2051,13 @@ sub compare_routine {
 	$cmd .= "-B ";
 	$cmd .= "file=-";
 
+    } elsif ($cfg::type eq 'copy') {
+
+	$main::path{'diff'} = &checkinpath('diff');
+
+	$cmd = "$main::path{diff} -r -q ";
+	$cmd .= ". $main::device";
+
     } else {
 	die("$cfg::type not capable of comparing files");
     }
@@ -2529,6 +2536,14 @@ sub optioncheck {
 	$main::debug = 1;
     }
 
+    # Flag old config file
+    if (defined(@cfg::filesystems) or defined($cfg::mt_var_blksize)) {
+	# so strict shuts up
+	my $junk = @cfg::filesystems;
+	$junk = $cfg::mt_var_blksize;
+	push(@main::errors,"You've got an old 1.0.x configuration file, please update it!");
+    }
+
     # First check if things are defined in the config file
     # Checks exist, true/false, or one of options
     &check(\$cfg::type,'type','dump afio cpio tar star pax zip ar shar lha copy filelist');
@@ -2558,7 +2573,7 @@ sub optioncheck {
     &check(\$cfg::sprefix,'sprefix','exist');
 
     if (@main::errors) {
-	print "\nErrors:\n";
+	print "Errors:\n";
 	while(@main::errors) {
 	    print " " . shift(@main::errors) . "\n";
 	}
@@ -2858,7 +2873,7 @@ sub optioncheck {
 	my $megs = $cfg::buffer_megs . "M";
 	my $bufcmd = "$main::path{mbuffer} -m $megs -p $pct $mbuffer_blk_flag";
 
-        # FIXMe keep testing this
+	# FIXME keep testing this
 	# FIXME sleep setup just like buffer
 	$main::buffer_cmd = " | $bufcmd -q";
 	$main::write_cmd = "$bufcmd | $main::path{dd} $main::dd_blk_flag $main::dd_write_pad_flag of=";
@@ -4583,13 +4598,14 @@ sub file_list_cmd {
 
     if (defined(%{$main::prune{$prunekey}})) {
 	# FIXME don't join , use separate -regex -o flags
-	# So freebsd find will work?
+	# So freebsd find will work?  Bug john.
 	$cmd .= '-regex "\./\(';
 	$cmd .= join('\|', keys %{$main::prune{$prunekey}});
 	$cmd .= '\)/.*" -prune -o ';
     } else {
-C	# FIXME Can't use find -depth with the -prune w/ gnu findutils 4.1.7
-	# It wasn't really required anyway...
+	# Can't use find -depth with -prune (see single unix spec etc)
+	# (not toally required anyway, only if you are archiving dirs you
+	# don't have permissions on and are running as non-root)
 	$cmd .= "-depth ";
     }
 
