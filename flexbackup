@@ -2422,7 +2422,7 @@ sub optioncheck {
     &check(\$cfg::compr_level,'compr_level','exist');
     &check(\$cfg::verbose,'verbose');
     &check(\$cfg::sparse,'sparse');
-    #&check(\$cfg::label,'label');
+    &check(\$cfg::label,'label');
     &check(\$cfg::atime_preserve,'atime_preserve');
     &check(\$cfg::indexes,'indexes');
     &check(\$cfg::staticfiles,'staticfiles');
@@ -4179,7 +4179,7 @@ sub rmindex {
     # or the entire db
     if ($arg =~ m/^(\d+)(:all)?$/) {
 	$key = $1;
-    } elsif ($arg =~ m/^(\d+):(\S+)$/) {
+    } elsif ($arg =~ m/^(\d+):(.+)$/) {
 	$key = $1;
 	$file = $2;
     } elsif ($arg eq "all") {
