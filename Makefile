@@ -22,7 +22,7 @@ tag: version commit
 	cvs tag -F $(CVSVER)
 
 tar: tag lsm
-	cd /tmp; cvs co -r $(CVSVER) flexbackup; mv flexbackup flexbackup-$(VER)
+	cd /tmp; cvs -z3 -d:ext:edwinh@cvs.sourceforge.net:/cvsroot/flexbackup co -r $(CVSVER) flexbackup; mv flexbackup flexbackup-$(VER)
 	cd /tmp/flexbackup-$(VER); mv Makefile.dist Makefile
 	tar -C /tmp -z -c -v -X tar.exclude -f $(SITE)/tarball/flexbackup-$(VER).tar.gz flexbackup-$(VER)
 	cp -p $(SITE)/tarball/flexbackup-$(VER).tar.gz $(SITE)/tarball/flexbackup-latest.tar.gz
@@ -41,7 +41,7 @@ webdoc:
 	cd /tmp; echo yes | cvs release -d flexbackup
 
 lsm: tag
-	cd /tmp; cvs co -r $(CVSVER) flexbackup; mv flexbackup flexbackup-$(VER)
+	cd /tmp; cvs -z3 -d:ext:edwinh@cvs.sourceforge.net:/cvsroot/flexbackup co -r $(CVSVER) flexbackup; mv flexbackup flexbackup-$(VER)
 	tar -C /tmp -z -c -v -X tar.exclude -f $(SITE)/tarball/flexbackup-$(VER).tar.gz flexbackup-$(VER)
 	cd /tmp; echo yes | cvs release -d flexbackup-$(VER)
 	./sizelsm.perl $(SITE)/tarball $(VER)
