@@ -3,6 +3,8 @@ Flexbackup todo list as of version 0.9.3
 Some of these might not happen, but figured I should jot them down
 
  - test remote timestamps again
+ - test afio doublebuffer
+ - test dump with my timestamps
  - test file-based stuff
  - test FreeBSD again
 
