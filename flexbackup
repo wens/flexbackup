@@ -712,7 +712,7 @@ sub backup {
 	    # Replace piped commands with catch-script
 	    # Put on the front of the pipe as well
 	    if ($cmd =~ s: \| : \| $exitscript :g) {
-		$cmd = "$exitscript $cmd";
+		#$cmd = "$exitscript $cmd";
 	    }
 
 	    # Put any ssh stuff back
