@@ -49,7 +49,7 @@
 #                                    have tape driver & parameters set up correctly
 #  flexbackup [opt] -n             : don't run actual dump or mt commands, just echo
 #  flexbackup [opt] -type filelist : special backup type that just saves list of files
-#                                    that would have been archvied
+#                                    that would have been archived
 # MISC:
 #  flexbackup -newtape             : erase & create new index key (but no backup)
 #  flexbackup -rmfile <file>       : if backups to disk, rm specific file & index info

@@ -8,7 +8,6 @@ Cleanup/fix:
  - Fix stdout/err flow when listing (maybe just "buffer" problem?)
 
  - Better cleanup after error in backup
-
  - Clean up more $main:: vars, split into types or refactor code
  - Whole class of problems like:
     - Use dump combined flags (for older dumps that want abc not -a -b -c)
@@ -46,7 +45,7 @@ Features to add:
       labelling, but the idea was sort of the same as mine, with small key at
       the start of the tape.
 
-      Ack.  still not workable.
+      Ack.  still not workable.  need edits to multivol...
 
  - Better way to spec fs,
      be able to have spaces in dirs in the conf file
@@ -56,9 +55,9 @@ Features to add:
 
  - Make package delta work with BSD ports or debian pkgs
 
- - If we detect an error and are using tapes, do seomthing intelligent
-     to reposition tape, add another filemark etc to get tape to known state
-     and avoid the maybe-error in the index & what 'nextfile" is on the tape
+ - If we detect an error and are using tapes, do something intelligent
+     to reposition tape, add another filemark, etc to get tape to known state
+     and avoid the maybe-error in the index & what 'nextfile' is on the tape
 
  - smbtar?
      doable - overload type 'tar'. smbtar triggers with a fs spec of something like
