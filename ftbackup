@@ -10,15 +10,16 @@
 #
 # USAGE:
 #
-#  ftbackup -help      : this message
-#           -list      : list tape contents
-#           -restore   : restore from current tape position
-#                        into your current working directory
-#           -compare   : compare archive at current tape position
-#                        with the files on the system
-#           -all       : dump all filesystems, level 0
-#           -fs <fs>   : dump filesystem <fs>
-#           -level <n> : dump all filesystems, level n
+#  ftbackup help     : this message
+#  ftbackup list     : list tape contents
+#  ftbackup restore  : restore from current tape position
+#                      into your current working directory
+#  ftbackup compare  : compare archive at current tape position
+#                      with the files on the system
+#  ftbackup all      : dump all filesystems, level 0
+#  ftbackup <fs>     : dump filesystem <fs>, level 0
+#  ftbackup all <n>  : dump all filesystems, level n
+#  ftbackup <fs> <n> : dump filesystem <fs>, level n
 #
 # NOTE: Level 0 backups assume a new tape - will trigger
 # tape retension and erasure.  Other level dumps move tape to
@@ -38,14 +39,14 @@
 # Edit this section
 #
 
-$archivetype = "afio";
+$archivetype = "dump";
 
 # List the filesystems you wish to dump for "all"
 # Just a simple space-separated list
 # remote filesystems should denoted as "host:dir"
 # $filesystems = "/ /usr /home";
-$filesystems = "/ /var ";
-$filesystems .= " goliath:/ goliath:/accounts goliath:/local goliath:/var";
+$filesystems = "/ /var /usr/local";
+$filesystems .= " goliath:/ goliath:/accounts goliath:/opt goliath:/var";
 $filesystems .= " leopard:/ leopard:/accounts";
 
 # Log files
@@ -69,16 +70,8 @@ $length    = "3100000";     # estimated tape size (k). This number doesn't reall
 #
 ######################################################################
 
-use English;
-use Getopt::Long;
-
 # No output buffering
-$OUTPUT_AUTOFLUSH = 1;
-
-%flag = ();
-GetOptions(\%flag,
-	   'help','restore','compare','fs=s','level=i'
-	   );
+$| = 1;
 
 # Give usage message
 if (!$ARGV[0]
