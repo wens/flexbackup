@@ -14,8 +14,8 @@ cut off 0.9.4 here
  - exclude regexp's
      dump won't be able to do this
  - resurrect my old drive and test ftape stuff again
+ - sanity check: make sure remoteshell,vtblc,afio,cpio,tar, etc in path; check dir validity
  - autodetect ftape and raw device to eliminate configuration
- - sanity check: make sure remoteshell,vtblc,etc in path; check dir validity
  - nocompress list for afio
  - arbitrary "list of files" extract
  - add reten switch
@@ -24,7 +24,8 @@ cut off 1.0 features here?
 
  - use a global "title" per backup
      work in a volume label scheme
-     ideas & code from Scott Penrose
+     ideas & code from Scott Penrose?
+ - support multiple tapes for a single archive
  - commands are an array.  use &remote_command subroutine
      abstract away duplicated code in afio,cpio,tar
  - does restore compare subdirectories of mountpoints correctly?
@@ -32,7 +33,6 @@ cut off 1.0 features here?
  - log files for extract/compare/etc?
  - transparent extract/compare/restore of remote volumes
      restore needs to be interactive, so wont work - put sw on client
- - support multiple tapes for a single archive
  - GUI driver/configurator utility
      "linux backup" util looked like the right kind of interface
      http://mirrors.darkelf.net. contact author.

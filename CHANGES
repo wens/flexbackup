@@ -1,3 +1,10 @@
+
+Version 0.9.4
+
+ - dump -a and dump -T work now.  Found my problems were known bugs.
+   For Linux + dump,  you MUST install dump-0.4b4-10 (redhat lorax) 
+   or newer, or equivalent patches for other distributions.
+   
 Version 0.9.3 (19990921) (just for testing)
 
  - can now archive to files instead of devices
