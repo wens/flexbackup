@@ -37,12 +37,10 @@ Misc:
  - Try against torture-test list:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
  - Update mt manpages collection
+ - Get someone to do .debs?
+
 
 Features to add:
-
- - Make package delta have config options
-
- - Make package delta work with BSD ports or debian pkgs
 
  - Have an mt op. override in the config (tell = status for debugging, platform
      specific junk).  just act like path stuff does now.
@@ -62,6 +60,11 @@ Features to add:
      better way for multiple tapes
      Maybe take out the multiple tape fs array parts if we can do mutivol?
      Redo include/exclude paths, not just expressions?  per-fs?
+
+ - mt_blksize config parameter (in bytes), separate from $blksize.
+   Deprecate mt_var_blksize.
+
+ - Make package delta work with BSD ports or debian pkgs
 
  - If we detect an error and are using tapes, do seomthing intelligent
      to reposition tape, add another filemark etc to get tape to known state
