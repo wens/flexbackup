@@ -710,8 +710,10 @@ sub backup {
 	    }
 
 	    # Replace piped commands with catch-script
-	    # Put on the front of the pipe as well
 	    if ($cmd =~ s: \| : \| $exitscript :g) {
+		# Put on the front of the pipe as well
+		#  -Can't do this because of "cd <dir> &&" at front...
+		#  -It makes the cd happen in a subshell.
 		#$cmd = "$exitscript $cmd";
 	    }
 
