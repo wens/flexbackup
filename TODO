@@ -5,12 +5,16 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
+ - Revisit -cnewer problem.  Make sure it works with touch -t/-d of
+     timestamp refs (ctime isn't set backward by touch like the mtime)
+
+     ctime can't be set anyway. with touch or utime() or whatever.
+     http://mail.gnu.org/archive/html/bug-fileutils/2001-01/msg00032.html
+     
  - Clean up more $main:: vars, split into types or refactor code
  - bash PIPESTATUS trick fails if remote filesystem and shell there!=bash
      and shell local==bash. bah.
  - Check buffer avail mem thing from John
- - Revisit -cnewer problem.  Make sure it works with touch -t/-d of
-     timestamp refs (ctime isn't set backward by touch like the mtime)
  - Try to use dump combined flags (for older dumps that want abc not -a -b -c)
  - When level > 9 and using files, -toc sorts it wrong (cosmetic nit)
  - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
@@ -25,7 +29,9 @@ Misc:
  - Make a manual page (AND other enchanced documentation, more than a README)
    someone made a good start or two:
      http://myezserver.com/downloads/mitel/howto/flexbackup-howto.html
+      
      http://www.cyber-euskadi.com/howtos/contrib/flexbackup-restore-from-disk-howto.html
+     how about french?  http://sgmf.free.fr/flexbackup_doc.html
  - Someone needs to put a bunch of stuff in a faq
      Started... not much at this point
  - Try bfr or dbuffer? (buffer seems unmaintained; no O_LARGEFILE)
@@ -35,7 +41,9 @@ Misc:
 
 
 Features to add:
- - smbtar?
+ - A "no blocking at all" option
+
+- smbtar?
      doable - overload type 'tar'. smbtar triggers with a fs spec of something like
                smb:user:pass@host/share:dir
      smbtar has "files newer than" option, test
@@ -48,6 +56,13 @@ Features to add:
       Defaults:backup !authenticate
       Cmnd_Alias BACKUP = /usr/bin/afio, /usr/bin/find
       backup  ALL = NOPASSWD: BACKUP
+ - Better way to spec fs. 
+ - Redo include/exclude paths, not just expressions?
+ - Do we want to count on perl (or flexbackup for that matter) being 
+     installed on remote machines?  We could do some built-in replacements
+     for the 'find' for instance and make things more standardized. although
+     keeping it simply built out of standard commandline utils is a big plus
+     as well...
  - Make remote machine path overrides possible, that supercede others?
  - Make -extract -files for afio/cpio/zip recurse dirs
       dump/tar already to this. Actually just check that all act the same.
@@ -57,14 +72,17 @@ Features to add:
  - some "level" that uses rpm, verifies all packages, and just backs
       up any file not in a package OR changed from a package. and the rpm list.
       once the above works make it work for debian packages
- - A "no blocking at all" option
  - Log tape sizes (output of buffer or dd or mt tell can be used?)
+ - Extract options to not overwrite existing files
  - Handle multi-volume backups (original idea never panned out)
       Maybe figure out which archivers support & try to add
       won't work with pipelines probably
       needs testing
  - Arbitrary "groups" that act sort of like "all"
- - Extract options to not overwrite existing files
+ - Store the index db on the tapes?
+      But we don't know the size ahead of time unless hard-limited resperved size.
+      Updating db at the beginning of the tape will add tape-travel overhead for every backup.
+      Sometimes rewind->write loses the rest of the contents past the first file?
  - CD-ROM burning (or just .iso type?) for full backups? any?
  - When using files
       Make lower numbered level nuke higher ones & rm index?
