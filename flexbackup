@@ -654,7 +654,7 @@ sub backup_afio {
     $cmd .= "cd $dir && ";
     $cmd .= "(echo //--$tmplabel flexbackup.volume_header_info && ";
     $cmd .= "find . $main::mountpoint_flag ";
-    $cmd .= "-cnewer -or -newer $tmpstamp ";
+    $cmd .= "-cnewer $tmpstamp -or -newer $tmpstamp ";
     $cmd .= "-print | ";
     $cmd .= "sed -e \"s%^\./%%\" ";
     $cmd .= "$main::exclude_cmd ";
