@@ -4125,7 +4125,7 @@ sub test_tape_drive {
     &log('');
 
     &log("Reading test file \#2");
-    $cmd = &read_function($main::device);
+    $cmd = $main::read_cmd . '"' . $main::device . '"';
     if (defined($main::remotetapehost)) {
 	$cmd = &maybe_remote_cmd($cmd, $main::remotetapehost);
 	# Buffer both sides if remote
