@@ -83,15 +83,6 @@ my $loc = POSIX::setlocale( &POSIX::LC_ALL, "C" );
 # See if afio is calling us as a control script
 if ($ARGV[0] =~ /flexbackup.volume_header_info/) {
     &print_afio_volume_header();
-# See if multibuf is calling us as a prompt script
-} elsif ($ARGV[0] =~ /multibuf.prompt/) {
-    &multibuf_prompt();
-# See if multibuf is calling us as a prep script
-} elsif ($ARGV[0] =~ /multibuf.prep/) {
-    &multibuf_prep();
-# See if multibuf is calling us as a retry script
-} elsif ($ARGV[0] =~ /multibuf.retry/) {
-    &multibuf_retry();
 }
 
 # This is changed during "make install"
@@ -1474,7 +1465,7 @@ sub optioncheck {
     &check(\$cfg::verbose,'verbose');
     &check(\$cfg::sparse,'sparse');
     &check(\$cfg::indexes,'indexes');
-    &check(\$cfg::buffer,'buffer','false buffer multibuf');
+    &check(\$cfg::buffer,'buffer','false buffer');
     &check(\$cfg::buffer_megs,'buffer_megs','exist');
     &check(\$cfg::pad_blocks,'pad_blocks');
     &check(\$cfg::device,'device','exist');
@@ -1625,8 +1616,6 @@ sub optioncheck {
     }
     # buffer blocksize needs k appended
     my $buffer_blk_flag = "-s " . $cfg::blksize . "k";
-    # multibuf blocksize is in bytes
-    my $multibuf_blk_flag = "-b " . $cfg::blksize * 1024;
     # dd blocksize needs k appended
     $main::dd_blk_flag = "ibs=" . $cfg::blksize . "k obs=" . $cfg::blksize . "k";
     # afio blocksize needs k appended
@@ -1702,15 +1691,6 @@ sub optioncheck {
         } else {
             push(@main::errors,"\$buffer_megs must be set to integer number of megabytes");
         }
-
-    } elsif ($cfg::buffer eq "multibuf") {
-
-        &checkinpath('multibuf');
-        my $flags = "-R \"$0 multibuf.retry\" ";
-        $flags .= "-c \"$0 multibuf.prompt\" -C \"$0 multibuf.prep\"";
-        $main::buffer_cmd = " | multibuf -w $multibuf_blk_flag $flags ";
-        $main::buffer_write_flags = "";
-        $main::read_cmd = "multibuf -r $multibuf_blk_flag $flags ";
 
     } else {
 
@@ -2033,7 +2013,7 @@ sub versionstring {
     if ($ver eq '') {
         $ver = "devel";
     }
-    return($ver . " <flexbackup\@home.com>");
+    return($ver . " <support\@flexbackup.org>");
 
 }
 
@@ -2768,18 +2748,4 @@ sub maybe_delete_old_index {
 ######################################################################
 sub bynumber {
     $a <=> $b;
-}
-
-######################################################################
-# Multibuf prompt routines below
-######################################################################
-sub multibuf_prompt {
-
-}
-
-sub multibuf_prep {
-    &mt('rewind');
-}
-
-sub multibuf_retry {
 }
