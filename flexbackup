@@ -41,9 +41,9 @@
 #  flexbackup -rmindex <key>       : force db delete of specified tape
 #  flexbackup -rmindex <key> -f <file>
 #                                  : force db delete of specified tape/filenumber
-# TESTING:
-#  flexbackup -test-tape-drive     : tries writing/reading multiple files to make sure you
-#                                    have tape parameters set up correctly and it works
+# TESTING/DEBUG:
+#  flexbackup -test-tape-drive     : tries writing/reading files to make sure you
+#                                    have tape driver & parameters set up correctly
 #  flexbackup [opt] -n             : don't run actual dump or mt commands, just echo
 #  flexbackup [opt] -type filelist : special backup type that just saves list of files
 #                                    that would have been archvied
@@ -4429,14 +4429,21 @@ sub newtape () {
     return($retval);
 }
 
+
 #############################################################################
-#
+# Test writing a couple files to tape, then read & diff.  To help make
+# sure filemarks, blocks, padding, are working as we need.
 #############################################################################
 sub test_tape_drive () {
 
     my $cmd;
     my $tmp1 = "$cfg::tmpdir/test1.$PROCESS_ID";
     my $tmp2 = "$cfg::tmpdir/test2.$PROCESS_ID";
+    my $fail = 0;
+
+    &log("| Testing will the current tape!");
+    &log("| Hit CTRL-C to abort within 5 seconds...");
+    sleep(5);
 
     &mt("generic-blocksize $main::mt_blksize");
 
@@ -4450,6 +4457,9 @@ sub test_tape_drive () {
     $cmd = "$main::path{cat} $0";
     $cmd = &append_writer_cmd($cmd);
     system($cmd);
+    if ($CHILD_ERROR) {
+	$fail++;
+    }
 
     &mt('generic-query');
     &log('');
@@ -4458,16 +4468,20 @@ sub test_tape_drive () {
     $cmd = "$main::path{cat} $0";
     $cmd = &append_writer_cmd($cmd);
     system($cmd);
+    if ($CHILD_ERROR) {
+	$fail++;
+    }
 
     &mt('generic-query');
     &log('');
 
     &log('Rewinding...');
     &mt('rewind');
-    &mt('generic-query');
     if ($cfg::indexes eq 'true') {
+	&log('Skipping index label...');
 	&mt('fsf 1');
     }
+    &mt('generic-query');
     &log('');
 
     &log("Reading test file #1");
@@ -4477,9 +4491,12 @@ sub test_tape_drive () {
 	# Buffer both sides if remote
 	$cmd .= $main::buffer_cmd;
     }
-    # if pad blocks was true e have nulls at the end
+    # if pad blocks was true e have nulls at the end (won't be in this script otherwise)
     $cmd .= " | $main::path{tr} -d '\\0' > $tmp1";
     system($cmd);
+    if ($CHILD_ERROR) {
+	$fail++;
+    }
 
     &mt('generic-query');
     &log('');
@@ -4491,7 +4508,7 @@ sub test_tape_drive () {
 	# Buffer both sides if remote
 	$cmd .= $main::buffer_cmd;
     }
-    # if pad blocks was true e have nulls at the end
+    # if pad blocks was true we have nulls at the end (won't be in this script otherwise)
     $cmd .= " | $main::path{tr} -d '\\0' > $tmp2";
     system($cmd);
 
@@ -4500,14 +4517,26 @@ sub test_tape_drive () {
 
     &mt('rewind');
 
-    # FIXME flag CHILD_ERROR
+    &log("Comparing...");
     system("$main::path{diff} -q $0 $tmp1");
-    &log('');
+    if ($CHILD_ERROR) {
+	$fail++;
+    }
 
     system("$main::path{diff} -q $0 $tmp2");
-    &log('');
+    if ($CHILD_ERROR) {
+	$fail++;
+    }
 
     unlink $tmp1;
     unlink $tmp2;
+
+    if ($fail != 0) {
+	print "\nFAILURE! Problem with tape driver or parameters.  Please see the FAQ\n";
+	print "or try changing the \$blksize, \$pad_blocks, or \$mt_var_blksize settings.\n";
+	exit(1);
+    } else {
+	print "SUCCESS! Tape drive parameters seem to work just fine\n";
+    }
 
 }

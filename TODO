@@ -44,14 +44,7 @@ Features to add:
 
      Will do this post 1.0
 
- - Add a "-test-tapedrive" switch that writes a couple known pieces of data
-     to tape and then reads & compares.  Should help people having drive,
-     blksize, padding, etc.  problems that aren't related to the rest of
-     the program
-
-     Will do this post 1.0
-
- - Have an mt op. overide in the config (tell = status for debugging, platform
+ - Have an mt op. override in the config (tell = status for debugging, platform
      specific junk).  just act like path stuff does now.
 
      Will do this post 1.0

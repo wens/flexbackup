@@ -5,6 +5,9 @@ Changes:
   - Added 'filelist' type that doesn't back up anything, but prints/saves
     the list of files that would have been done.  Good for debugging
     timestamps, levels, and file exclusion.
+  - Added '-test-tape-drive' switch that just makes sure blocks, filemarks,
+    and padding work as expected and we can read,write,compare.  If people
+    can't get that running, then the problem is somehwere else...
   - Added support for lha, shar, and ar archives just to be stupid
 
 Cleanup:
