@@ -71,6 +71,9 @@ Features to add:
       will hose indexes - no index on second volume
       what about read/restore?
 
+- If we detect an error and are using tapes, do seomthing intelligent with
+     to reposition tape, add another filmark etc to get tape to known state
+     and avoid the maybe-error in the index & what 'nextfile" is on the tape
 - smbtar?
      doable - overload type 'tar'. smbtar triggers with a fs spec of something like
                smb:user:pass@host/share:dir
