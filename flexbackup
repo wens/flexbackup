@@ -5041,7 +5041,7 @@ sub check_wday {
 
 ######################################################################
 # Split whitespace-separated list.
-# If it containts quotes, do a bit differently so we can have
+# If it contains quotes, do a bit differently so we can have
 # items containing whitespace, as long as all elements are quoted.
 ######################################################################
 sub split_list {
