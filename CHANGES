@@ -1,7 +1,7 @@
 $Id$
 $Name$
 
-Version TBD
+Version 0.9.9.7 (20030115)
 
 Changes: (just so we can say it supports *everything* for archive formats)
  - Initial support for "star" archiver. Like tar but does acl's, has its own

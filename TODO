@@ -81,6 +81,8 @@ Features to add:
        star tsize=
        pax -B
        zip nope
+      will hose indexes - no index on second volume
+      what about read/restore?
  - Arbitrary "groups" that act sort of like "all"
  - Store the index db on the tapes?
       But we don't know the size ahead of time unless hard-limited resperved size.

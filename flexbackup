@@ -1208,7 +1208,7 @@ sub list_routine {
 
     $main::log = "flexbackup.list.log";
     if (! open(LOG,">$main::log")) {
-	$main::log = "/tmp/flexbackup.list.log";
+	$main::log = "$cfg::tmpdir/flexbackup.list.log";
 	if (! open(LOG,">$main::log")) {
 	    die "Can't write to $main::log: $OS_ERROR";
 	}
@@ -1288,7 +1288,7 @@ sub extract_routine {
 
     $main::log = "flexbackup.extract.log";
     if (! open(LOG,">$main::log")) {
-	$main::log = "/tmp/flexbackup.extract.log";
+	$main::log = "$cfg::tmpdir/flexbackup.extract.log";
 	if (! open(LOG,">$main::log")) {
 	    die "Can't write to $main::log: $OS_ERROR";
 	}
@@ -1415,7 +1415,7 @@ sub compare_routine {
 
     $main::log = "flexbackup.compare.log";
     if (! open(LOG,">$main::log")) {
-	$main::log = "/tmp/flexbackup.compare.log";
+	$main::log = "$cfg::tmpdir/flexbackup.compare.log";
 	if (! open(LOG,">$main::log")) {
 	    die "Can't write to $main::log: $OS_ERROR";
 	}
