@@ -6,13 +6,13 @@ Version 0.9.3 (19990921) (just for testing)
  - timestamp changes:
      use "touch -t" not "touch -d" so FreeBSD works
      all dates now in YYYYMMDDhhmm.SS format
-     dump can use /etc/dumpdates or flexbackup's timestamps
      use timestamps of the epoch for level 0 (simplifies code)
+     dump can use /etc/dumpdates or flexbackup's timestamps
  - add "-d var=val" for overriding config values
- - if $dump_length set to 0 use dump -a
  - tar mode uses "find" just like afio & cpio
  - afio doublebuffering option
- - FreeBSD fix for mt setblk
+ - FreeBSD: if $dump_length set to 0 use dump -a
+ - FreeBSD: fix for mt setblk
  - error if level > 0 and no level 0 stamp exists
  - fix label string for remote paths
  - add -n option that doesn't run mt and the actual backup

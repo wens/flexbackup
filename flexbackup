@@ -472,7 +472,12 @@ sub backup_dump {
     }
 
     if ($cfg::dump_length eq "0") {
-        $cfg::dump_length = "-a";
+        # There is no -a for linux
+        if ($global::uname =~ /Linux/) {
+            die("\$dump_length can't be 0 on Linux\n");
+        } else {
+            $cfg::dump_length = "-a";
+        }
     } else {
         $cfg::dump_length = "-B $cfg::dump_length";
     }
@@ -635,11 +640,12 @@ sub list_routine {
     my $cmd;
 
     &log("flexbackup version " . &versionstring());
+
+    $cfg::device = &maybe_get_filename();
+
     &line();
     &mt('generic-query');
     &line();
-
-    $cfg::device = &maybe_get_filename();
 
     if ($cfg::type eq 'dump') {
 	$cmd = "restore -t -b $cfg::blksize -f $cfg::device";
@@ -658,7 +664,7 @@ sub list_routine {
     if (!defined($global::opt{'n'})) {
         system($cmd);
     } else {
-        &log('$cmd');
+        &log("$cmd");
     }
 
     &line();
@@ -675,10 +681,12 @@ sub extract_routine {
     my $cmd;
 
     &log("flexbackup version " . &versionstring());
-    &mt('generic-query');
-    &line();
 
     $cfg::device = &maybe_get_filename();
+
+    &line();
+    &mt('generic-query');
+    &line();
 
     if ($cfg::type eq 'dump') {
 	$cmd = "restore -r -v -b $cfg::blksize -f $cfg::device";
@@ -696,7 +704,7 @@ sub extract_routine {
     if (!defined($global::opt{'n'})) {
         system($cmd);
     } else {
-        &log('$cmd');
+        &log("$cmd");
     }
 
     &line();
@@ -713,11 +721,12 @@ sub compare_routine {
     my $cmd;
 
     &log("flexbackup version " . &versionstring());
+
+    $cfg::device = &maybe_get_filename();
+
     &line();
     &mt('generic-query');
     &line();
-
-    $cfg::device = &maybe_get_filename();
 
     if ($cfg::type eq 'dump') {
 	$cmd = "restore -C -b $cfg::blksize -f $cfg::device";
@@ -736,7 +745,7 @@ sub compare_routine {
     if (!defined($global::opt{'n'})) {
         system($cmd);
     } else {
-        &log('$cmd');
+        &log("$cmd");
     }
 
     &line();
@@ -753,11 +762,12 @@ sub restore_routine {
     my $cmd;
 
     &log("flexbackup version " . &versionstring());
+
+    $cfg::device = &maybe_get_filename();
+
     &line();
     &mt('generic-query');
     &line();
-
-    $cfg::device = &maybe_get_filename();
 
     if ($cfg::type eq 'dump') {
 	$cmd = "restore -i -v -b $cfg::blksize -f $cfg::device";
@@ -769,7 +779,7 @@ sub restore_routine {
     if (!defined($global::opt{'n'})) {
         system($cmd);
     } else {
-        &log('$cmd');
+        &log("$cmd");
     }
 
     &line();
@@ -818,7 +828,7 @@ sub get_last_date {
     my @files = readdir(DIR);
     foreach $file (reverse sort @files) {
         next if ($file !~ m/^$cfg::sprefix$label\.([0-9])$/);
-        if ($1 <= $global::level) {
+        if ($1 < $global::level) {
             $targetfile = "$cfg::stampdir/$file";
             last;
         }
@@ -932,7 +942,7 @@ sub mt {
     }
 
     # BSD mt is slightly different
-    if ($operation eq 'generic-blksize') {
+    if ($operation =~ /generic-blksize/) {
         if ($global::uname =~ /BSD/) {
             $operation =~ s/generic-blksize/blocksize/;
         } else {
@@ -940,7 +950,7 @@ sub mt {
         }
     }
 
-    if ($global::use_file == 1) {
+    if (defined($global::use_file)) {
         &log("Archiving to file; \"mt $operation\" skipped");
     } elsif (defined($global::opt{'n'})) {
         &log("(debug) $global::mt -f $cfg::device $operation");
@@ -1056,6 +1066,15 @@ sub optioncheck {
                 if ($cfg::dump_dumpdates !~ /^(true|false)$/) {
                     die("config file error: \$dump_dumpdates must be defined as true or false\n");
                 }
+            }
+
+            # The -T for linux is causing me errors
+            # the manpage lists this, but I get
+            #   You cannot use the T and u flags together.
+            # Even though I give it no -u!!
+            # Need to check into this...
+            if ($global::uname =~ /Linux/) {
+                die("\$dump_usedumpdates can't be false on Linux\n");
             }
 
             # Length of tape
@@ -1234,6 +1253,8 @@ sub maybe_get_filename {
 
     my @modes = qw(list extract compare restore);
     my $arg;
+    my $file;
+    my $ftype;
 
     # optionscheck already guarantees only one is set
     foreach (@modes) {
@@ -1242,25 +1263,28 @@ sub maybe_get_filename {
         }
     }
 
-    # if the flag is set to 1, and $device was not set to a dir, just return
-    if (($arg eq "1") and (!defined($global::use_file)) {
+    # if the flag given but null , and $device was not set to a dir, just return
+    if (($arg eq '') and (!defined($global::use_file))) {
         return($cfg::device);
     }
 
     # Look for file in current dir first (or full path given)
     # Then in $device dir (if conf file set to backup to files)
-    if (-e "$arg") {
-        return($arg);
+    if (-f "$arg") {
+        $file = $arg;
+        $global::use_file = 1;
 
-    } elsif (($global::use_file == 1) and (-e "$cfg::device/$arg"))
-        return("$cfg::device/$arg");
+    } elsif (defined($global::use_file) and (-f "$cfg::device/$arg")) {
+        $file = $cfg::device . "/" . $arg;
 
     } else {
-        if ($global::use_file == 1) {
+        if (defined($global::use_file)) {
             die("Error: file \"$arg\" or \"$cfg::device/$arg\" not found\n");
         } else {
             die("Error: file \"$arg\" not found\n");
         }
     }
+
+    return($file);
 
 }
