@@ -32,6 +32,7 @@ tar: version tag
 	ln -snf flexbackup-$(VER).tar.gz $(SITE)/tarball/flexbackup-latest.tar.gz
 	cp /tmp/flexbackup-$(VER)/CHANGES /tmp/flexbackup-$(VER)/README /tmp/flexbackup-$(VER)/TODO $(SITE)
 	./flexbackup -h > $(SITE)/usage.txt
+	cp ./flexbackup.conf $(SITE)/flexbackup.conf.txt
 	rm -rf /tmp/flexbackup-$(VER)
 
 rpm: version tar
