@@ -268,12 +268,12 @@ sub backup_routine {
 	next if (m/^$logfile(\.gz|\.bz2|\.Z)?$/);
 	next if (! m/^$cfg::prefix$label\.(\d+)(\.(\d+))?(\.gz|\.bz2|\.Z)?$/);
 	if ($1 >= $main::level) {
-            # Might be from $staticlogs=true or false
-            if (defined($3)) {
-                $oldlogs{"$cfg::logdir/$_"} = $1 . "|" . $3;
-            } else {
-                $oldlogs{"$cfg::logdir/$_"} = $1;
-            }
+	    # Might be from $staticlogs=true or false
+	    if (defined($3)) {
+		$oldlogs{"$cfg::logdir/$_"} = $1 . "|" . $3;
+	    } else {
+		$oldlogs{"$cfg::logdir/$_"} = $1;
+	    }
 	}
     }
     close(DIR);
@@ -427,11 +427,11 @@ sub backup_routine {
     # Remove old log files now that we are done
     foreach (sort keys %oldlogs) {
 	my ($lev,$d) = split(/\|/,$oldlogs{$_});
-        if (defined($d)) {
-            print "| Removing old level $lev log of $main::opt{fs} (dated $d)\n";
-        } else{
-            print "| Removing old level $lev log of $main::opt{fs}\n";
-        }
+	if (defined($d)) {
+	    print "| Removing old level $lev log of $main::opt{fs} (dated $d)\n";
+	} else{
+	    print "| Removing old level $lev log of $main::opt{fs}\n";
+	}
 	unlink("$_") or warn("Can't remove $_: $OS_ERROR\n");
     }
 
@@ -2257,21 +2257,49 @@ sub checkinpath {
     my ($dir, @path);
 
     if (defined($cfg::path{$file})) {
-	if (-x $cfg::path{$file}) {
-	    print "path $file = $cfg::path{$file}\n";
-	    return "$cfg::path{$file}";
-	}
-    }
 
-    @path = split(/:/,$ENV{'PATH'});
-    foreach $dir (@path) {
-	if (-e "${dir}/$file" && -x _) {
-	    return "$file";
-	}
-    }
+	# Override in config file
 
-    push(@main::errors,"$file not found in \$PATH");
-    return(0);
+	if ($cfg::path{$file} =~ m:^/:) {
+
+	    # Starts with /; full path override
+	    if (-e $cfg::path{$file} && -x _) {
+		print "path $file = $cfg::path{$file}\n";
+		return "$cfg::path{$file}";
+	    } else {
+		push(@main::errors,"$cfg::path{$file} not found");
+		return(0);
+	    }
+
+	} else {
+
+	    # Didn't start with /; just overriding name of command
+	    # search PATH for it
+	    @path = split(/:/,$ENV{'PATH'});
+	    foreach $dir (@path) {
+		if (-e "${dir}/$cfg::path{$file}" && -x _) {
+		    return "$cfg::path{$file}";
+		}
+	    }
+
+            push(@main::errors,"$cfg::path{$file} not found in \$PATH");
+            return(0);
+
+	}
+
+    } else {
+
+	# Not spec'ed as an override in config file; search PATH
+	@path = split(/:/,$ENV{'PATH'});
+	foreach $dir (@path) {
+	    if (-e "${dir}/$file" && -x _) {
+		return "$file";
+	    }
+	}
+
+        push(@main::errors,"$file not found in \$PATH");
+        return(0);
+    }
 
 }
 

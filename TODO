@@ -5,8 +5,7 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
- - make path overrides also search $PATH (say if we just changed the name
-     tar == gtar put still want to do normal path-search)
+ - fix 'incremental' with fs=all.  non-trivial (see FIXME in code)
  - clean up all the $main:: vars, split into types
  - bash PIPESTATUS trick fails if remote filesystem and shell there!=bash
      and shell local==bash. bah.
@@ -15,7 +14,6 @@ Cleanup/fix:
    timestamp refs (ctime isn't set backward by touch like the mtime)
  - when levels > 9 and using files, -toc sorts it wrong (cosmetic nit)
  - when levels > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
- - fix 'incremental' with fs=all.  non-trivial (see FIXME in code)
  - try to use dump combined flags (for older dumps that want abc not -a -b -c)
 
 Misc:
@@ -53,7 +51,7 @@ Features to add:
       up any file not in a package OR changed from a package. and the rpm list.
       once the above works make it work for debian packages
  - "no blocking at all" option
- - log tape sizes (output of buffer or dd can be used?)
+ - log tape sizes (output of buffer or dd or mt tell can be used?)
  - handle multi-volume backups (original idea never panned out)
  - arbitratry "groups" that act sort of like "all"
  - multiple tapes for levels that aren't 0

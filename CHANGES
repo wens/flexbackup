@@ -11,6 +11,10 @@ Changes:
  - Static filenames option when using disk (same fs, same level overwrite)
      based on 0.9.8 patch from Michael Matsumura <michael@limit.org>
      split into $staticlogs / $staticfiles config options
+
+Cleanup:
+ - Make path overrides also search $PATH (say if we just changed the name
+     tar == gtar but still want to do normal path-search)
  - $nocompress_types -> $afio_nocompress_types since that's the only one
    that uses it
 
