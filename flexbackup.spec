@@ -1,17 +1,19 @@
 Summary: Flexible backup script
 Name: flexbackup
-Version: 0.7
+%define version 0.7
+Version: %{version}
 Release: 1
-Source: http://members.home.net/edwinh/flexbackup/flexbackup-0.7.tar.gz
+Source: http://members.home.net/edwinh/flexbackup/flexbackup-%{version}.tar.gz
 Url: http://members.home.net/edwinh/flexbackup/
 Copyright: GPL
 Group: Applications/System
-Buildroot: /var/tmp/flexbackup-root
-Requires: perl
+BuildRoot: /var/tmp/flexbackup-root
+BuildArch: noarch
 Requires: mt-st
 
 %description
 Flexible backup script.
+
 Features:
    o Easy to configure (at least I think so)
    o Uses dump, afio, tar, or cpio with the flick of a switch
@@ -23,6 +25,7 @@ Features:
      or Linux ftape (allows table of contents support)
    o Nice log files
 
+
 %prep
 %setup -q
 
@@ -32,6 +35,8 @@ Features:
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/etc
 mkdir -p $RPM_BUILD_ROOT/bin
+mkdir -p $RPM_BUILD_ROOT/var/lib/flexbackup
+mkdir -p $RPM_BUILD_ROOT/var/log/flexbackup
 install -m 755 flexbackup.conf $RPM_BUILD_ROOT/etc
 install -m 755 flexbackup $RPM_BUILD_ROOT/bin
 
@@ -39,6 +44,7 @@ install -m 755 flexbackup $RPM_BUILD_ROOT/bin
 rm -rf $RPM_BUILD_ROOT
 
 %files
+/bin/flexbackup
 %defattr(-,root,root)
 %doc CHANGES COPYING TODO README flexbackup.lsm
 %dir /var/lib/flexbackup
@@ -46,5 +52,5 @@ rm -rf $RPM_BUILD_ROOT
 %config /etc/flexbackup.conf
 
 %changelog
-* Sat Sep 18 18:14:15 MST 1999 Edwin Huffstutler <edwinh@computer.org>
+* Sat Sep 18 1999 Edwin Huffstutler <edwinh@computer.org>
 - initial rpm package
