@@ -801,7 +801,7 @@ sub backup_afio {
     my $remove;
     my $no_compress = '';
 
-    if (defined($remote)) {
+    if (defined($remote) and ($level != 0)) {
 	$_ = &get_last_date($label, $level, 'numeric');
 	$cmd = "$main::path{touch} -t \"$_\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
@@ -821,7 +821,7 @@ sub backup_afio {
 
     $cmd = "cd $dir && ";
     $cmd .= "(echo //--$tmplabel flexbackup.volume_header_info && ";
-    $cmd .= &file_list_cmd($dir, $stamp, 'null', $remote);
+    $cmd .= &file_list_cmd($dir, $stamp, 'null', $level, $remote);
     $cmd .= ") | ";
 
     $cmd .= "$main::path{afio} -o -0 ";
@@ -848,7 +848,7 @@ sub backup_afio {
     push(@cmds, $cmd);
 
     $remove = "$tmplabel";
-    if (defined($remote)) {
+    if (defined($remote) and ($level != 0)) {
 	$remove .= " $stamp";
     }
     if ($no_compress ne '') {
@@ -877,7 +877,7 @@ sub backup_cpio {
     my $stamp = "$cfg::tmpdir/refdate.$$";
     my $remove;
 
-    if (defined($remote)) {
+    if (defined($remote) and ($level != 0)) {
 	$_ = &get_last_date($label, $level, 'numeric');
 	$cmd = "$main::path{touch} -t \"$_\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
@@ -893,7 +893,7 @@ sub backup_cpio {
     push(@cmds, &maybe_remote_cmd($cmd, $remote));
 
     $cmd = "cd $dir && ";
-    $cmd .= &file_list_cmd($dir, $stamp, 'null', $remote);
+    $cmd .= &file_list_cmd($dir, $stamp, 'null', $level, $remote);
     $cmd .= "| ";
 
     $cmd .= "$main::path{cpio} -o ";
@@ -917,7 +917,7 @@ sub backup_cpio {
     push(@cmds, $cmd);
 
     $remove = "\"$dir/$title\"";
-    if (defined($remote)) {
+    if (defined($remote) and ($level != 0)) {
 	$remove .= " $stamp";
     }
 
@@ -942,7 +942,7 @@ sub backup_tar {
     my @cmds;
     my $stamp = "$cfg::tmpdir/refdate.$$";
 
-    if (defined($remote)) {
+    if (defined($remote) and ($level != 0)) {
 	$_ = &get_last_date($label, $level, 'numeric');
 	$cmd = "$main::path{touch} -t \"$_\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
@@ -951,7 +951,7 @@ sub backup_tar {
     }
 
     $cmd = "cd $dir && ";
-    $cmd .= &file_list_cmd($dir, $stamp, 'null', $remote);
+    $cmd .= &file_list_cmd($dir, $stamp, 'null', $level, $remote);
     $cmd .= "| ";
 
     $cmd .= "$main::path{tar} --create ";
@@ -983,7 +983,7 @@ sub backup_tar {
 
     push(@cmds, $cmd);
 
-    if (defined($remote)) {
+    if (defined($remote) and ($level != 0)) {
 	$cmd = "$main::path{rm} -f $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
     }
@@ -1006,7 +1006,7 @@ sub backup_star {
     my @cmds;
     my $stamp = "$cfg::tmpdir/refdate.$$";
 
-    if (defined($remote)) {
+    if (defined($remote) and ($level != 0)) {
 	$_ = &get_last_date($label, $level, 'numeric');
 	$cmd = "$main::path{touch} -t \"$_\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
@@ -1015,7 +1015,7 @@ sub backup_star {
     }
 
     $cmd = "cd $dir && ";
-    $cmd .= &file_list_cmd($dir, $stamp, 'newline', $remote);
+    $cmd .= &file_list_cmd($dir, $stamp, 'newline', $level, $remote);
     $cmd .= "| ";
 
     $cmd .= "$main::path{star} -c ";
@@ -1049,7 +1049,7 @@ sub backup_star {
 
     push(@cmds, $cmd);
 
-    if (defined($remote)) {
+    if (defined($remote) and ($level != 0)) {
 	$cmd = "$main::path{rm} -f $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
     }
@@ -1073,7 +1073,7 @@ sub backup_pax {
     my $stamp = "$cfg::tmpdir/refdate.$$";
     my $remove;
 
-    if (defined($remote)) {
+    if (defined($remote) and ($level != 0)) {
 	$_ = &get_last_date($label, $level, 'numeric');
 	$cmd = "$main::path{touch} -t \"$_\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
@@ -1089,7 +1089,7 @@ sub backup_pax {
     push(@cmds, &maybe_remote_cmd($cmd, $remote));
 
     $cmd = "cd $dir && ";
-    $cmd .= &file_list_cmd( $dir, $stamp, 'newline', $remote);
+    $cmd .= &file_list_cmd( $dir, $stamp, 'newline', $level, $remote);
     $cmd .= "| ";
 
     $cmd .= "$main::path{pax} -w ";
@@ -1114,7 +1114,7 @@ sub backup_pax {
     push(@cmds, $cmd);
 
     $remove = "\"$dir/$title\"";
-    if (defined($remote)) {
+    if (defined($remote) and ($level != 0)) {
 	$remove .= " $stamp";
     }
 
@@ -1141,7 +1141,7 @@ sub backup_zip {
     my $tmpzip = "$cfg::tmpdir/tmp$$.zip";
     my $remove;
 
-    if (defined($remote)) {
+    if (defined($remote) and ($level != 0)) {
 	$_ = &get_last_date($label, $level, 'numeric');
 	$cmd = "$main::path{touch} -t \"$_\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
@@ -1157,7 +1157,7 @@ sub backup_zip {
     push(@cmds, &maybe_remote_cmd($cmd, $remote));
 
     $cmd = "cd $dir && ";
-    $cmd .= &file_list_cmd($dir, $stamp, 'newline', $remote);
+    $cmd .= &file_list_cmd($dir, $stamp, 'newline', $level, $remote);
     $cmd .= "| ";
 
     $cmd .= "$main::path{zip} -@ ";
@@ -1172,14 +1172,11 @@ sub backup_zip {
     $cmd = &maybe_remote_cmd($cmd, $remote);
     push(@cmds,$cmd);
 
-    $cmd = "cat $tmpzip ";
-
+    $cmd = "$main::path{cat} $tmpzip ";
     # Buffer both sides if remote
     if (defined($remote) and ($cfg::buffer eq "buffer")) {
 	$cmd .= "$main::buffer_cmd";
     }
-
-    # Wrap all that together
     $cmd = &maybe_remote_cmd($cmd, $remote);
 
     # Append writer stuff
@@ -1188,7 +1185,7 @@ sub backup_zip {
     push(@cmds, $cmd);
 
     $remove = "$tmpzip \"$dir/$title\"";
-    if (defined($remote)) {
+    if (defined($remote) and ($level != 0)) {
 	$remove .= " $stamp";
     }
 
@@ -3559,6 +3556,7 @@ sub file_list_cmd {
     my $dir = shift(@_);
     my $timestampfile = shift(@_);
     my $separator = shift(@_);
+    my $level = shift(@_);
     my $remote = shift(@_);
 
     if (!defined($separator) or ($separator !~ m/^(null|newline)$/)) {
@@ -3569,13 +3567,17 @@ sub file_list_cmd {
     $cmd .= "$main::path{find} . $main::mountpoint_flag ";
     $cmd .= "-depth ";
 
-    $cmd .= "-newer $timestampfile ";
-
-    # If local, we can use the flexbackup timetamp native and ctime
-    # can be used.  Remote, we'll be creating one with touch -t...
-    # ctime can't be touched backwards
-    if (!defined($remote)) {
-	$cmd .= "-or -cnewer $timestampfile ";
+    if ($level != 0) {
+	if (!defined($remote)) {
+	    $cmd .= '\( ';
+	}
+	$cmd .= "-newer $timestampfile ";
+	# If local, we can use the flexbackup timetamp native and ctime
+	# can be used.  Remote, we'll be creating one with touch -t...
+	# ctime can't be touched backwards
+	if (!defined($remote)) {
+	    $cmd .= "-or -cnewer $timestampfile " . '\) ';
+	}
     }
 
     $cmd .= "$main::exclude_expr ";
