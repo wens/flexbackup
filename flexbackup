@@ -40,8 +40,8 @@
 #  flexbackup [...] <file>         : if archiving to files rather than a device,
 #                                    list/extract/compare/restore options take
 #  flexbackup [...] -pipe          : read archive from stdin
-#  flexbackup [...] -volumes <n>   : # of volumes (EXPERIMENTAL mbuffer multivolume support)
-#
+#  flexbackup [...] -volumes <n>   : # of volumes in input
+#                                    (EXPERIMENTAL mbuffer multivolume support)
 # INDEX RELATED:
 #  flexbackup -toc                 : list current device's table of contents
 #  flexbackup -toc all             : list all known table of contents
