@@ -5,18 +5,21 @@ Flexbackup to-do list
 Some of these might not happen
 
 Currently:
- - check for mt blksize = factor of blksize
+ - Check for mt blksize = factor of blksize
  - FIXMEs in code
- - mbuffer testing w/ device
+ - mbuffer testing w/ device (need mt_blksize not to be 0?)
  - mbuffer testing w/ remote
  - mbuffer testing w/ end of media
- - test -test-tape-drive mod
+ - Test -test-tape-drive mod
+ - Check old release operation for all + use_file + multiple fs array +
+    keys
+           main::device -> cfg::device in 2 spots, do_erase for files
  - Finish up -set / -dir
      yell if given set not defined
-     erase when using files acting funny
      test with tapes too
      how to spec dirs with spaces?
- - exclude paths, not just expressions?  per-fs?
+ - -erase for use_file wipes dir+index+key?
+ - Exclude paths, not just expressions?  per-fs?
 
 Cleanup/fix:
  - Better cleanup after error in backup
@@ -43,8 +46,9 @@ Misc:
      filelist
      mt_blksize
      example for -wday use
- - add faq on max size    
- - Add link/rpm for mbuffer
+ - add faq on max size
+ - Create mbuffer rpm. Add link/rpm for mbuffer
+ - Do bfr again, maybe was blocking problem?
  - Make a manual page (AND other enchanced documentation, more than a README)
    someone made a good start or two:
      http://www.law.utulsa.edu:8080/users/bchapman/linuxnotes/flexbackup
@@ -63,7 +67,7 @@ Features to add:
       Found "multivol" program.
       Ack.  still not workable.  need edits to multivol...
 
-      mbuffer can do this? 
+      mbuffer can do this?
 
  - Make package delta work with BSD ports or debian pkgs
 
