@@ -4,43 +4,44 @@ $Name$
 Flexbackup to-do list
 Some of these might not happen, but figured I should jot them down
 
+
+finish & test multibuf support
+makefile rpm etc.
+
+
 Features to add:
  - make a manual page!  too many options now :)
  - mailing list
  - interactive restore-like shell for types besides dump
-     see notes below
- - support multiple tapes for a single archive
-     - dump already does this? afio has hooks too. tar does(-M). would
-       the pipeline mechanism screw it all up?
-     - found a utility called "multivol", and one from Kbackup celled
-       "multibuf" that could replace buffer and handle volumes too.
-        must play with them both.
-     - need to test with an almost-full tape, or a floppy
+      see notes below
  - arbitratry "groups" that act sort of like "all"
  - multiple tapes for levels that aren't 0
  - configurable path for programs (gtar=tar, etc)
-     remote vs local too
+      remote vs local too
  - Gnome driver/configurator utility
-     I have a "picture" of what I want this to look like
-     use glade + libglade
-     will be a seperate program that just manipulates flexbackup
+      I have a "picture" of what I want this to look like
+      use glade + libglade
+      will be a seperate program that just manipulates flexbackup
  - extract options to not overwrite existing files
  - remote extract/compare/restore
-     just install s/w on client w/remote tape device. need config file
-     option
+      just install s/w on client w/remote tape device. need config file
+      option
  - encryption with gnupg
  - cd-rom burning (or just .iso type?) for full backups?
  - some "level" that uses rpm, verifies all packages, and just backs
-   up any file not in a package OR changed from a package. and the rpm list.
+      up any file not in a package OR changed from a package. and the rpm list.
  - once the above works make it work for debian packages
-
+ - add switch to remove all index entries for all tapes
+ - make file-based backups act like a tape - "erase" would remove all files
+      in a dir, etc.  configurable?
 
 Cleanup/fix:
  - if using files, make -num grab the right file from disk using the index
-      now -num with file sis just ignored
+      now -num with files is just ignored
  - zip/unzip backend, use fifos rather than temp files
  - indexes and using files can sometimes mess up if the filenames
-   clobber each other.  use full time?
+      clobber each other.  (2 packups on same day) use full time? a counter?
+      same thing goes for log files actually.
  - when using files, maybe I want "erase" to clean out a dir?
  - do a debian package
  - make -extract -files for afio/cpio/zip recurse dirs
@@ -48,7 +49,7 @@ Cleanup/fix:
  - try restore -D for comparing subdirs w/ restore
  - check that dir we are backing up exists
  - config file in just text?  Wondering if anyone is bothered by the
-     perl syntax.
+      perl syntax.
 
 
 -------------------

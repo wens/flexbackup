@@ -1,6 +1,15 @@
 $Id$
 $Name$
 
+New Features:
+ - added multibuf.  if you use this instead of "buffer" we can now deal
+      with end-of-media type multivolume backups.  (multibuf came from KBackup)
+ - works for block devices (like floppies).  Turns the indexing off since
+   you can't do multiple files, but otherwise it works fine
+
+
+
+----------------------------------------------------------------------
 Version 0.9.8 (19991102)
 
 New Features:

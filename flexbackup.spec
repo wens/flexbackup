@@ -36,6 +36,7 @@ Features:
 %setup -q
 
 %build
+make
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -43,9 +44,9 @@ mkdir -p $RPM_BUILD_ROOT/etc
 mkdir -p $RPM_BUILD_ROOT/usr/bin
 mkdir -p $RPM_BUILD_ROOT/var/state/flexbackup
 mkdir -p $RPM_BUILD_ROOT/var/log/flexbackup
-make fb.install
 install -m 0644 flexbackup.conf $RPM_BUILD_ROOT/etc/flexbackup.conf
 install -m 0755 fb.install $RPM_BUILD_ROOT/usr/bin/flexbackup
+install -m 0755 multibuf $RPM_BUILD_ROOT/usr/bin/multibuf
 
 
 %clean
@@ -53,6 +54,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 /usr/bin/flexbackup
+/usr/bin/multibuf
 %defattr(-,root,root)
 %doc CHANGES COPYING TODO README CREDITS flexbackup.lsm INSTALL
 %dir /var/state/flexbackup

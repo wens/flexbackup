@@ -83,6 +83,24 @@ if ($ARGV[0] =~ /flexbackup.volume_header_info/) {
     exit(0);
 }
 
+# See if multibuf is calling us as a prompt script
+if ($ARGV[0] =~ /multibuf.prompt/) {
+    exit(1);
+    &multibuf_prompt();
+}
+
+# See if multibuf is calling us as a prep script
+if ($ARGV[0] =~ /multibuf.prep/) {
+    exit(1);
+    &multibuf_prep();
+}
+
+# See if multibuf is calling us as a retry script
+if ($ARGV[0] =~ /multibuf.retry/) {
+    exit(1);
+    &multibuf_retry();
+}
+
 # This is changed during "make install"
 $main::CONFFILE="/etc/flexbackup.conf";
 
@@ -600,7 +618,7 @@ sub backup_dump {
     $cmd .= "$main::dump_len_flag ";
     $cmd .= "-f - ";
     $cmd .= "$dir $main::z";
-    if ($main::remote and ($cfg::buffer eq "true")) {
+    if ($main::remote and ($cfg::buffer eq "buffer")) {
         $cmd .= "$main::buffer_cmd";
     }
 
@@ -659,7 +677,7 @@ sub backup_afio {
     $cmd .= "$main::afio_bnum_flag ";
     $cmd .= "$main::afio_blk_flag ";
     $cmd .= "-";
-    if ($main::remote and ($cfg::buffer eq "true")) {
+    if ($main::remote and ($cfg::buffer eq "buffer")) {
         $cmd .= "$main::buffer_cmd";
     }
     $remove = "$tmpstamp $tmplabel";
@@ -712,7 +730,7 @@ sub backup_cpio {
     $cmd .= "$main::cpio_sparse_flag ";
     $cmd .= "$main::cpio_blk_flag ";
     $cmd .= "$main::z";
-    if ($main::remote and ($cfg::buffer eq "true")) {
+    if ($main::remote and ($cfg::buffer eq "buffer")) {
         $cmd .= "$main::buffer_cmd";
     }
     $cmd .= " ; rm -f $tmpstamp \"$dir/$title\"";
@@ -764,7 +782,7 @@ sub backup_tar {
     $cmd .= "$main::tar_blk_flag ";
     $cmd .= "--file - ";
     $cmd .= "$main::z";
-    if ($main::remote and ($cfg::buffer eq "true")) {
+    if ($main::remote and ($cfg::buffer eq "buffer")) {
         $cmd .= "$main::buffer_cmd";
     }
     $cmd .= " ; rm -f $tmpstamp";
@@ -822,7 +840,7 @@ sub backup_zip {
     push(@cmds,$cmd);
 
     $cmd = "cat $tmp ";
-    if ($main::remote and ($cfg::buffer eq "true")) {
+    if ($main::remote and ($cfg::buffer eq "buffer")) {
         $cmd .= "$main::buffer_cmd";
     }
     $cmd .= " ; rm -f $tmpstamp \"$dir/$title\" $tmp";
@@ -1455,7 +1473,7 @@ sub optioncheck {
     &check(\$cfg::verbose,'verbose');
     &check(\$cfg::sparse,'sparse');
     &check(\$cfg::indexes,'indexes');
-    &check(\$cfg::buffer,'buffer');
+    &check(\$cfg::buffer,'buffer','false buffer multibuf');
     &check(\$cfg::buffer_megs,'buffer_megs','exist');
     &check(\$cfg::pad_blocks,'pad_blocks');
     &check(\$cfg::device,'device','exist');
@@ -1605,7 +1623,9 @@ sub optioncheck {
         $main::mt_blksize = $cfg::blksize * 1024;
     }
     # buffer blocksize needs k appended
-    $main::buffer_blk_flag = "-s " . $cfg::blksize . "k";
+    my $buffer_blk_flag = "-s " . $cfg::blksize . "k";
+    # multibuf blocksize is in bytes
+    my $multibuf_blk_flag = "-b " . $cfg::blksize * 1024;
     # dd blocksize needs k appended
     $main::dd_blk_flag = "ibs=" . $cfg::blksize . "k obs=" . $cfg::blksize . "k";
     # afio blocksize needs k appended
@@ -1651,38 +1671,53 @@ sub optioncheck {
     }
 
     # Block padding
+    my $buffer_pad_flag;
     if ($cfg::pad_blocks eq "true") {
         $main::dd_pad_flag = "conv=noerror,sync";
-        $main::buffer_pad_flag = "-B";
+        $buffer_pad_flag = "-B";
     } else {
         $main::dd_pad_flag = '';
-        $main::buffer_pad_flag = '';
+        $buffer_pad_flag = '';
     }
 
 
     # Buffer stuff
-    # Just use dd if buffer is disabled
-    if ($cfg::buffer eq "true") {
+    # Use dd if buffer is disabled
+    if ($cfg::buffer eq "buffer") {
+
         &checkinpath('buffer');
         if ($cfg::buffer_megs =~ m/^\d+$/) {
-            $main::buffer_megs = $cfg::buffer_megs . "m";
-            $main::buffer_cmd = " | buffer -m $main::buffer_megs $main::buffer_blk_flag";
+            my $read_flags;
+            my $megs = $cfg::buffer_megs . "m";
+            $main::buffer_cmd = " | buffer -m $megs $buffer_blk_flag";
             if (!defined($main::use_file)) {
-                $main::buffer_write_flags = "-u 100 -t -p 75 $main::buffer_pad_flag -o ";
-                $main::buffer_read_flags = "-u 100 -t -p 75 $main::buffer_pad_flag -i ";
+                $main::buffer_write_flags = "-u 100 -t -p 75 $buffer_pad_flag -o ";
+                $read_flags = "-u 100 -t -p 75 $buffer_pad_flag -i ";
             } else {
-                $main::buffer_write_flags = "-t -p 75 $main::buffer_pad_flag -o ";
-                $main::buffer_read_flags = "-t -p 75 $main::buffer_pad_flag -i ";
+                $main::buffer_write_flags = "-t -p 75 $buffer_pad_flag -o ";
+                $read_flags = "-t -p 75 $buffer_pad_flag -i ";
             }
-            $main::read_cmd = "buffer -m $main::buffer_megs $main::buffer_blk_flag $main::buffer_read_flags";
+            $main::read_cmd = "buffer -m $megs $buffer_blk_flag $read_flags";
         } else {
             push(@main::errors,"\$buffer_megs must be set to integer number of megabytes");
         }
+
+    } elsif ($cfg::buffer eq "multibuf") {
+
+        &checkinpath('multibuf');
+        my $flags = "-R \"$0 multibuf.retry\" ";
+        $flags .= "-c \"$0 multibuf.prompt\" -C \"$0 multibuf.prep\"";
+        $main::buffer_cmd = " | multibuf -w $multibuf_blk_flag $flags ";
+        $main::buffer_write_flags = "";
+        $main::read_cmd = "multibuf -r $multibuf_blk_flag $flags ";
+
     } else {
+
         &checkinpath('dd');
         $main::buffer_cmd = " | dd $main::dd_blk_flag $main::dd_pad_flag";
         $main::buffer_write_flags = "of=";
         $main::read_cmd = "dd $main::dd_blk_flag $main::dd_pad_flag if=";
+
     }
 
     # Check for type of touch flag

@@ -26,7 +26,6 @@ tar: tag lsm
 	cd /tmp/flexbackup-$(VER); mv Makefile.dist Makefile
 	tar -C /tmp -z -c -v -X tar.exclude -f $(SITE)/tarball/flexbackup-$(VER).tar.gz flexbackup-$(VER)
 	cp -p $(SITE)/tarball/flexbackup-$(VER).tar.gz $(SITE)/tarball/flexbackup-latest.tar.gz
-	cp -p $(SITE)/tarball/flexbackup-$(VER).tar.gz archive
 	cd /tmp; echo yes | cvs release -d flexbackup-$(VER)
 
 rpm: tar

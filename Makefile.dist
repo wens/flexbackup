@@ -15,16 +15,22 @@ PERLPATH = /usr/bin/perl
 
 ######################################################################
 
-all:
-	@echo 'Nothing to build; try "make install"'
+all: multibuf fb.install
 
-install: fb.install
+install: all
 	install -m 0644 flexbackup.conf $(CONFFILE)
 	install -m 0755 fb.install $(BINPATH)/flexbackup
-	rm -f fb.install
+	install -m 0755 multibuf $(BINPATH)/multibuf
 
 fb.install:
 	cp flexbackup fb.install
 	cp fb.install fb.tmp; sed -e 's%/etc/flexbackup.conf%$(CONFFILE)%g;' fb.tmp > fb.install
 	cp fb.install fb.tmp; sed -e 's%/usr/bin/perl%$(PERLPATH)%g' fb.tmp > fb.install
 	rm -f fb.tmp
+
+multibuf: multibuf.c getopt.h
+        $(CC) $(CFLAGS) -Wall -D_XOPEN_SOURCE -DNDEBUG multibuf.c -o multibuf
+
+clean:
+	rm -f fb.install
+	rm -f multibuf
