@@ -1,0 +1,76 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<HTML> <HEAD>
+<TITLE>Flexbackup FAQ</TITLE>
+</HEAD>
+
+<BODY BGCOLOR="#FFFFFF">
+<H1>Flexbackup FAQ</H1>
+
+<OL>
+
+  <LI><I>
+      I keep getting only one backup per tape when I do "-fs all"!
+      </I>
+      <BLOCKQUOTE>
+      Use the non-rewinding device.
+      </BLOCKQUOTE>
+
+  <LI><I>
+      I can't get the $exclude_expr stuff to work!
+      </I>
+      <BLOCKQUOTE>
+      Use regular expressions, not wildcards (aka globs).  See a perl, sed,
+      or grep reference, or "man 7 regex".  Simplistically, you probably
+      mean to say ".*" instead of "*", and ".?" instead of "?".  Also,
+      leave OFF the first part of a path that is the filesystem you
+      are archiving;  the exclude epxressions only match subdirectories of
+      the backup directory.
+      </BLOCKQUOTE>
+
+  <LI><I>
+      How do I archive multiple filesytems without redefining $filesystems
+      in the configuration file?
+      </I>
+
+      <BLOCKQUOTE>
+      Do this:
+      <PRE>
+      flexbackup -fs /dir1 -norewind
+      flexbackup -fs /dir2 -norewind
+      flexbackup -fs /dir3 -norewind
+      </PRE>
+      </BLOCKQUOTE>
+
+  <LI><I>
+      The disk totally died.  How do I get flexbackups' archives off the
+      tapes on a mchine without the flexbackup script installed?
+      </I>
+
+      <BLOCKQUOTE>
+      Something like this, if using compression with
+      tar/cpio/dump:
+      <PRE>
+      dd if=/dev/tapedevice bs=64k | gzip -dc | tar xvf -
+      </PRE>
+      replace "tar xvf -" with "restore -i -f -" or whatever. Skip the gzip
+      pipe if you aren't using compression.  afio is a bit more compex, but
+      read the manpage...
+      </BLOCKQUOTE>
+
+  <LI><I>
+      I don't have the index files! (disk died, different machine, etc)
+      </I>
+
+      <BLOCKQUOTE>
+      This is OK, you can still extract/restore/etc. The index files are
+      for human convenience only.  Just skip the first file on the tape,
+      it's a simple "tag" text file.  The rest of the tape is your normal archives.
+      </BLOCKQUOTE>
+
+</OL>
+
+<HR>
+<!-- HHMTS START -->
+Last modified: Fri Oct  8 11:27:45 MST 1999
+<!-- HHMTS END -->
+</BODY> </HTML>
