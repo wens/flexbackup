@@ -942,12 +942,11 @@ sub backup_afio {
     push(@cmds, &maybe_remote_cmd($cmd, $remote));
 
     $cmd = "cd $dir && ";
-    $cmd .= "($main::path{printf} \"//--$tmplabel flexbackup.volume_header_info\\0\" && ";
-    $cmd .= &file_list_cmd($dir, $stamp, 'null', $level, $remote);
+    $cmd .= "($main::path{printf} \"//--$tmplabel flexbackup.volume_header_info\\n\" && ";
+    $cmd .= &file_list_cmd($dir, $stamp, 'newline', $level, $remote);
     $cmd .= ") | ";
 
-    #$cmd .= "$main::path{afio} -o ";
-    $cmd .= "$main::path{afio} -o -0 ";
+    $cmd .= "$main::path{afio} -o ";
     $cmd .= "$no_compress ";
     $cmd .= "-z ";
     $cmd .= "$main::afio_z_flag ";
