@@ -11,11 +11,11 @@
 #  flexbackup -help                : this message
 #
 # BACKUP:
-#  flexbackup -fs all              : backup all (defined in config file), level 0
-#  flexbackup -fs <x>              : backup directory <x>, level 0
-#  flexbackup -fs all -level <n>   : backup all (defined in config file), level n
-#  flexbackup -fs <x> -level <n>   : backup directory <x>, level n
-#     level can be an integer, or full/differential/incremental
+#  flexbackup -dir <x>             : backup directory tree, level 0
+#  flexbackup -set <tag>           : backup set "tag" (def. in config file), level 0
+#  flexbackup -set all             : backup all sets, level 0
+#  flexbackup [...] -level <n>     : backup level, can be integer or
+#                                    full/differential/incremental
 #  flexbackup [...] -pkgdelta rpm  : prune backup to files not part of an RPM
 #                                    or changed from distributed version
 #  flexbackup [...] -wday <n>      : backup only if the week day matches
@@ -29,9 +29,9 @@
 #  flexbackup -compare             : compare archive with the files in your
 #                                    current directory
 #  flexbackup -restore             : interactive restore (dump type only for now)
-#  flexbackup [operation] -num <n> : read file number n from tape; if not given
+#  flexbackup [...] -num <n>       : read file number n from tape; if not given
 #                                    uses current tape position
-#  flexbackup [operation] <file>   : if archiving to files rather than a device,
+#  flexbackup [...] <file>         : if archiving to files rather than a device,
 #                                    list/extract/compare/restore options take
 #                                    a filename argument
 # INDEX RELATED:
@@ -44,24 +44,24 @@
 #                                  : force db delete of specified tape/filenumber
 # TESTING/DEBUG:
 #  flexbackup -test-tape-drive     : tries writing/reading files to make sure you
-#                                    have tape driver & parameters set up correctly
+#                                    have tape driver & parameters set up right
 #  flexbackup [...] -n             : don't run actual dump or mt commands, just echo
-#  flexbackup [...] -type filelist : special backup type that just saves list of files
-#                                    that would have been archived
+#  flexbackup [...] -type filelist : special backup type that just saves list of
+#                                    files that would have been archived
 # MISC:
 #  flexbackup -newtape             : erase & create new index key (but no backup)
-#  flexbackup -rmfile <file>       : if backups to disk, rm specific file & index info
-#  flexbackup -rmfile all          : if backups to disk, rm all files & index for dir
+#  flexbackup -rmfile <file>       : if backups to disk, rm file & index info
+#  flexbackup -rmfile all          : if backups to disk, rm all files/index for dir
 #  flexbackup [...] -c <file>      : use <file> instead of /etc/flexbackup.conf
 #                                    for configuration
 #  flexbackup [...] -type <x>      : override $type from config file
 #  flexbackup [...] -compress <x>  : override $compress from config file
 #  flexbackup [...] -device <dev>  : override $device from config file
 #  flexbackup [...] -d 'var=val'   : override config file setting of $var
-#  flexbackup -fs all -noreten     : don't retension for level 0 "all" backups
-#  flexbackup -fs all -noerase     : don't rewind/erase for level 0 "all" backups
-#  flexbackup -fs <x> -erase       : force a rewind/erase before backup
-#  flexbackup -fs <x> -norewind    : don't rewind tape after a single backup
+#  flexbackup -dir <x> -erase      : force a rewind/erase before backup
+#  flexbackup -dir <x> -norewind   : don't rewind tape after a single backup
+#  flexbackup -set <x> -noreten    : don't retension for level 0 set backups
+#  flexbackup -set <x> -noerase    : don't rewind/erase for level 0 set backups
 #  flexbackup [operation] -reten   : force a retension before read
 #  flexbackup -version             : show version
 #
@@ -128,6 +128,7 @@ if (! &main::GetOptions(\%main::opt,
 			"compare:s",
 			"compress=s",
 			"d=s%",
+			"dir=s",
 			"pkgdelta=s",
 			"device=s",
 			"differential",
@@ -135,7 +136,6 @@ if (! &main::GetOptions(\%main::opt,
 			"extract:s",
 			"f=s",
 			"files=s",
-			"fs=s",
 			"full",
 			"help",
 			"incremental",
@@ -149,13 +149,13 @@ if (! &main::GetOptions(\%main::opt,
 			"rewind!",
 			"rmfile:s",
 			"rmindex:s",
+			"set=s",
 			"test-tape-drive",
 			"toc:s",
 			"type=s",
 			"version",
 			"wday=i"
 			)) {
-    &usage();
     exit(0);
 }
 
@@ -209,7 +209,7 @@ if (defined($main::opt{'restore'})) {
 } elsif (defined($main::opt{'list'})) {
     &list_routine();
 
-} elsif (defined($main::opt{'fs'})) {
+} elsif (defined($main::opt{'dir'}) or defined($main::opt{'set'})) {
     &backup_routine();
 
 } elsif (defined($main::opt{'toc'})) {
@@ -258,7 +258,6 @@ sub backup_routine {
 
     my @files;
     my $label;
-    my $list;
     my $tapecounter = 0;
     my %oldlogs;
     my $fs;
@@ -270,17 +269,18 @@ sub backup_routine {
     my $logsuffix = '';
 
 
-    # Get rid of trailing /
-    $main::opt{'fs'} = &nuke_trailing_slash($main::opt{'fs'});
-
     # Figure out log file name & empty log file
-    $label = &get_label($main::opt{'fs'});
+    if (defined($main::opt{'set'})) {
+	$label = &get_label($main::opt{'set'});
+    } else {
+	$label = &get_label($main::opt{'dir'});
+    }
 
     if ($cfg::staticlogs eq 'false' ) {
 	$logsuffix = ".$main::date";
     }
 
-    if (!defined($main::incremental_all)) {
+    if (!defined($main::set_incremental)) {
 	$logfile = "$cfg::prefix$label.$main::level" . $logsuffix;
     } else {
 	$logfile = "$cfg::prefix$label.incremental" . $logsuffix;
@@ -299,7 +299,7 @@ sub backup_routine {
 
     # Remember old log files (will remove at end of job)
     # ("old" = any higher- or equal-numbered logs for this label)
-    if (!defined($main::incremental_all)) {
+    if (!defined($main::set_incremental)) {
 	opendir(DIR,"$cfg::logdir") or die("Can't open cfg::logdir: $OS_ERROR");
 	@files = readdir(DIR);
 	foreach my $lf (reverse sort @files) {
@@ -356,16 +356,27 @@ sub backup_routine {
     # Main backup routine
     #
     ##########################
-    # Spew some info
-    if (!defined($main::incremental_all)) {
-	&log("| Doing level $main::level backup of $main::opt{fs} using $cfg::type");
-    } else {
-	&log("| Doing incremental backup of all using $cfg::type");
-    }
+    if (defined($main::opt{'set'})) {
 
-    if ($main::opt{'fs'} eq 'all') {
+	if (!defined($main::set_incremental)) {
+	    &log("| Doing level $main::level backup of set $main::opt{set} using $cfg::type");
+	} else {
+	    &log("| Doing incremental backup of $main::opt{set} using $cfg::type");
+	}
 
-	foreach $list (@cfg::filesystems) {
+	# All sets or just one?
+	my @do_sets;
+	if ($main::opt{'set'} eq 'all') {
+	    @do_sets = keys(%cfg::set);
+	    $_ = length(@do_sets) + 1;
+	    $_ = join(" ", @do_sets) . " ($_ tapes)";
+	    &log("| All sets = $_");
+	} else {
+	    @do_sets = ($main::opt{'set'});
+	}
+
+	my $num_tapes = length(@do_sets);
+	foreach my $this_set (@do_sets) {
 
 	    # Maybe retension
 	    if (($main::do_reten == 1) and defined($main::tapedevice)) {
@@ -385,43 +396,44 @@ sub backup_routine {
 		&mt('generic-eod');
 	    }
 
-	    # Multiple tapes are only for level 0
-	    if (!defined($main::incremental_all) and ($main::level == 0)) {
-		&log("| Tape \#$tapecounter");
-	    }
-
-	    # Print what "all" means
-	    &log("| Filesystems = $list");
+	    # Print what this set contains
+	    &log("| Set = $this_set ($cfg::set{$this_set})");
 
 	    # Show tape position
 	    if (defined($main::tapedevice)) {
+		# Multiple tapes are only for level 0
+		if (!defined($main::set_incremental) and ($main::level == 0)) {
+		    &log("| Tape \#$tapecounter");
+		}
 		&line();
 		&mt('generic-query');
 	    }
 
-	    # Iterate over the filesystems and back 'em up
-	    foreach my $fs (split(/\s+/,$list)) {
+	    # Iterate over the filesystems in the set and back 'em up
+	    foreach my $dir (split(/\s+/,$cfg::set{$this_set})) {
 
 		my $level;
 
 		# Get rid of trailing /
-		$fs = &nuke_trailing_slash($fs);
+		$dir = &nuke_trailing_slash($dir);
 
-		if (!defined($main::incremental_all)) {
+		# If level is icremental for the set, each dir might
+		# have a different numeric level
+		if (!defined($main::set_incremental)) {
 		    $level = $main::level;
 		} else {
-		    $level = &get_incremental_level($fs);
+		    $level = &get_incremental_level($dir);
 		}
 
-		&backup($fs, $tape_key, $level);
+		&backup($dir, $tape_key, $level);
 		if ($cfg::indexes eq "true") {
 		    $main::nextfile++;
 		}
 	    }
 
 	    # Prompt for new tape if more than one set in list & level 0
-	    if (!defined($main::incremental_all) and ($main::level == 0)) {
-		if ($tapecounter < $main::num_tapes) {
+	    if (!defined($main::set_incremental) and ($main::level == 0)) {
+		if ($tapecounter < $num_tapes) {
 
 		    # Maybe rewind (usually true)
 		    if ($main::do_rewind_after == 1) {
@@ -447,13 +459,16 @@ sub backup_routine {
 			print "\n";
 			&line();
 		    }
-		}               # end not at last tape
-	    }                   # end level == 0 (inside foreach fs, inside all)
-	}                       # end foreach fs (inside all)
+
+		} # end not at last tape
+	    } # end if level == 0
+
+	}  # end foreach set
 
     } else {
 
-	# Just one filesystem
+	# Just one filesystem, -dir given
+	&log("| Doing level $main::level backup of $main::opt{dir} using $cfg::type");
 
 	# Maybe retension
 	if ($main::do_reten == 1) {
@@ -480,9 +495,9 @@ sub backup_routine {
 	    &mt('generic-query');
 	}
 
-	&backup($main::opt{'fs'}, $tape_key, $main::level);
+	&backup($main::opt{'dir'}, $tape_key, $main::level);
 
-    } # end all or single fs
+    } # end set or single fs
 
     if (defined($main::tapedevice)) {
 	&line();
@@ -675,14 +690,14 @@ sub backup {
 	    $_ = pop(@_);
 	    $indexkey = "$tape_key|$_";
 	    if (defined($main::opt{'n'})) {
-		&log("(debug) \$main::index{$indexkey} = $title_without_type");
+		&log("DEBUG \$main::index{$indexkey} = $title_without_type");
 	    } else {
 		$main::index{$indexkey} = "$title_without_type";
 	    }
 	} else {
 	    $indexkey = "$tape_key|$main::nextfile";
 	    if (defined($main::opt{'n'})) {
-		&log("(debug) \$main::index{$indexkey} = $title");
+		&log("DEBUG \$main::index{$indexkey} = $title");
 	    } else {
 		$main::index{$indexkey} = $title;
 	    }
@@ -876,7 +891,7 @@ sub backup {
 
 	}
     } else {
-	&log("(debug) command output would be here");
+	&log("DEBUG command output would be here");
     }
     &line();
 
@@ -2338,7 +2353,7 @@ sub mt {
 		if (defined($main::log)) { close(LOG); }
 
 	    } else {
-		&log("(debug) $command");
+		&log("DEBUG $command");
 	    }
 
 	} # not a file
@@ -2533,26 +2548,12 @@ sub optioncheck {
     # Traverse mountpoints?
     &check(\$cfg::traverse_fs,'traverse_fs','false local all');
     if ($cfg::traverse_fs eq "local") {
-	$main::mountpoint_flag = "! -fstype nfs ! -fstype smbfs";
+	$main::mountpoint_flag = "! -fstype nfs ! -fstype smbfs ! -fstype bind";
     } elsif ($cfg::traverse_fs eq "all") {
 	$main::mountpoint_flag = "";
     } else {
 	$main::mountpoint_flag = "-xdev";
     }
-
-    ##### Check for deprecated mt_var_blksize
-    ##### FIXME remove this section  after transition
-    if (!defined($cfg::mt_blksize) and defined($cfg::mt_var_blksize)) {
-	if ($cfg::mt_var_blksize eq "true") {
-	    $cfg::mt_blksize = 0;
-	} else {
-	    $cfg::mt_blksize = $cfg::blksize * 1024;
-	}
-	print "NOTE: Your config file uses deprecated variable \$mt_var_blksize.\n";
-	print "      Please update to using \$mt_blksize\n\n";
-	sleep(1);
-    }
-    ##### FIXME remove this section  after transition
 
     # mt block size (in bytes not k)
     if (!defined($cfg::mt_blksize)) {
@@ -2720,35 +2721,37 @@ sub optioncheck {
     }
 
     # Filesystems
-    if (defined($main::opt{'fs'})) {
-	if ($main::opt{'fs'} ne 'all') {
+    if (defined($main::opt{'dir'})) {
 
-	    # Single fs
-	    if ($main::opt{'fs'} =~ /^(\S+):/) {
+	    # Single directory
+	    if ($main::opt{'dir'} =~ /^(\S+):/) {
 		$main::remotehosts{$1} = 1;
 	    } else {
 		$main::local = 1;
 	    }
 
-	} else {
+	    # Get rid of trailing /
+	    $main::opt{'dir'} = &nuke_trailing_slash($main::opt{'dir'});
 
-	    # All
-	    $main::num_tapes = -1;
-	    foreach my $list (@cfg::filesystems) {
-		$main::num_tapes++;
-		foreach my $fs (split(/\s+/,$list)) {
-		    if ($fs =~ /^(\S+):/g) {
-			$main::remotehosts{$1} = 1;
-		    } else {
-			$main::local = 1;
-		    }
+    } elsif (defined($main::opt{'set'})) {
+
+	my @do_sets;
+	if ($main::opt{'set'} eq 'all') {
+	    @do_sets = keys(%cfg::set);
+	} else {
+	    @do_sets = ($main::opt{'set'});
+	}
+
+	foreach my $this_set (@do_sets) {
+	    foreach my $dir (split(/\s+/,$cfg::set{$this_set})) {
+		if ($dir =~ /^(\S+):/g) {
+		    $main::remotehosts{$1} = 1;
+		} else {
+		    $main::local = 1;
 		}
 	    }
-	    if ($main::num_tapes == -1) {
-		push(@main::errors,"no filesystem spec for \"all\" backups (\$filesystem[0] not defined)");
-	    }
-
 	}
+
     }
 
     # Verbose flag
@@ -3064,16 +3067,16 @@ sub optioncheck {
 	$main::level = 1;
     } elsif ($main::opt{'level'} eq "incremental") {
 	# If incremental + one fs, we can find the level now.
-	if (defined($main::opt{'fs'}) and ($main::opt{'fs'} ne 'all')) {
-	    $main::level = &get_incremental_level($main::opt{'fs'});
+	if (defined($main::opt{'dir'})) {
+	    $main::level = &get_incremental_level($main::opt{'dir'});
 	    if (($cfg::type eq 'dump') and ($main::level > 9)) {
 		push(@main::errors,"can't use level > 9 and type=dump");
 	    }
 	} else {
-	    # If we are doing 'all', have to postpone till later; each
+	    # If we are doing a set have to postpone till later; each
 	    # fs might have a different level...
 	    undef $main::level;
-	    $main::incremental_all = 1;
+	    $main::set_incremental = 1;
 	}
     }
 
@@ -3109,7 +3112,7 @@ sub optioncheck {
     }
 
     # Mode
-    my (@modelist) = qw(fs list extract compare restore toc newtape rmindex rmfile test-tape-drive);
+    my (@modelist) = qw(set dir list extract compare restore toc newtape rmindex rmfile test-tape-drive);
     my @modes;
     my $modecount = 0;
     $main::mode = '';
@@ -3162,8 +3165,8 @@ sub optioncheck {
 
     # Test
     if (defined($main::opt{'n'})) {
-	&log('(debug) no backup or mt commands will be executed');
-	&log('(debug) no old stamps or old log files will be removed');
+	&log('DEBUG no backup or mt commands will be executed');
+	&log('DEBUG no old stamps or old log files will be removed');
     }
 
     # Check extract list
@@ -3531,7 +3534,7 @@ sub run_or_echo_then_query {
     if (!defined($main::opt{'n'})) {
 	system("($cmd) 2>&1 | $main::path{tee} -a $main::log");
     } else {
-	&log("(debug) command output would be here");
+	&log("DEBUG command output would be here");
     }
 
     if (!defined($main::use_file)) {
@@ -3745,34 +3748,30 @@ sub print_afio_volume_header {
 sub set_tape_operation_defaults {
 
     # Assume stuff based on how we are called first
-    if (defined($main::opt{'fs'})) {
-	if ($main::opt{'fs'} eq 'all') {
-	    if (!defined($main::incremental_all) and ($main::level == 0)) {
-		# All level zero - retension, and erase a new tape
-		# (config file may tell us not to erase)
-		if ($cfg::erase_tape_all_level_zero eq "true") {
-		    $main::do_reten = 1;
-		    $main::do_erase = 1;
-		} else {
-		    $main::do_reten = 0;
-		    $main::do_erase = 0;
-		}
-		$main::do_rewind_after = 1;
+    if (defined($main::opt{'set'})) {
+	if (!defined($main::set_incremental) and ($main::level == 0)) {
+	    # Set level zero - retension, and erase a new tape
+	    # (config file may tell us not to erase)
+	    if ($cfg::erase_tape_all_level_zero eq "true") {
+		$main::do_reten = 1;
+		$main::do_erase = 1;
 	    } else {
-		# All incremental backup - go to end of tape
 		$main::do_reten = 0;
 		$main::do_erase = 0;
-		$main::do_rewind_after = 1;
 	    }
+	    $main::do_rewind_after = 1;
 	} else {
-	    # Just one filesystem - assume we append to tape
+	    # Set incremental backup or set non-zero - go to end of tape
 	    $main::do_reten = 0;
 	    $main::do_erase = 0;
 	    $main::do_rewind_after = 1;
-	} # all or one filesystem
-
+	}
+    } elsif (defined($main::opt{'dir'})) {
+	# Just one filesystem - assume we append to tape
+	$main::do_reten = 0;
+	$main::do_erase = 0;
+	$main::do_rewind_after = 1;
     } else {
-
 	# We're doing a read of some sort
 	$main::do_reten = 0;
 	$main::do_erase = 0; # -erase has no effect anyway here
@@ -3866,7 +3865,7 @@ sub new_tape_key {
     $string .=  "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=$dev";
 
     if (defined($main::opt{'n'})) {
-	&log("(debug) $string");
+	&log("DEBUG $string");
     } else {
 	`$string 2> /dev/null`;
     }
@@ -3876,14 +3875,14 @@ sub new_tape_key {
     if (defined($main::use_file)) {
 	my $label = "<index keyfile, dir=$cfg::device>";
 	if (defined($main::opt{'n'})) {
-	    &log("(debug) \$main::index{$key|$cfg::keyfile} = $label");
+	    &log("DEBUG \$main::index{$key|$cfg::keyfile} = $label");
 	} else {
 	    $main::index{"$key|$cfg::keyfile"} = $label;
 	}
     } else {
 	my $label = "<tape index key>";
 	if (defined($main::opt{'n'})) {
-	    &log("(debug) \$main::index{$key|0} = $label");
+	    &log("DEBUG \$main::index{$key|0} = $label");
 	} else {
 	    $main::index{"$key|0"} = $label;
 	}
@@ -3923,7 +3922,7 @@ sub get_tape_key {
 	}
 
 	if (defined($main::opt{'n'})) {
-	    &log("(debug) $string");
+	    &log("DEBUG $string");
 	    $key = '';
 	} else {
 	    $key = `$string 2> /dev/null`;
@@ -3935,14 +3934,14 @@ sub get_tape_key {
 	    chomp($key);
 	    if ($key !~ m/^\d+$/) {
 		if (!defined($quiet)) {
-		    &log("| ERROR: Tape doesn't have an index! (use \"-fs <x> -erase\" or -newtape?)");
+		    &log("| ERROR: Tape doesn't have an index! (use -newtape?)");
 		}
 		$main::nextfile = 0;
 		return('');
 	    }
 	} else {
 	    if (!defined($quiet)) {
-		&log("| ERROR: Tape doesn't have an index! (use \"-fs <x> -erase\" or -newtape?)");
+		&log("| ERROR: Tape doesn't have an index! (use -newtape?)");
 	    }
 	    $main::nextfile = 0;
 	    return('');
@@ -4110,7 +4109,7 @@ sub rmindex {
 		    ($filenum eq $file)) {
 		    &log("| Deleting record for tape $tape file $filenum");
 		    if (defined($main::opt{'n'})) {
-			&log("(debug) delete \$main::index{$tape|$filenum}");
+			&log("DEBUG delete \$main::index{$tape|$filenum}");
 		    } else {
 			delete $main::index{"$tape|$filenum"};
 		    }
@@ -4122,7 +4121,7 @@ sub rmindex {
 		if ($tape eq $key) {
 		    &log("| Deleting record for tape $tape file $filenum");
 		    if (defined($main::opt{'n'})) {
-			&log("(debug) delete \$main::index{$tape|$filenum}");
+			&log("DEBUG delete \$main::index{$tape|$filenum}");
 		    } else {
 			delete $main::index{"$tape|$filenum"};
 		    }
@@ -4202,10 +4201,10 @@ sub rmfile {
 sub maybe_delete_old_index {
 
     my $key;
-    my $tape;
-    my $filenum;
 
     return if $cfg::indexes eq "false";
+
+    return if (defined($main::use_file));
 
     $key = &get_tape_key('quiet');
     if ($key ne '') {
@@ -4390,7 +4389,7 @@ sub list_packages {
 	    &log("| Listing all RPM packages...");
 	}
 	if (defined($main::opt{'n'})) {
-	    &log("(debug) $cmd");
+	    &log("DEBUG $cmd");
 	} else {
 	    open(LIST,"$cmd |") || die;
 	    while(<LIST>) {
@@ -4423,7 +4422,7 @@ sub find_packaged_files {
 	    &log("| Finding all files owned by RPM packages...");
 	}
 	if (defined($main::opt{'n'})) {
-	    &log("(debug) $cmd");
+	    &log("DEBUG $cmd");
 	} else {
 	    open(LIST,"$cmd |") || die;
 	    while(<LIST>) {
@@ -4457,9 +4456,9 @@ sub find_changed_files {
 	} else {
 	    &log("| Finding changed package files...");
 	}
-	&log("| May take quite a while, be patient");
+	&log("| May take quite a while, please be patient");
 	if (defined($main::opt{'n'})) {
-	    &log("(debug) $cmd");
+	    &log("DEBUG $cmd");
 	} else {
 	    open(LIST,"$cmd |") || die;
 	    while(<LIST>) {
@@ -4543,7 +4542,7 @@ sub test_bufferprog {
 	close (PIPE);
 
     } else {
-	print "\n(debug) $pipecmd\n";
+	print "\nDEBUG $pipecmd\n";
     }
 
     if ($retval == 0) {
@@ -4585,7 +4584,7 @@ sub check_remote_progs {
 	print "| Checking for required programs on host $host... ";
 	my $cmd = "$main::remoteshell $host sh -c '$string'";
 	if (defined($main::opt{'n'})) {
-	    print "\n(debug) $cmd\n";
+	    print "\nDEBUG $cmd\n";
 	    next;
 	}
 	if (!(open(PIPE,"$cmd |"))) {
@@ -4639,7 +4638,7 @@ sub check_shell {
     $main::shelltype{$host} = 'unknown';
 
     if (defined($main::opt{'n'})) {
-	print "(debug) $pipecmd\n";
+	print "DEBUG $pipecmd\n";
     }
 
     if (!(open(PIPE,"$pipecmd 2>&1 |"))) {
@@ -4727,20 +4726,6 @@ sub test_tape_drive {
     &mt('generic-query');
     &log('');
     &log("Writing test file \#1");
-    $cmd = "$main::path{cat} $configfile";
-    $cmd = &append_writer_cmd($cmd);
-    if (!defined($main::opt{'n'})) {
-	system($cmd);
-	if ($CHILD_ERROR) {
-	    $fail++;
-	}
-    } else {
-	&log($cmd);
-    }
-
-    &mt('generic-query');
-    &log('');
-    &log("Writing test file \#2");
     $cmd = "$main::path{cat} $0";
     $cmd = &append_writer_cmd($cmd);
     if (!defined($main::opt{'n'})) {
@@ -4753,7 +4738,19 @@ sub test_tape_drive {
     }
 
     &mt('generic-query');
-    &log('');
+    &log("Writing test file \#2");
+    $cmd = "$main::path{cat} $configfile";
+    $cmd = &append_writer_cmd($cmd);
+    if (!defined($main::opt{'n'})) {
+	system($cmd);
+	if ($CHILD_ERROR) {
+	    $fail++;
+	}
+    } else {
+	&log($cmd);
+    }
+
+    &mt('generic-query');
     &log("Writing test file \#3");
     $cmd = "$main::path{cat} $0";
     $cmd = &append_writer_cmd($cmd);
@@ -4796,11 +4793,10 @@ sub test_tape_drive {
 	    $fail++;
 	}
     } else {
-	&log($cmd);
+	&log("DEBUG $cmd");
     }
 
     &mt('generic-query');
-    &log('');
     &log("Reading test file \#2");
     $cmd = &read_function($main::device);
     if (defined($main::remotetapehost)) {
@@ -4820,11 +4816,10 @@ sub test_tape_drive {
 	    $fail++;
 	}
     } else {
-	&log($cmd);
+	&log("DEBUG $cmd");
     }
 
     &mt('generic-query');
-    &log('');
     &log("Reading test file \#3");
     $cmd = &read_function($main::device);
     if (defined($main::remotetapehost)) {
@@ -4844,7 +4839,7 @@ sub test_tape_drive {
 	    $fail++;
 	}
     } else {
-	&log($cmd);
+	&log("DEBUG $cmd");
     }
 
     &mt('generic-query');
@@ -4865,9 +4860,9 @@ sub test_tape_drive {
 	    $fail++;
 	}
     } else {
-	&log("$main::path{diff} -q $0 $tmp1");
-	&log("$main::path{diff} -q $configfile $tmp2");
-	&log("$main::path{diff} -q $0 $tmp3");
+	&log("DEBUG $main::path{diff} -q $0 $tmp1");
+	&log("DEBUG $main::path{diff} -q $configfile $tmp2");
+	&log("DEBUG $main::path{diff} -q $0 $tmp3");
     }
 
     unlink $tmp1;
