@@ -10,10 +10,13 @@ Cleanup/fix:
      and shell local==bash. bah.
  - Check buffer avail mem thing from John
  - Check for existence of remote executables? (John had something)
- - Try to use dump combined flags (for older dumps that want abc not -a -b -c)
+ - Whole class of problems like:
+    - Use dump combined flags (for older dumps that want abc not -a -b -c)
+    - Not all finds have the -fstype flag (from $traverse_fs)
+    - How to handle (use lowest common denominator flags?  sorta what's tried now)
+    - Explicitly say we use GNU tar...
  - When level > 9 and using files, -toc sorts it wrong (cosmetic nit)
  - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
- - Not all finds have the -fstype flag (from $traverse_fs)
  - Split main program; use separate libs for archiver types that are stored
    in different files?  install then requires more than just program + conf file.
 
@@ -39,6 +42,7 @@ Features to add:
      smbtar has "files newer than" option, test
      don't want password echoed
      no exclude from find
+     top level of shares only?
  - some "level" that uses rpm, verifies all packages, and just backs
       up any file not in a package OR changed from a package. and the rpm list.
       once the above works make it work for debian packages
