@@ -4287,7 +4287,7 @@ sub split_and_echo {
 }
 
 ######################################################################
-# Create new tape "key" and return it
+# Create new tape "key" and return it (YYYYMMDDHHMMSS)
 # Also sets ::nextfile
 ######################################################################
 sub new_tape_key {
@@ -4361,6 +4361,9 @@ sub new_tape_key {
 	}
     }
 
+    # So that we won't generate duplicate keys...
+    # (as long as two processes with -newtape aren't run in parallel)
+    sleep(1);
 
     return($key);
 }

@@ -5,9 +5,7 @@ Flexbackup to-do list
 Some of these might not happen
 
 Pending:
- - Scrub manpage
-     Incorporate man pages into install, rpms
- - Fix key duplication for multiple sets same time
+ - Scrub manpage, mention in readme, etc.
 
 Cleanup/fix:
  - Better cleanup after error in backup
@@ -16,6 +14,8 @@ Cleanup/fix:
  - If comp_log is changed, we don't nuke old logs that normally would be
    overwritten with ourselves if comp_log stayed the same. (cosmetic nit)
  - Fix afio w/null (FreeBSD printf can't spit out null char)
+ - Multiple backups launched within the same second clobber each other's
+    logs/filenames
  - rpm-delta mode - prelink messages clutter stderr
  - Whole class of cross-platform command switch stuff:
     - Use dump combined flags (for older dumps that want abc not -a -b -c)
@@ -97,7 +97,7 @@ Features to add:
  - Make per-host path overrides possible
 
  - Make -set or -dir able to be given multiple times on the commandline
-   (then wha do we call the log file?
+   (then what do we call the log file?
 
  - Stor lists of files backed up in a on-disk db (to help find what to
      restore from?). Actually now you can just 'zgrep filename
