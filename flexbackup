@@ -4050,7 +4050,7 @@ sub test_tape_drive {
     &line();
     sleep(10);
 
-    &log("| If for some reason this prgram does not exit within a few minutes,");
+    &log("| If for some reason this program does not exit within a few minutes,");
     &log("| Hit CTRL-C, and try adjusting \$blksize, \$pad_blocks, or \$mt_var_blksize.");
     &line();
 
