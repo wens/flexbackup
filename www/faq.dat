@@ -129,12 +129,13 @@ treating the thing like a SCSI tape - I've had more success that way.
 tar and dd (to factor flexbackup out of the loop), although that's what the
 <CODE>-test-tape-drive</CODE> switch tries to do.  If you can get that working,
 but flexbackup still seems to malfunction, let us know.  Try things like:
-(The example below uses afio to test, others will be different)
+(The example below uses afio to test, tar/cpio/others will be different)
 
 <PRE>
   # Backup two dirs
   mt -f /dev/tape setblk 32768
   mt -f /dev/tape rewind
+  mt -f /dev/tape erase
   find /dir1 -print | afio -o -z -v -b 32k - | dd ibs=32k obs=32k of=/dev/tape
   find /dir2 -print | afio -o -z -v -b 32k - | dd ibs=32k obs=32k of=/dev/tape
 
