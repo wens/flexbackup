@@ -161,7 +161,7 @@ if (defined($main::opt{'restore'})) {
 } elsif (defined($main::opt{'toc'})) {
 
     &line();
-    &mt("generic-blksize $main::mt_blksize");
+    &mt("generic-blocksize $main::mt_blksize");
 
     # Maybe retension
     if ($main::do_reten == 1) {
@@ -209,7 +209,7 @@ sub backup_routine {
     close(LOG);
 
     &line();
-    &mt("generic-blksize $main::mt_blksize");
+    &mt("generic-blocksize $main::mt_blksize");
 
     # Remember old stamp files (will remove at end of job)
     # ("old" = any higher-numbered stamps for this label)
@@ -259,7 +259,7 @@ sub backup_routine {
                 &log('| Rewinding & erasing tape...');
                 &mt('rewind');
                 &maybe_delete_old_index();
-                &mt('erase');
+                &mt('generic-erase');
                 $tape_key = &new_tape_key();
             } else {
                 &mt('rewind');
@@ -337,7 +337,7 @@ sub backup_routine {
             &log('| Rewinding & erasing tape...');
             &mt('rewind');
             &maybe_delete_old_index();
-            &mt('erase');
+            &mt('generic-erase');
             $tape_key = &new_tape_key();
         } else {
             &mt('rewind');
@@ -624,7 +624,7 @@ sub backup_afio {
         $no_compress = "-E $tmpnocompress";
     }
 
-    $cmd .= "printf \"\\nVolume Label:\\n$title\\n\\n\" > $tmplabel ; ";
+    $cmd .= "printf \"\\n\nVolume Label:\\n$title\\n\\n\" > $tmplabel ; ";
 
     $cmd .= "cd $dir ; ";
     $cmd .= "(echo //--$tmplabel flexbackup.volume_header_info && ";
@@ -738,6 +738,7 @@ sub backup_tar {
     $cmd .= "--files-from=- ";
     $cmd .= "--same-permissions ";
     $cmd .= "--same-order ";
+    $cmd .= "--no-recursion ";
     $cmd .= "--totals ";
     $cmd .= "--label \"$title\" ";
     $cmd .= "$main::tar_atime_flag ";
@@ -831,7 +832,10 @@ sub list_routine {
 
     $main::log = "flexbackup.list.log";
     if (! open(LOG,">$main::log")) {
-        warn "Can't write to $main::log: $OS_ERROR";
+        $main::log = "/tmp/flexbackup.list.log";
+        if (! open(LOG,">$main::log")) {
+            die "Can't write to $main::log: $OS_ERROR";
+        }
     }
     close(LOG);
 
@@ -894,7 +898,10 @@ sub extract_routine {
 
     $main::log = "flexbackup.extract.log";
     if (! open(LOG,">$main::log")) {
-        warn "Can't write to $main::log: $OS_ERROR";
+        $main::log = "/tmp/flexbackup.extract.log";
+        if (! open(LOG,">$main::log")) {
+            die "Can't write to $main::log: $OS_ERROR";
+        }
     }
     close(LOG);
 
@@ -995,7 +1002,10 @@ sub compare_routine {
 
     $main::log = "flexbackup.compare.log";
     if (! open(LOG,">$main::log")) {
-        warn "Can't write to $main::log: $OS_ERROR";
+        $main::log = "/tmp/flexbackup.compare.log";
+        if (! open(LOG,">$main::log")) {
+            die "Can't write to $main::log: $OS_ERROR";
+        }
     }
     close(LOG);
 
@@ -1248,7 +1258,7 @@ sub mt {
     # Can someone who has a drive that does this tell me if this works???
     if ($cfg::compress eq "hardware") {
         foreach (@operations) {
-            if ($_ =~ m/generic-blksize/) {
+            if ($_ =~ m/generic-blocksize/) {
                 push(@operations,'compression 1');
             }
         }
@@ -1256,38 +1266,96 @@ sub mt {
 
     foreach $operation (@operations) {
 
-        # BSD mt, GNU mt, & ftmt slightly different
+        # mt flavors for block number
         if ($operation eq 'generic-query') {
-            if ($main::uname =~ /BSD/) {
-                $operation = 'rdhpos';
-            } elsif ($main::ftape == 1) {
-                $operation = 'getsize';
-            } else {
+            if ($main::uname =~ /Linux/) {
                 $operation = 'tell';
+                if ($main::ftape == 1) {
+                    $operation = 'getsize';
+                }
+            } elsif ($main::uname =~ /BSD/) {
+                $operation = 'rdhpos';
+            } elsif ($main::uname =~ /OSF1/) {
+                $operation = 'status';
+            } elsif ($main::uname =~ /AIX/) {
+                $operation = 'status';
+            } elsif ($main::uname =~ /HP-UX/) {
+                next;
+            } elsif ($main::uname =~ /SunOS/) {
+                $operation = 'status';
+            } elsif ($main::uname =~ /IRIX/) {
+                $operation = 'status';
+            } else {
+                $operation = 'status';
             }
         }
 
-        # mt & ftmt slightly different
+        # mt flavors for eod
         if ($operation eq 'generic-eod') {
-            if ($main::ftape == 1) {
+            if ($main::uname =~ /Linux/) {
+                $operation = 'eod';
+                if ($main::ftape == 1) {
+                    $operation = 'eom';
+                }
+            } elsif ($main::uname =~ /BSD/) {
+                $operation = 'eod';
+            } elsif ($main::uname =~ /OSF1/) {
+                $operation = 'seod';
+            } elsif ($main::uname =~ /AIX/) {
+                warn "don't know how to seek to end of data on AIX";
+                next;
+            } elsif ($main::uname =~ /HP-UX/) {
+                $operation = 'eod';
+            } elsif ($main::uname =~ /SunOS/) {
                 $operation = 'eom';
+            } elsif ($main::uname =~ /IRIX/) {
+                $operation = 'eod';
             } else {
                 $operation = 'eod';
             }
         }
 
-        if ($main::uname =~ /BSD/) {
-            # BSD mt is slightly different
-            $operation =~ s/generic-blksize/blocksize/;
-        } elsif ($main::uname =~ /OSF1/) {
-            # Skip blksize setting if on OSF1
-            if ($operation =~ /generic-blksize/) {
-                next;
+        # mt flavors for erase
+        if ($operation eq 'generic-erase') {
+            if ($main::uname =~ /Linux/) {
+                $operation = 'erase';
+            } elsif ($main::uname =~ /BSD/) {
+                $operation = 'erase';
+            } elsif ($main::uname =~ /OSF1/) {
+                $operation = 'weof 2';
+            } elsif ($main::uname =~ /AIX/) {
+                $operation = 'weof 2';
+            } elsif ($main::uname =~ /HP-UX/) {
+                $operation = 'weof 2';
+            } elsif ($main::uname =~ /SunOS/) {
+                $operation = 'erase';
+            } elsif ($main::uname =~ /IRIX/) {
+                $operation = 'erase';
+            } else {
+                $operation = 'erase';
             }
-        } else {
-            $operation =~ s/generic-blksize/setblk/;
         }
 
+        # mt flavors for setblk
+        if ($operation =~ /generic-blocksize/) {
+            if ($main::uname =~ /Linux/) {
+                $operation =~ s/generic-blocksize/setblk/;
+            } elsif ($main::uname =~ /BSD/) {
+                $operation =~ s/generic-blocksize/blocksize/;
+            } elsif ($main::uname =~ /OSF1/) {
+                next;
+            } elsif ($main::uname =~ /AIX/) {
+                next;
+            } elsif ($main::uname =~ /HP-UX/) {
+                next;
+            } elsif ($main::uname =~ /SunOS/) {
+                next;
+            } elsif ($main::uname =~ /IRIX/) {
+                $operation =~ s/generic-blocksize/setblksz/;
+            } else {
+                $operation =~ s/generic-blocksize/setblk/;
+            }
+        }
 
         if (defined($main::use_file)) {
             if (defined($main::opt{'fs'})) {
@@ -1447,7 +1515,7 @@ sub optioncheck {
         my $expr;
         foreach $expr (@cfg::exclude_expr) {
 
-            # People jsut don't grok regex's.
+            # People just don't grok regex's.
             #
             # If the first character is a *, they obviously got it wrong,
             # we can try to assume what they meant.
@@ -2128,7 +2196,7 @@ sub setup_before_read {
 
     $main::device = &maybe_get_filename();
 
-    &mt("generic-blksize $main::mt_blksize");
+    &mt("generic-blocksize $main::mt_blksize");
 
     # Maybe retension
     if ($main::do_reten == 1) {
@@ -2360,6 +2428,7 @@ sub new_tape_key {
 ######################################################################
 sub get_tape_key {
 
+    my $quiet = shift(@_);
     my $key;
     my $dev = $main::device;
 
@@ -2378,15 +2447,25 @@ sub get_tape_key {
 
     } else {
 
-        open(KEY,"$main::read_cmd $main::device |") or die("Can't open tape device: $OS_ERROR");
-        chomp($key = <KEY>);
+        open(KEY,"dd $main::dd_blk_flag conv=sync count=1 if=$main::device 2> /dev/null |") or die("Can't open tape device: $OS_ERROR");
+        $key = <KEY>;
         close(KEY);
-        if ($key !~ m/^\d+\.\d\d$/) {
-            warn("This tape doesn't have an index");
+        if (defined($key)) {
+            chomp($key);
+            if ($key !~ m/^\d+\.\d\d$/) {
+                if (!defined($quiet)) {
+                    &log("| ERROR: This tape doesn't have an index! (use -erase?)");
+                }
+                $main::nextfile = 0;
+                return('');
+            }
+        } else {
+            if (!defined($quiet)) {
+                &log("| ERROR: This tape doesn't have an index! (use -erase?)");
+            }
             $main::nextfile = 0;
             return('');
         }
-
     }
 
     # Figure out the existing files
@@ -2419,11 +2498,11 @@ sub toc_routine {
     my $file;
     my $tape;
     my $filenum;
-
     return if $cfg::indexes eq "false";
 
     if (defined($arg)) {
 
+        return if ($arg eq '');
         $keys{$arg} = 1;
 
     } elsif ($main::opt{'toc'} =~ m/^\d+\.\d\d$/) {
@@ -2471,6 +2550,7 @@ sub toc_routine {
         # Print toc for current tape/device
         &mt('rewind');
         $_ = &get_tape_key();
+        &mt('rewind');
         if ($_ ne '') {
             $keys{$_} = 1;
         }
@@ -2521,6 +2601,7 @@ sub toc_routine {
         }
         &log('');
     }
+
 }
 
 ######################################################################
@@ -2536,7 +2617,7 @@ sub maybe_delete_old_index {
 
     return if defined($main::use_file);
 
-    $key = &get_tape_key();
+    $key = &get_tape_key('quiet');
     if ($key ne '') {
         foreach (sort keys %main::index) {
             ($tape,$filenum) = split(/\|/,$_);

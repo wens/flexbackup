@@ -1,6 +1,17 @@
 $Id$
 $Name$
 
+New Features:
+ - tried to add intelligence for various mt flavors on different Unix variants
+
+Bug fixes:
+ - sort the toc ouptput correctly
+ - rewind after printing toc
+ - minor cleanups to tape key handling
+
+Cleanup:
+
+----------------------------------------------------------------------
 Version 0.9.7 (19991019)
 
 New Features:
