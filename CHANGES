@@ -1,7 +1,7 @@
 $Id$
 $Name$
 
-IN CVS but not released
+Version 1.0pre3 (20030119)
 
 Bug Fixes:
   - Fix PIPESTATUS trick to not require extra 'seq' utility, just a while loop
