@@ -39,6 +39,7 @@
 #  flexbackup -fs <x> -erase       : force a rewind/erase before backup
 #  flexbackup -fs all -noreten     : don't retension for level 0 "all" backups
 #  flexbackup -fs all -noerase     : don't rewind/erase for level 0 "all" backups
+#  flexbackup -fs <x> -norewind    : don't rewind tape after a single backup
 #  flexbackup [opt] -n             : don't run actual dump or mt commands
 #  flexbackup [opt] -d 'var=val'   : override config file setting of $var
 #  flexbackup -version             : show version
@@ -96,6 +97,7 @@ if (! &main::GetOptions(\%main::opt,
                         "compress=s",
                         "noreten",
                         "noerase",
+                        "norewind",
                         "erase",
                         "reten",
                         "version",
@@ -341,14 +343,17 @@ sub backup_routine {
 
     } # end all or single fs
 
-    # Rewind
-    &line();
-    &log("| Rewinding...");
-    &mt('rewind');
-    &update_toc();
+    # Rewind unless the user doesn't want that....
+    # JR Fri Oct  1 22:54:34 MST 1999
+    unless (defined($main::opt{'norewind'})) {
+        &line();
+        &log("| Rewinding...");
+        &mt('rewind');
+        &update_toc();
 
-    # Print out new contents
-    &contents();
+        # Print out new contents
+        &contents();
+    }
 
     # Actually remove the old log and stamp files now that we are done
     foreach (sort keys %oldstamps) {
@@ -540,7 +545,7 @@ sub backup {
         # command lines down to a nice width for printing...
         my @chunks = split(" ",$_);
         my $line = "";
-        my $linelimit = 78;
+        my $linelimit = 76;
         while (@chunks) {
             while ($_ = shift(@chunks)) {
                 if (length($_) < $linelimit ) {
@@ -687,9 +692,11 @@ sub backup_afio {
 
     $cmd .= "cd $dir ; ";
     $cmd .= "(echo //--$tmplabel flexbackup.volume_header_info && ";
-    $cmd .= "find . -xdev -newer $tmpstamp ";
-    $cmd .= "$main::exclude_flag ";
-    $cmd .= "-print) | ";
+    $cmd .= "find . -xdev ";
+    $cmd .= "-newer $tmpstamp ";
+    $cmd .= "-print ";
+    $cmd .= "$main::exclude_cmd ";
+    $cmd .= ") | ";
     $cmd .= "afio -o ";
     $cmd .= "$no_compress ";
     $cmd .= "-z ";
@@ -740,9 +747,11 @@ sub backup_cpio {
     $cmd .= "touch \"$dir/$title\" ; ";
 
     $cmd .= "cd $dir ; ";
-    $cmd .= "find . -xdev -newer $tmpstamp ";
-    $cmd .= "$main::exclude_flag ";
-    $cmd .= "-print | ";
+    $cmd .= "find . -xdev ";
+    $cmd .= "-newer $tmpstamp ";
+    $cmd .= "-print ";
+    $cmd .= "$main::exclude_cmd ";
+    $cmd .= "| ";
     $cmd .= "cpio --create ";
     $cmd .= "--format $cfg::cpio_format ";
     $cmd .= "$main::cpio_verb_flag ";
@@ -790,7 +799,10 @@ sub backup_tar {
     # Have to handle this differently for tar, since we aren't using find in the first place.
     # find everything that _matches_ the regexp, then use it as an exclude list for tar
     if (defined($cfg::exclude_expr[0])) {
-        $cmd .= "find $dir -xdev $main::inverse_exclude_flag -printf \"%P\\n\" > $tmpexclude ; ";
+        $cmd .= "rm -f $tmpexclude ; ";
+        foreach (@main::include_cmds) {
+            $cmd .= "find $dir -xdev | sed -e \"s%^\./%%\" $_ >> $tmpexclude ; ";
+        }
         $exclude_flag = "--exclude-from $tmpexclude";
     }
 
@@ -813,9 +825,9 @@ sub backup_tar {
     if ($main::remote and ($cfg::buffer eq "true")) {
         $cmd .= "$main::buffer_cmd";
     }
-    if (defined($cfg::exclude_expr[0])) {
-        $cmd .= " ; rm -f $tmpexclude";
-    }
+#    if (defined($cfg::exclude_expr[0])) {
+#        $cmd .= " ; rm -f $tmpexclude";
+#    }
 
     # Wrap all that together
     $cmd = &maybe_remote_cmd($cmd);
@@ -851,9 +863,12 @@ sub backup_zip {
     $cmd .= "touch $main::touch_flag \"$_\" $tmpstamp ; ";
 
     $cmd .= "cd $dir ; ";
-    $cmd .= "find . -xdev -newer $tmpstamp ";
-    $cmd .= "$main::exclude_flag ";
-    $cmd .= "-printf \"%P\\n\" | ";
+    $cmd .= "find . -xdev ";
+    $cmd .= "-newer $tmpstamp ";
+    $cmd .= "-print | ";
+    $cmd .= "sed -e \"s%^\./%%\" ";
+    $cmd .= "$main::exclude_cmd ";
+    $cmd .= "| ";
     $cmd .= "zip -@ ";
     $cmd .= "-b $cfg::tmpdir "; # temp file path
     $cmd .= "-y "; # store symlinks
@@ -1439,21 +1454,25 @@ sub optioncheck {
     }
 
     # Exclude regexp for find
-    $main::exclude_flag = '';
-    $main::inverse_exclude_flag = '';
+    $main::exclude_cmd = '';
+    @main::include_cmds = ();
     # Deal with the old non-array setting that may be in the config file
     if (!defined($cfg::exclude_expr[0]) and defined($cfg::exclude_expr)) {
         $cfg::exclude_expr[0] = $cfg::exclude_expr;
     }
     if (defined($cfg::exclude_expr[0])) {
-        my @array;
-        my @array2;
+        &checkinpath("egrep");
+        my @excl_array;
         foreach (@cfg::exclude_expr) {
-            push(@array,'-not -regex "' . $_ . '"');
-            push(@array2,'-regex "' . $_ . '"');
+            # If the user put "*.whatever" as an expression, better turn this
+            # "glob" into a regex just to be sure ...
+            if (/^\*/) {
+                $_ =~ s/^\*/.*/;
+            }
+            push(@excl_array, "egrep -v \"$_\"");
+            push(@main::include_cmds, "| egrep \"$_\"");
         }
-        $main::exclude_flag = join(" -and ",@array);
-        $main::inverse_exclude_flag = join(" -or ",@array2);
+        $main::exclude_cmd = "| " . join(" | ", @excl_array);
     }
 
     # Block size
@@ -1675,6 +1694,7 @@ sub optioncheck {
     } elsif ($cfg::type eq 'tar') {
 
         &checkinpath('tar');
+        &checkinpath('sed');
 
         # Echo record number
         $main::tar_recnum_flag = "";

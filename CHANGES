@@ -5,6 +5,7 @@ Version 0.9.6 (199910??)
 
 New Features:
  - buffing is optional
+ - add -norewind flag
  - can now have more than one exclude expression defined
  - use our own timestamps for "dump", with -T
      config file variable to use /etc/dumpdates
