@@ -2,8 +2,16 @@
 Version 0.9.4
 
  - dump -a and dump -T work now.  Found my problems were known bugs.
-   For Linux + dump,  you MUST install dump-0.4b4-10 (redhat lorax) 
-   or newer, or equivalent patches for other distributions.
+     For Linux + dump,  you MUST install dump-0.4b4-10 (redhat lorax) 
+     or newer, or equivalent patches for other distributions.
+ - multiple tapes for an "all" level 0.  This just lets you split up
+     backups onto different tapes, not end-of-media type of
+     multivolume problems (that's on the todo list)
+ - problem fix: afio doublebuffer only if local backup
+ - fix bug: dump length bug for "-fs all"
+ - fix bug: output of archive commands didn't go to log file
+ - fix bug: with label "host:path-dir"; didn't work w/ remomte + files
+     labels are now "host-path-dir"
    
 Version 0.9.3 (19990921) (just for testing)
 

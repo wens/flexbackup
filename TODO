@@ -3,14 +3,11 @@ Flexbackup todo list as of version 0.9.4a2
 Some of these might not happen, but figured I should jot them down
 
  - test remote timestamps again
- - test afio doublebuffer
- - test dump with my timestamps
- - test file-based stuff
  - test FreeBSD again
+ - recheck dump B length bug with new dump
 
 cut off 0.9.4 here
 
- - support multiple tapes for "all"
  - exclude regexp's
      dump won't be able to do this
  - resurrect my old drive and test ftape stuff again

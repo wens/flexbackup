@@ -152,6 +152,8 @@ sub backup_routine {
 
     my @files;
     my $label;
+    my $list;
+    my $tapecounter = 1;
 
     # Get backup level...
     if (defined($global::opt{'level'})) {
@@ -215,65 +217,80 @@ sub backup_routine {
     ##########################
     if ($global::opt{'fs'} eq 'all') {
 
-        &log("(all = $cfg::filesystems)");
-	&line();
+        foreach $list (@cfg::filesystems) {
 
+            &line();
 
-        # All filesystems
-        if ($global::level eq "0") {
+            if ($global::level eq "0") {
 
-            # All
-            # Level zero - rewind and erase a new tape
-            if (!defined($global::opt{'noreten'})) {
-                &log('Retensioning tape...');
-                &mt('retension');
-            }
-            if (!defined($global::opt{'noerase'})) {
-                &log('Rewinding & erasing tape...');
-                &mt('rewind');
-                &mt('erase');
-                $global::nextfile = 0;
-	    }
+                &log("Tape \#$tapecounter filesystems = $list");
 
-        } else {
+                # All
+                # Level zero - rewind and erase a new tape
+                if (!defined($global::opt{'noreten'})) {
+                    &log('Retensioning tape...');
+                    &mt('retension');
+                }
+                if (!defined($global::opt{'noerase'})) {
+                    &log('Rewinding & erasing tape...');
+                    &mt('rewind');
+                    &mt('erase');
+                    $global::nextfile = 0;
+                }
 
-            # All
-            # Incremental backup - list what's on it, then go to end of tape
-            if (!defined($global::opt{'erase'})) {
-                $global::nextfile = &contents();
-                &log('Making sure tape is at end of data...');
-                &mt('generic-eod');
             } else {
-                $global::nextfile = 0;
-                &log('Rewinding & erasing tape...');
-                &mt('rewind');
-                &mt('erase');
+
+                &log("Filesystems = $list");
+
+                # All
+                # Incremental backup - list what's on it, then go to end of tape
+                if (!defined($global::opt{'erase'})) {
+                    $global::nextfile = &contents();
+                    &log('Making sure tape is at end of data...');
+                    &mt('generic-eod');
+                } else {
+                    $global::nextfile = 0;
+                    &log('Rewinding & erasing tape...');
+                    &mt('rewind');
+                    &mt('erase');
+                }
             }
-        }
 
-        # Show tape position
-        &line();
-        &mt('generic-query');
+            # Show tape position
+            &line();
+            &mt('generic-query');
 
-        # Iterate over the filesystems and back 'em up
-        foreach (split(/\s+/,$cfg::filesystems)) {
-            &backup($cfg::type,$_);
-            $global::contents{$global::nextfile} = "$cfg::type $_ ($global::level)";
-            $global::nextfile++;
+            # Iterate over the filesystems and back 'em up
+            foreach (split(/\s+/,$list)) {
+                &backup($cfg::type,$_);
+                $global::contents{$global::nextfile} = "$cfg::type $_ ($global::level)";
+                $global::nextfile++;
+            }
+
+            # Prompt for new tape if more than one set in list & level 0
+            if ($global::level == 0) {
+                if ($tapecounter < $global::num_tapes) {
+
+                    # Rewind
+                    &line();
+                    &log("Rewinding...");
+                    &mt('rewind');
+
+                    &update_toc();
+
+                    $tapecounter++;
+                    print "\n---> Insert tape \#$tapecounter\n";
+                    $_ = <STDIN>;
+               }
+            }
         }
 
         # Rewind
         &line();
-        &log("Rewinding...\n");
+        &log("Rewinding...");
         &mt('rewind');
 
-        # Only ftape has the toc capability
-        if ($cfg::ftape eq 'true') {
-            &log('Updating table of contents...');
-            foreach (keys %global::contents) {
-                &tag($_,$global::contents{$_});
-            }
-        }
+        &update_toc();
 
     } else {
 
@@ -306,7 +323,7 @@ sub backup_routine {
 
     # gzip log file
     if ($cfg::gzip_log eq 'true') {
-        print "Compressing log file...\n";
+        print "Compressing log file ($global::log)\n";
         system("gzip -f $global::log");
         if ($?) {
             warn("error compressing log file\n");
@@ -388,7 +405,7 @@ sub backup {
 
     # Create file name if writing to a file
     # (config file's $device points to a dir in this case)
-    if ($global::use_file == 1) {
+    if (defined($global::use_file)) {
         $_ = $global::date . "." . $type;
         if (($type eq "tar") and ($cfg::tar_compress ne '')) {
             $_ .= ".gz";
@@ -427,7 +444,7 @@ sub backup {
     &log("$cmd");
     &line();
     if (!defined($global::opt{'n'})) {
-        system("$cmd 2>&1 | tee -a $global::log");
+        system("($cmd) 2>&1 | tee -a $global::log");
         if ($?) {
             &log("$type: error from backup, exiting....\n");
             exit(1);
@@ -466,7 +483,7 @@ sub backup_dump {
     my $tapehost = shift(@_);
     my $cmd = '';
     my $tmpstamp;
-    my $length = $cfg::dump_length
+    my $length = $cfg::dump_length;
 
     if ($remote) {
         $cmd .= "$cfg::remoteshell $remote -n \'";
@@ -521,9 +538,16 @@ sub backup_afio {
     my $tapehost = shift(@_);
     my $cmd = '';
     my $tmpstamp;
+    my $double;
 
     if ($remote) {
 	$cmd  .= "$cfg::remoteshell $remote -n \'";
+    }
+
+    if ($remote) {
+	$double = '';
+    } else {
+        $double = $cfg::afio_doublebuffer;
     }
 
     $tmpstamp = "/tmp/refdate.$label";
@@ -532,7 +556,7 @@ sub backup_afio {
 
     $cmd .= "cd $dir && find . -xdev -newer $tmpstamp -print | ";
 
-    $cmd .= "afio -o $cfg::afio_compress $cfg::afio_doublebuffer $cfg::afio_verbose -b $cfg::afio_blksize -c $cfg::afio_buffer";
+    $cmd .= "afio -o -s $cfg::afio_length $cfg::afio_compress $double $cfg::afio_verbose -b $cfg::afio_blksize -c $cfg::afio_buffer";
 
     if ($remote) {
         $cmd .= " -B $tapehost%$cfg::remoteshell:$cfg::device";
@@ -794,8 +818,8 @@ sub get_label {
     my $host = '';
     my $label;
 
-    if ($path =~ m/(\S+:)(\S+)/) {
-        $host = $1;
+    if ($path =~ m/(\S+):(\S+)/) {
+        $host = $1 . "-";
         $label = $2;
     } else {
         $label = $path;
@@ -1014,6 +1038,16 @@ sub optioncheck {
         }
     }
 
+    # filesystems
+    $global::num_tapes = 0;
+    foreach (@cfg::filesystems) {
+        $global::num_tapes++;
+    }
+    if ($global::num_tapes == 0) {
+        die("config file error: no filesystem spec for \"all\" backups");
+    }
+
+
     # Type-specific setup
     if (defined($cfg::type)) {
 
@@ -1033,9 +1067,24 @@ sub optioncheck {
                 $cfg::afio_verbose = "";
             }
 
+            # Length of tape
+            if (defined($cfg::afio_length)) {
+                if ($cfg::afio_length =~ m/^\d+$/) {
+                    $cfg::afio_length .= "k";
+                } else {
+                    die("config file error: \$afio_length must be set to integer number of megabytes\n");
+                }
+
+            } else {
+                die("config file error: \$afio_length not defined\n");
+            }
+
             # Double buffer flag
             if ($cfg::afio_doublebuffer eq "true") {
                 $cfg::afio_doublebuffer = "-f";
+                if ($cfg::afio_length eq "0k") {
+                    die("config file error: afio_length must be nonzero if doublebuffer is on\n");
+                }
             } else {
                 $cfg::afio_doublebuffer = "";
             }
@@ -1275,4 +1324,18 @@ sub maybe_get_filename {
 
     return($file);
 
+}
+
+######################################################################
+# Update table of contents
+######################################################################
+sub update_toc {
+
+    # Only ftape has the toc capability
+    if ($cfg::ftape eq 'true') {
+        &log('Updating table of contents...');
+        foreach (keys %global::contents) {
+            &tag($_,$global::contents{$_});
+        }
+    }
 }
