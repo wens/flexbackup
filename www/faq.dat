@@ -1,121 +1,149 @@
 
-<c>
-Backup & Configuration
-<q>
-Help me understand numeric dump levels
-<a>
-TODO, but  very needed FAQ.
-See <A HREF="http://docs.sun.com/db/doc/805-7228/6j6q7uf18?a=view">these sun docs</A> for an example.
+<c>Configuration
 
-For those not used to dump-style numeric levels, the latest versions
-of flexbackup have added <TT>-full</TT>, <TT>-differential</TT>, 
-<TT>-incremental</TT> that get translated into appropriate dump-style level numbers.
+<q>On my system, "tar" is not GNU tar. On my system, "dump" is "ufsdump".
 
-<c>
-Backup & Configuration
-<q>
-Backups seem to work ok, but I can't get extracting/listing to work.
-<a>
-Usually a matter of tape positioning.  Use 'mt rewind; mt fsf
-&lt;n&gt;' to get to the right file number on the tape, or use the
-"-num" switch with "-list|extract|compare|restore" to have flexbackup
-do it for you.  If you are using flexbackup's indexes, remember that
-file number 0 is a header used for the index itself.
+<a>Use the path overrides at the end of the config file. A couple examples
+are given there, such as: <CODE>$path{'dump'} = 'ufsdump';</CODE>.  You can
+use this mechanism to override paths or just change command names.
 
-<c>
-Backup & Configuration
-<q>
-I can't get the $exclude_expr stuff to work!
-<a>
-Use regular expressions, not wildcards (aka globs).  See a perl, sed,
-or grep reference, or "man 7 regex".  Simplistically, you probably
-mean to say ".*" instead of "*", and ".?" instead of "?".  Also,
-leave OFF the first part of a path that is the filesystem you
-are archiving;  the exclude epxressions only match sub-paths of
-the backup directory. Test to see if your expression matches what
-you want to exlude by:<PRE>
-    cd &lt;topdir&gt;
-    find . -regex "&lt;expression&gt;"</PRE>
+<c>Configuration
 
-<c>
-Backup & Configuration
-<q>
-I keep getting only one backup per tape when I do "-fs all"!
-<a>
-Use the non-rewinding device.
+<q>I can't get my exclude expressions to work...
 
-<c>
-Backup & Configuration
-<q>
-How do I get remote backups over ssh to work without prompting for a password?
-<a>
-If you're not using ssh, you should be. Switch to ssh and don't use rsh. If you
-are using ssh and still having a problem with it asking for a password, then
-your RSAAuthentication parameters are either incorrect or you have
-public/private key problems.
+<a>Use regular expressions, not wild cards (aka globs).  See a perl, sed,
+or grep reference, or "man 7 regex".  Simplistically, you probably mean to
+say ".*" instead of "*", and ".?" instead of "?".  Also, leave OFF the
+first part of a path that is the filesystem you are archiving; the exclude
+expressions only match sub-paths of the backup directory. Test to see if
+your expression matches what you want to exclude by:<BR><BR> <CODE>cd
+&lt;topdir&gt;; find . -regex "&lt;expression&gt;"</CODE>
 
-Section 7.2.2 of the ssh FAQ might help:<PRE>
-  <A HREF="http://www.onsight.com/faq/ssh/ssh-faq.html">http://www.onsight.com/faq/ssh/ssh-faq.html</A>
-</PRE>
-In a nutshell the value of your <TT>~/.ssh/identity.pub</TT> needs to be present in your
-<TT>~/.ssh/authorized_keys</TT> file for RSA authentication to work. For root accounts
-you might also need to put <PRE>
-  PermitRootLogin yes
-</PRE>
-in your sshd_config file, as root is treated with more care than normal user
-accounts. Note: you might choose without-password or forced-commands-only
-instead of yes for more security. See your ssh(1) and sshd(1) man pages.
-<P>
-If you do not want to use passphrase-less ssh keys or don't want to permit
-root logins, See the section on use with "sudo".
+<c>Configuration
 
-<c>
-Backup & Configuration
-<q>
-How do I archive multiple filesytems to tape at once without rewinding
-in between, and without redefining "all" $filesystems
-in the configuration file?
-<a>
-Do this:<PRE>
-      flexbackup -fs /dir1 -norewind
-      flexbackup -fs /dir2 -norewind
-      flexbackup -fs /dir3 -norewind</PRE>
+<q>I don't want to run backups or remote shells as root
 
-<c>
-Recovery
-<q>
-The disk totally died.  How do I get flexbackups' archives off the
-tapes on a machine without the flexbackup script installed?
-<a>
-Something like this, if using compression with
-tar/cpio/dump:
-<PRE>dd if=/dev/tapedevice bs=10k | gzip -dc | tar xvf -</PRE>
-replace "tar xvf -" with "restore -i -f -" or whatever. Skip the gzip
-pipe if you aren't using compression.  afio is a bit more compex, but
-read the manpage...
+<a>FIXME sudo stuff
 
-<c>
-Recovery
-<q>
-I don't have the index files! (disk died, different machine, etc.)
-<a>
-This is OK, you can still extract/restore/etc. The index files are for
+<c>Backup
+
+<q>Can you explain numeric dump levels?
+
+<a>FIXME
+
+<P>See also <A
+HREF="http://docs.sun.com/db/doc/805-7228/6j6q7uf18?a=view">these sun
+docs</A> for an example.
+
+<P>For those not used to dump-style numeric levels, the latest versions of
+flexbackup have added <CODE>-full</CODE>, <CODE>-differential</CODE>,
+<CODE>-incremental</CODE> that get translated into appropriate dump-style
+level numbers.  FIXME definitions
+
+<c>Backup
+
+<q>How do I archive multiple filesytems to tape at once without rewinding
+in between, and without redefining "all" $filesystems in the configuration
+file?
+
+<a>Do this:<BR><BR>
+<CODE>
+flexbackup -fs /dir1 -norewind<BR>
+flexbackup -fs /dir2 -norewind<BR>
+flexbackup -fs /dir3 -norewind
+</CODE>
+
+<c>Common problems
+
+<q>I get I/O errors or other errors from my tape drive.
+
+<a>Try changing the block size parameter in the configuration file.  The
+default is 10k, but some tape drives like 32 or 64 much better.  Also try
+setting <CODE>$pad_blocks</CODE> to false, or if that doesn't help change
+<CODE>$mt_var_blocksize</CODE> to false.
+
+<P>If you are using an IDE tape drive under Linux, and are still having
+trouble, you might also try the 'ide-scsi' layer with the 'st' module, and
+treating the thing like a SCSI tape - I've had more success that way.
+
+<P>You can also just try writing/reading stuff straight from the drive
+with tar or dd (to factor flexbackup out of the loop).  If you can get that
+working, but flexbackup still seems to malfunction, let us know.
+
+<c>Common problems
+
+<q>Backups seem to work ok, but I can't get extracting/listing to work.
+
+<a>Usually a matter of tape positioning, or else is a tape drive parameter
+problem as talked about above.  For positioning, use 'mt rewind; mt fsf
+&lt;n&gt;' to get to the right file number on the tape, or use the "-num"
+switch with "-list|extract|compare|restore" to have flexbackup do it for
+you.  If you are using flexbackup's indexes, remember that file number 0 is
+a header used for the index itself.
+
+<c>Common problems
+
+<q>How do I get remote backups over ssh to work without prompting for a password?
+
+<a>If you're not using ssh, you should be. Switch to ssh and don't use
+rsh. If you are using ssh and still having a problem with it asking for a
+password, then your RSAAuthentication parameters are either incorrect or
+you have public/private key problems. Section 7.2.2 of the ssh FAQ might
+help:<BR><BR> <A
+HREF="http://www.onsight.com/faq/ssh/ssh-faq.html">http://www.onsight.com/faq/ssh/ssh-faq.html</A><BR><BR>
+In a nutshell the value of your <CODE>~/.ssh/identity.pub</CODE> needs to
+be present in your <CODE>~/.ssh/authorized_keys</CODE> file for RSA
+authentication to work. For root accounts you might also need to
+put<BR><BR> <CODE>PermitRootLogin yes</CODE><BR><BR> in your sshd_config
+file, as root is treated with more care than normal user accounts. Note:
+you might choose without-password or forced-commands-only instead of yes
+for more security. See your ssh(1) and sshd(1) man pages.
+
+<P>If you do not want to use passphrase-less ssh keys or don't want to
+permit root logins, See the section on use with "sudo".
+
+<c>Common problems
+
+<q>I keep getting only one backup per tape when I do "-fs all"!
+
+<a>Use the non-rewinding device.
+
+<c>Common problems
+
+<q>'buffer' complains that it can't run successfully.
+
+<a>FIXME explain; talk about john's workaround
+
+<c>Recovery
+
+<q>The disk totally died.  How do I get flexbackup's archives off the
+tapes on a machine without flexbackup or even perl installed?
+
+<a>Something like this, if using compression with tar/cpio/dump:<BR><BR>
+<CODE>dd if=/dev/tapedevice bs=10k | gzip -dc | tar xvf -</CODE><BR><BR>
+replace "tar xvf -" with "restore -i -f -" or whatever. Skip the gzip pipe
+if you aren't using compression.  afio is a bit more complex, but read the
+manpage...
+
+<c>Recovery
+
+<q>I don't have the index files! (disk died, different machine, etc.)
+
+<a>This is OK, you can still extract/restore/etc. The index files are for
 human convenience only.  Just skip the first file on the tape, it's a
-simple "tag" text file.  The rest of the tape is your normal
-archives.
+simple "tag" text file.  The rest of the tape is your normal archives.
 
-<c>
-Implementation
-<q>
-Why keep the table of contents db on disk rather than on the tape?
-<a>
-...fill in later...
+<c>Implementation
 
-<c>
-Implementation
-<q>
-This index stuff is a useless mess/I can't get it to work!
-<a>
-It isn't necessary. Set $indexes = 'false' in the config, and just
-use written labels on the tapes...
+<q>Why keep the table of contents db on disk rather than on the tape?
+
+<a>FIXME add explanation
+
+<c>Implementation
+
+<q>This index stuff is a useless mess/I can't get it to work!
+
+<a>It isn't necessary if you don't like it. Set <CODE>$indexes =
+'false';</CODE> in the config file, and just use written labels on the
+tapes...
 
