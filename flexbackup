@@ -287,7 +287,9 @@ sub backup_routine {
                 $fs = &nuke_trailing_slash($fs);
 
                 &backup($fs,$tape_key);
-                $main::nextfile++;
+                if ($cfg::indexes eq "true") {
+                    $main::nextfile++;
+                }
             }
 
             # Prompt for new tape if more than one set in list & level 0
@@ -301,13 +303,15 @@ sub backup_routine {
                         &line();
                     }
 
-                    &toc_routine($tape_key) if (!defined($main::use_file));
+                    if (!defined($main::use_file)) {
+                        &toc_routine($tape_key);
+                    }
 
                     $tapecounter++;
                     if (!defined($main::use_file)) {
                         print "\n";
                         while(1) {
-                        print "---> Insert tape \#$tapecounter (enter y to continue) ";
+                            print "---> Insert tape \#$tapecounter (enter y to continue) ";
                             chomp($_ = <STDIN>);
                             last if ($_ =~ m/^y/i);
                         }
@@ -469,7 +473,9 @@ sub backup {
     $notagtitle = "level $main::level $dir $main::date_at_start from $host";
 
     # Modify table of contents
-    if ($tape_key ne '') {
+    if (($tape_key ne '')
+        and
+        ($cfg::indexes eq "true")) {
         # If writing to files, store the filename
         if (defined($main::use_file)) {
             @_ = split(/\//,$main::device);
@@ -1355,6 +1361,7 @@ sub optioncheck {
     &check(\$cfg::compr_level,'compr_level','exist');
     &check(\$cfg::verbose,'verbose');
     &check(\$cfg::sparse,'sparse');
+    &check(\$cfg::indexes,'indexes');
     &check(\$cfg::buffer,'buffer');
     &check(\$cfg::buffer_megs,'buffer_megs','exist');
     &check(\$cfg::device,'device','exist');
@@ -1776,9 +1783,10 @@ sub optioncheck {
     }
 
     # Index database
-    tie(%main::index,"AnyDBM_File",$cfg::index,O_CREAT|O_RDWR,0640) or
-        push(@main::errors,"Can't tie DB $cfg::index: $OS_ERROR");
-
+    if ($cfg::indexes eq "true") {
+        tie(%main::index,"AnyDBM_File",$cfg::index,O_CREAT|O_RDWR,0640) or
+            push(@main::errors,"Can't tie DB $cfg::index: $OS_ERROR");
+    }
 
     # Levels
     if (defined($main::opt{'level'})) {
@@ -1787,13 +1795,17 @@ sub optioncheck {
         }
     }
 
-    # Check delete flags
+    # Check delete/toc flags
     if (!defined($main::opt{'toc'})) {
         if (defined($main::opt{'dfile'})) {
             push(@main::errors,"-dfile useless without -toc <key>");
         }
         if (defined($main::opt{'delete'})) {
             push(@main::errors,"-delete useless without -toc <key>");
+        }
+    } else {
+        if ($cfg::indexes eq "false") {
+            push(@main::errors,"Can't do -toc with \$indexes set to false");
         }
     }
 
@@ -2298,6 +2310,8 @@ sub new_tape_key {
     my $dev = $main::device;
     my $old;
 
+    return('') if $cfg::indexes eq "false";
+
     $key = &current_time("numeric");
 
     # If writing to a file see if there is already an index key and use it
@@ -2332,7 +2346,7 @@ sub new_tape_key {
     $main::nextfile = 1;
 
     if (defined($main::use_file)) {
-        $main::index{"$key|0"} = "<tape index key, dir=$main::device>";
+        $main::index{"$key|0"} = "<tape index key, dir=$cfg::device>";
     } else {
         $main::index{"$key|0"} = "<tape index key>";
     }
@@ -2348,6 +2362,8 @@ sub get_tape_key {
 
     my $key;
     my $dev = $main::device;
+
+    return('') if $cfg::indexes eq "false";
 
     # If writing to a file see if there is already an index key and use it
     if (defined($main::use_file)) {
@@ -2404,6 +2420,7 @@ sub toc_routine {
     my $tape;
     my $filenum;
 
+    return if $cfg::indexes eq "false";
 
     if (defined($arg)) {
 
@@ -2412,6 +2429,8 @@ sub toc_routine {
     } elsif ($main::opt{'toc'} =~ m/^\d+\.\d\d$/) {
 
         if (!defined($main::opt{'delete'})) {
+
+            &log("| Listing specific index");
 
             # Print toc for a specific tape
             $keys{"$main::opt{toc}"} = 1;
@@ -2440,9 +2459,11 @@ sub toc_routine {
 
             }
 
+            &line();
             return;
 
         }
+
         &line();
 
     } elsif ($main::opt{'toc'} eq '') {
@@ -2456,6 +2477,8 @@ sub toc_routine {
         &line();
 
     } elsif ($main::opt{'toc'} eq "all") {
+
+        &log("| Listing all in database");
 
         # Print everything we know about
         foreach $file (sort keys %main::index) {
@@ -2506,6 +2529,10 @@ sub maybe_delete_old_index {
     my $key;
     my $tape;
     my $filenum;
+
+    return if $cfg::indexes eq "false";
+
+    return if defined($main::use_file);
 
     $key = &get_tape_key();
     if ($key ne '') {

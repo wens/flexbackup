@@ -37,6 +37,9 @@ Features to add:
 
 Cleanup/fix:
  - zip/unzip backend, use fifos rather than temp files
+ - indexes and using files can soemtimes mess up if the filenames
+   clobber each other.  use full time?
+ - when using files, maybe I want "erase" to clean out a dir?
  - do a debian package
  - make -extract -files for afio/cpio/zip recurse dirs
       dump/tar already to this.
