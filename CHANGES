@@ -1,6 +1,8 @@
 $Id$
 $Name$
 
+Move support info/web site so this isn't stagnant anymore
+
 New Features:
  - works for block devices (like floppies).  Turns the indexing off since
       you can't do multiple files, but otherwise it works fine

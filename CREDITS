@@ -11,17 +11,3 @@ Other people have helped me debug/fix things:
   Rick Gaudette <rjg@ECE.NEU.EDU>
   Rafal Maszkowski <rzm@icm.edu.pl>
   Michael Bartosh <bartosh@apple.tamu.edu>
-
-
-"multibuf" is from the "Kbackup" package and carries this notice:
-
-   Copyright 1995,1996,1997 (C) by Karsten Ball|der
-                            karsten@pimajestix.physik.uni-karlsruhe.de
-
-   If you are using this program within some other software, you must
-   state that your software is using MultiBuf, that MultiBuf is part of
-   the KBackup package and your software must show the above copyright.
-
-
-$Id$
-$Name$
