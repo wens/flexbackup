@@ -3056,6 +3056,7 @@ sub optioncheck {
 
     # Delta option
     if (defined($main::opt{'delta'})) {
+        # FIXME bail if remote filesystems
 	if ($main::opt{'delta'} eq 'rpm') {
 	    $main::delta = 'rpm';
 	    $main::path{'rpm'} = &checkinpath('rpm');
@@ -4221,9 +4222,6 @@ sub file_list_cmd {
     $cmd .= "$main::exclude_expr ";
 
     if (defined($main::delta)) {
-	if (defined($remote)) {
-	    die("Can't do remote delta yet");
-	}
 	$cmd .= "-print ";
 	if ($main::delta eq 'rpm') {
 	    $cmd = &file_list_rpmdelta($dir, $level, $cmd, $separator);
@@ -4260,16 +4258,16 @@ sub file_list_rpmdelta {
 
     &log("| RPM package delta - may take a while to select files!");
 
-    # FIXME do -n 
+    # FIXME do -n
 
     # FIXME do this once per run (if we have multiple local fs's)
     # Get a hash of all files under this dir that are "owned"
     &log("| Finding files owned by packages under $dir...");
     open(LIST,"$main::path{rpm} -q -a -l |") || die;
     while(<LIST>) {
-        if (m:^$dir/(.*)$:) {
-            $owned{$1} = 1;
-        }
+	if (m:^$dir/(.*)$:) {
+	    $owned{$1} = 1;
+	}
     }
     close(LIST);
 
@@ -4278,10 +4276,9 @@ sub file_list_rpmdelta {
     &log("| Finding changed package files under $dir...");
     open(LIST,"$main::path{rpm} -V -a |") || die;
     while(<LIST>) {
-        if (m:^(.*) . $dir/(.*)$:) {
-            $changed{$2} = 1;
-            print "X changed $2\n";
-        }
+	if (m:^(.*) . $dir/(.*)$:) {
+	    $changed{$2} = 1;
+	}
     }
     close(LIST);
 
@@ -4290,7 +4287,7 @@ sub file_list_rpmdelta {
     open(LIST,"cd \"$dir\"; $findcmd |") || die;
     while(<LIST>) {
 	chomp;
-        s:^\./::g;
+	s:^\./::g;
 	push(@files, $_);
     }
     close(LIST);
@@ -4298,9 +4295,8 @@ sub file_list_rpmdelta {
     # Then only keep unowned or owned+changed files
     &log("| Finding subset of files to archive...");
     foreach my $file (@files) {
-        if (!defined($owned{$file}) or defined($changed{$file})) {
+	if (!defined($owned{$file}) or defined($changed{$file})) {
 	    push(@files_to_backup, $file);
-            print "X backup $file\n";
 	}
     }
 
@@ -4308,10 +4304,10 @@ sub file_list_rpmdelta {
     open(LIST,"> $to_backup_list") || die;
     foreach my $file (@files_to_backup) {
 	if ($separator eq 'null') {
-            print LIST "$file\n";
-        } else {
-            print LIST "$file\0";
-        }
+	    print LIST "$file\0";
+	} else {
+	    print LIST "$file\n";
+	}
     }
     close(LIST);
 
