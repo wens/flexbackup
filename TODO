@@ -6,7 +6,7 @@ Some of these might not happen
 
 Pending:
  - Scrub manpage, mention in readme, etc.
- Freebsd pkg changes
+ - Freebsd pkg changes
 
 Cleanup/fix:
  - Clean up more $main:: vars, split into types or refactor code
@@ -25,7 +25,6 @@ Cleanup/fix:
 
 Misc:
  - Do .debs?
- - Add faq on files changing underneath? explain sql db dump?
  - Try against torture-test list:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
  - Update mt manpages collection I keep in cvs
@@ -37,7 +36,7 @@ Features to add:
 
   - Remote directores for to-disk backups
 
-  - A Shorter summary status that's better than doing
+  - A shorter summary status that's better than doing
          egrep "(error|of set|Backup of|written)"
     of logfile.  Needs to handle all configurations....
 
