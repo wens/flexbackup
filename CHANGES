@@ -27,6 +27,7 @@ Bug fixes:
 
 Cleanup:
  - '-rmindex all' says it will wait 5 seconds
+ - '-incremental|full|differential' same as '-level <type>'
  - Fix warning with no args
  - touch -t the same for everyone. buggy touch in pre-4.0 fileutils is old by now..
  - Clean up date routines

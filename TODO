@@ -43,7 +43,7 @@ Features to add:
      don't want password echoed
      no exclude from find
      top level of shares only?
- - some "level" that uses rpm, verifies all packages, and just backs
+ - Some "level" that uses rpm, verifies all packages, and just backs
       up any file not in a package OR changed from a package. and the rpm list.
       once the above works make it work for debian packages
  - Non-root use (remote too)
