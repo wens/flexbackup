@@ -204,7 +204,8 @@ if (defined($main::opt{'restore'})) {
     }
     &mt('rewind');
     &maybe_delete_old_index();
-    &mt('rewind','generic-erase');
+    &mt('rewind');
+    &mt('generic-erase');
     &new_tape_key();
     &line();
 

@@ -5,7 +5,6 @@ Flexbackup to-do list
 Some of these might not happen, but figured I should jot them down
 
 Cleanup/fix:
- - check filemarks/ -num / etc
  - go back trough old unread mail archive for obvious bugs etc
  - clean up all the $main:: vars, split into types
  - make path overrides also search $PATH (say if we just changed the name

@@ -1,6 +1,7 @@
 $Id$
 $Name$
 
+Version 0.9.9.3 (20030109)
 
 Bug fixes:
  - BSD find wants "!" not "-not"
