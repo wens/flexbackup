@@ -41,7 +41,7 @@ Features:
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/etc
 mkdir -p $RPM_BUILD_ROOT/usr/bin
-mkdir -p $RPM_BUILD_ROOT/var/lib/flexbackup
+mkdir -p $RPM_BUILD_ROOT/var/state/flexbackup
 mkdir -p $RPM_BUILD_ROOT/var/log/flexbackup
 make fb.install
 install -m 0644 flexbackup.conf $RPM_BUILD_ROOT/etc/flexbackup.conf
@@ -55,7 +55,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/bin/flexbackup
 %defattr(-,root,root)
 %doc CHANGES COPYING TODO README CREDITS flexbackup.lsm INSTALL
-%dir /var/lib/flexbackup
+%dir /var/state/flexbackup
 %dir /var/log/flexbackup
 %config /etc/flexbackup.conf
 
