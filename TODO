@@ -5,9 +5,15 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
- - bfr doesn't work right?
- 
+ - check for mt blksize = factor of blksize
+ -n FIXMEs in code
+ - mbuffer testing w/ remote
+ - mbuffer testing w/ end of media
+ - test test tape drive mod
  - Better cleanup after error in backup
+
+ - Use something besides script for second file in test-tape-drive
+   (For problem with st0 <-> nst0, would never show up)
  - Clean up more $main:: vars, split into types or refactor code
  - Whole class of problems like:
     - Use dump combined flags (for older dumps that want abc not -a -b -c)
@@ -28,7 +34,7 @@ Misc:
      filelist
      mt_blksize
      example for -wday use
- - Add link/rpm for bfr
+ - Add link/rpm for mbuffer
  - Make a manual page (AND other enchanced documentation, more than a README)
    someone made a good start or two:
      http://www.law.utulsa.edu:8080/users/bchapman/linuxnotes/flexbackup
@@ -42,8 +48,6 @@ Misc:
 
 
 Features to add:
- - dog?
- - mbuffer?
  - Better way to spec fs,
      be able to have spaces in dirs in the conf file
      better way for multiple tapes
@@ -56,11 +60,10 @@ Features to add:
 
  - Handle multi-volume backups (original idea w/ 'multibuf' never panned out)
 
-      Found "multivol" program solution!  It also uses a slightly different
-      labelling, but the idea was sort of the same as mine, with small key at
-      the start of the tape.
-
+      Found "multivol" program.
       Ack.  still not workable.  need edits to multivol...
+
+      mbuffer can do this? 
 
  - Make package delta work with BSD ports or debian pkgs
 
