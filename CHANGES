@@ -1,8 +1,10 @@
 $Id$
 $Name$
 
+Bug fixes:
+ - If remote tape device, don't check for writable local device
  - Fix pattern-match so "sudo -u username command" works
- - Tweak sudo comment in config file and faq
+   (Tweak sudo comment in config file and faq as well)
 
 ----------------------------------------------------------------------
 Version 1.0.1 (20030202)
