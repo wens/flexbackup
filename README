@@ -12,10 +12,11 @@ Flexible backup script.
 
 Features:
    o Easy to configure
-   o Uses dump, afio, tar, cpio, or zip with the flick of a switch
+   o Uses dump, afio, tar, cpio, or zip archivers
    o Backup, list, compare, extract, extract list of files modes
    o Compression and buffering options for all backup types
-   o Full (0) and 1-9 levels of incremental backup (ala "dump")
+   o Handles multivolume backups
+   o Full (0) and 1-9 levels of incremental backup (like "dump")
    o Keeps a table of contents so you know what's on each tape
    o Does remote filesystems (over rsh/ssh; no special service)
    o Works with IDE/SCSI tapes, Linux ftape,
@@ -30,7 +31,6 @@ Software needed:
    o mt
    o gzip, bzip2, or compress (optional)
    o buffer (optional)
-   o ftape-tools (optional, for ftape driver)
 
 See the INSTALL file for installation instructions.
 

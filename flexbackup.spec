@@ -36,7 +36,7 @@ Features:
 %setup -q
 
 %build
-make
+make all
 
 %install
 rm -rf $RPM_BUILD_ROOT
@@ -62,6 +62,9 @@ rm -rf $RPM_BUILD_ROOT
 %config /etc/flexbackup.conf
 
 %changelog
+* Sun Nov  7 1999 Edwin Huffstutler <edwinh@computer.org>
+- add multibuf
+
 * Sat Sep 25 1999 Edwin Huffstutler <edwinh@computer.org>
 - add more requires, update description, email address.
 - really goes in /usr/bin since it needs perl anyway --
