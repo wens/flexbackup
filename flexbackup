@@ -2896,8 +2896,7 @@ sub check {
 ######################################################################
 sub checkinpath {
 
-    my ($file) = @_;
-    my ($dir, @path);
+    my $file = shift(@_);
 
     if (defined($cfg::path{$file})) {
 
@@ -2914,12 +2913,35 @@ sub checkinpath {
 		return(0);
 	    }
 
+	} elsif (($cfg::path{$file} =~ m:^\s*sudo\s+(\S+):) or
+		 ($cfg::path{$file} =~ m:^\s*sudo\s+-u\s+\S+\s+(\S+):)) {
+
+	    &checkinpath{'sudo'};
+
+	    # some sort of sudo...
+	    my $prog = $1;
+	    # sudo with full pathname
+	    if (($prog =~ m:^/:) and (-e $prog) and (-x _)) {
+		print "path $file = $cfg::path{$file}\n";
+		return "$cfg::path{$file}";
+	    }
+	    # sudo with just command name
+	    my @path = split(/:/,$ENV{'PATH'});
+	    foreach my $dir (@path) {
+		if (-e "${dir}/$prog" && -x _) {
+		    return "$cfg::path{$file}";
+		}
+	    }
+
+	    push(@main::errors,"sudo $prog not found in \$PATH");
+	    return(0);
+
 	} else {
 
 	    # Didn't start with /; just overriding name of command
 	    # search PATH for it
-	    @path = split(/:/,$ENV{'PATH'});
-	    foreach $dir (@path) {
+	    my @path = split(/:/,$ENV{'PATH'});
+	    foreach my $dir (@path) {
 		if (-e "${dir}/$cfg::path{$file}" && -x _) {
 		    return "$cfg::path{$file}";
 		}
@@ -2933,8 +2955,8 @@ sub checkinpath {
     } else {
 
 	# Not spec'ed as an override in config file; search PATH
-	@path = split(/:/,$ENV{'PATH'});
-	foreach $dir (@path) {
+	my @path = split(/:/,$ENV{'PATH'});
+	foreach my $dir (@path) {
 	    if (-e "${dir}/$file" && -x _) {
 		return "$file";
 	    }
@@ -3755,12 +3777,12 @@ sub test_shared_mem_for_buffer {
 	    push(@main::errors, "Problems encountered testing 'buffer' command:");
 	    push(@main::errors, " --> " . $out);
 	    if ($retval == 255) {
-		push(@main::errors, "You don't have enough shared memory to run 'buffer' on this host, or");
-		push(@main::errors, "have exceeded buffering limits. Try lowering the amount specified in");
-		push(@main::errors, "\$buffer_megs in your flexbackup.conf file, or reconfigure your");
-		push(@main::errors, "kernel to include more SysV shared memory pages if using *BSD.");
+		push(@main::errors, "  You don't have enough shared memory to run 'buffer' on this host, or");
+		push(@main::errors, "  have exceeded buffering limits. Try lowering the amount specified in");
+		push(@main::errors, "  \$buffer_megs in your flexbackup.conf file, or reconfigure your");
+		push(@main::errors, "  kernel to include more SysV shared memory pages if using *BSD.");
 	    } else {
-		push(@main::errors, "Unknown problem trying to run 'buffer' (exit code $retval). Try disabling it.");
+		push(@main::errors, "  Unknown problem trying to run 'buffer' (exit code $retval). Try disabling it.");
 	    }
 	}
 

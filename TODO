@@ -5,7 +5,7 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
- - Finish buffer me test function for remote hosts
+ - Finish buffer mem test function for remote hosts
  - Check for things to put in @remoteprogs for remote tape drives
  - Clean up more $main:: vars, split into types or refactor code
  - bash PIPESTATUS trick fails if remote filesystem and shell there!=bash
@@ -38,7 +38,16 @@ Misc:
 
 
 Features to add:
- - Some "level" that uses rpm, verifies all packages, and just backs
+ - Non-root use
+    based on sudo workaround from Alex
+    works using the path overrides I put in?
+
+    sudoers:
+      Defaults:backup !authenticate
+      Cmnd_Alias BACKUP = /usr/bin/afio, /usr/bin/find
+      backup  ALL = NOPASSWD: BACKUP
+
+- Some "level" that uses rpm, verifies all packages, and just backs
       up any file not in a package OR changed from a package. and the rpm list.
       once the above works make it work for debian packages
 
@@ -74,13 +83,7 @@ Features to add:
      no exclude from find
      top level of shares only?
 
- - Non-root use (remote too)
-    document sudo workaround from Alex
-    maybe works using the path overrides I put in?
-    sudoers:
-      Defaults:backup !authenticate
-      Cmnd_Alias BACKUP = /usr/bin/afio, /usr/bin/find
-      backup  ALL = NOPASSWD: BACKUP
+ - autoconfit (esp if we pkg multivol with it)
  - Better way to spec fs. 
  - Redo include/exclude paths, not just expressions?
  - Do we want to count on perl (or flexbackup for that matter) being 
