@@ -4,8 +4,12 @@
 # $Name$
 ######################################################################
 
+PREFIX=/usr
+
 # Where the script binary should go
-BINPATH = /usr/bin
+BINPATH = $PREFIX/bin
+# Where the manpage should go
+MANPATH = $PREFIX/share/man
 
 # Where flexbackup.conf should be stored
 CONFFILE = /etc/flexbackup.conf
@@ -20,6 +24,8 @@ all: fb.install
 install: all
 	install -m 0644 flexbackup.conf $(CONFFILE)
 	install -m 0755 fb.install $(BINPATH)/flexbackup
+	install -m 0644 flexbackup.1 $(MANPATH)/man1/flexbackup.1
+	install -m 0644 flexbackup.conf.5 $(MANPATH)/man5/flexbackup.conf.5
 
 fb.install:
 	cp flexbackup fb.install

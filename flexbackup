@@ -690,7 +690,7 @@ sub backup {
 	    }
 	}
 
-	# Overwirte device var to be the archive filename
+	# Overwrite device var to be the archive filename
 	$::device = $cfg::device . "/" . $label . "." . $filename;
 
     }
