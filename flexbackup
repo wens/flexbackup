@@ -291,7 +291,7 @@ sub backup_routine {
 	foreach $list (@cfg::filesystems) {
 
 	    # Maybe retension
-	    if ($main::do_reten == 1) {
+	    if (($main::do_reten == 1) and defined($main::tapedevice)) {
 		&log('| Retensioning tape...');
 		&mt('retension');
 	    }

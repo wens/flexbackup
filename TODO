@@ -7,6 +7,7 @@ Some of these might not happen, but figured I should jot them down
 Cleanup/fix:
  - test tapes again since it's been so long since I used it
  - clean up all the $main:: vars, split into types
+ - go back trough old unread mail archive for obvious bugs etc
 post 1.0:
  - make -extract -files for afio/cpio/zip recurse dirs
       dump/tar already to this.
@@ -14,7 +15,7 @@ post 1.0:
 
 Misc: 
  - Contact Paul and get flexbackup.org updated
-    freshmeat entry fixed to sf.net otherwise
+    freshmeat entry to sf.net otherwise?
  - Check lsm template/ibiblio.org stuff
  - Move CVS to sourceforge.net
  - Try bfr or dbuffer (buffer seems unmaintained; no O_LARGEFILE)
