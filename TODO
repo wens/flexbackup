@@ -57,8 +57,10 @@ Features to add:
    If anything, make a mode where people coming from the DOS/win world 
    can use
        'full' 'differential' 'incremental' 
-   that is different from the numbered level backups. Alias 0 == full and
-   implement the other two.
+   that is different from the numbered level backups. Alias 0 == full, alias
+   1 == 'differential', and implement 'incremental'.
+           - maybe just make imcremental + the number from last time
+	   - remove the limit of 9.
 
 
  - remote tape drive (rmt) support
