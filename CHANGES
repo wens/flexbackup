@@ -1,12 +1,22 @@
 $Id$
 $Name$
 
+Version 0.9.9.4 ()
+
+Changes:
+ - implement support for full/differential/incremental
+   as dump levels (for people not as familiar with dump-style)
+      full = 0
+      differential = 1
+      incremental = <latest backup> + 1  [broken for fs=all at this stage]
+ - support > 9 levels (for all types but 'dump')
 
 Bug fixes:
  - doh! we *were* doing levels slightly wrong.
-    use < rather than <= for comapring levels.
+    use < rather than <= for comparing levels.
     popped out of investigating incremental and differential requests
     Now we act like dumplevels should
+ - also changes what we regard as "old" logs/stamps as a result
 
 ----------------------------------------------------------------------
 Version 0.9.9.3 (20030109)
@@ -116,7 +126,7 @@ Bug fixes:
  - tar - take off "! -type d" since we have --no recursion
  - log/backup files now use yyyymmddhhmm.ss times in the
    filenames. Previously you could get messed up if you ran two backups
-      on the same day; files would clobber themselves
+      on the same minute; files would clobber themselves
  - OpenBSD didn't have "mt rdhpos". Split the BSD flavors up.
  - add a rewind before erase when deleting old index
  - "-n" was touching the stamp file, now it won't

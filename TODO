@@ -13,67 +13,61 @@ Cleanup/fix:
  - check buffer avail mem thing from John
  - fix the stamp find loop (See FIXME)
  - revisit -cnewer problem.  Make sure it works with touch -t/-d of
-   timestamp refs (ctime isn't set backward like the mtime)
- - logs/stamps of "equal" level are old as well?
+   timestamp refs (ctime isn't set backward by touch like the mtime)
+
 
 Misc:
  - make a manual page (or other enchanced doc)! too many options now :)
    someone made us a good start or two:
      http://myezserver.com/downloads/mitel/howto/flexbackup-howto.html
      http://www.cyber-euskadi.com/howtos/contrib/flexbackup-restore-from-disk-howto.html
-
  - someone needs to put a bunch of stuff in a faq
  - Check lsm template/ibiblio.org stuff. automate
  - Try bfr or dbuffer (buffer seems unmaintained; no O_LARGEFILE)
  - Try against torture-test list:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
 
+
 Features to add:
  - static filenames when using disk (same fs, same level overwrite)?
       Michael Matsumura <michael@limit.org>
 
- - Several suggestions of incremental/differntial type, need to sort out:
+ - Several suggestions of incremental/differential type, need to sort out:
 
-  o first verify behavior of dump using dumpdates
-
+  Q: first verify behavior of dump using /etc/dumpdates
     A: Multiple same-number get everything more recent then last
        higher-numbered.  '9' always gets all since '[0-8]', no matter how many
-       '9's you do in a row
-
-      see also  http://docs.sun.com/db/doc/805-7228/6j6q7uf18?a=view
-
-  o also re-check they way my timestamps work make sure its the same
-
+       '9's you do in a row. see also http://docs.sun.com/db/doc/805-7228/6j6q7uf18?a=view
+  Q: also re-check they way my timestamps work make sure its the same
     A: Oops. we had <= when we needed <. Fixed for 0.9.9.4+.
 
   Check these links:
       http://www.arkeia.com/archives_indexed/2000/10/msg00006.html
       http://www.sans.org/rr/backup/central.php
-  
-  To sum up, no changes are *needed*.
-  
-   we can do what people call "incremental" as long as you increase the
-   backup level each day.  (Well, you can do up to 8 of them.)
+   To sum up, no changes are *needed* if dump behavior mimiced.
 
-   we can do what people call "differential" just by keeping the number the
+   We can do what people call "incremental" as long as we increase the
+   backup level each day.  (Well, can do up to 8 of them right now.)
+
+   We can do what people call "differential" just by keeping the number the
    same for consecutive backups
-      
-   If anything, make a mode where people coming from the DOS/win world 
-   can use
-       'full' 'differential' 'incremental' 
-   that is different from the numbered level backups. Alias 0 == full, alias
-   1 == 'differential', and implement 'incremental'.
-           - maybe just make imcremental + the number from last time
+
+   --> RESULT: make a mode where people coming from the DOS/win world
+   can use 'full' 'differential' 'incremental'
+   Alias 0 == full, alias 1 == 'differential', and implement 'incremental'.
+           - make incremental = 1 + the levelr from last time
 	   - remove the limit of 9.
-        (WIP in hacked version) 
-	   fix "-level incremental" and fs=all problem
-           fix sorting of timestamps for level > 1 digit
+
+   (WIP in hacked version, will have checked in for 0.9.9.4+)
+        fix "-level incremental" and fs=all problem
+        fix sorting of timestamps for level > 1 digit
 
 
  - remote tape drive (rmt) support
      Caleb Crome <caleb@crome.org>
  - non-root use (remote too)
-    document sudo workaround
+    document sudo workaround from Alex
+    should work using the path overrides I put in?
       Defaults:backup !authenticate
       Cmnd_Alias BACKUP = /usr/bin/afio, /usr/bin/find
       backup  ALL = NOPASSWD: BACKUP
@@ -88,7 +82,7 @@ Features to add:
       up any file not in a package OR changed from a package. and the rpm list.
       once the above works make it work for debian packages
  - "no blocking at all" option
- - log tape sizes (putput of buffer or dd can be used?)
+ - log tape sizes (output of buffer or dd can be used?)
  - handle multi-volume backups (original idea never panned out)
  - arbitratry "groups" that act sort of like "all"
  - multiple tapes for levels that aren't 0
@@ -109,7 +103,7 @@ Features to add:
  - gnome driver/configurator utility
       will be a separate program that just manipulates flexbackup
 
--------------------
+-------------------------------------------------------------
 
 Notes for cloning restore shell for afio/tar/cpio types)
 Use perl readline module
