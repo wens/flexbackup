@@ -6,7 +6,6 @@ Some of these might not happen, but figured I should jot them down
 
 
 Features to add:
- - multiple tapes for level that aren't 0
  - interactive restore-like shell for types besides dump
      see notes below
  - support multiple tapes for a single archive
@@ -16,6 +15,7 @@ Features to add:
        "multibuf" that could replace buffer and handle volumes too.
         must play with them both.
      - need to test with an almost-full tape, or a floppy
+ - multiple tapes for level that aren't 0
  - configurable path for programs (gtar=tar, etc)
      remote vs local too
  - Gnome driver/configurator utility
