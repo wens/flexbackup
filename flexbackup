@@ -466,16 +466,17 @@ sub backup_dump {
     my $tapehost = shift(@_);
     my $cmd = '';
     my $tmpstamp;
+    my $length = $cfg::dump_length
 
     if ($remote) {
         $cmd .= "$cfg::remoteshell $remote -n \'";
     }
 
-    if ($cfg::dump_length eq "0") {
-        $cfg::dump_length = "-a";
+    if ($length eq "0") {
+        $length = "-a";
 
     } else {
-        $cfg::dump_length = "-B $cfg::dump_length";
+        $length = "-B $cfg::dump_length";
     }
 
     if ($cfg::dump_dumpdates eq "true") {
