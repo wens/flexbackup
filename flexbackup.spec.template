@@ -50,14 +50,17 @@ install -m 0755 fb.install $RPM_BUILD_ROOT/usr/bin/flexbackup
 rm -rf $RPM_BUILD_ROOT
 
 %files
-/usr/bin/flexbackup
 %defattr(-,root,root)
+/usr/bin/flexbackup
 %doc CHANGES COPYING TODO README CREDITS INSTALL
 %dir /var/lib/flexbackup
 %dir /var/log/flexbackup
 %config /etc/flexbackup.conf
 
 %changelog
+* Wed Jan 15 2003 Edwin Huffstutler <edwinh+flexbackup@edwinh.org>
+- defattr in right spot
+
 * Sun Jan 12 2003 Edwin Huffstutler <edwinh+flexbackup@edwinh.org>
 - updated
 
