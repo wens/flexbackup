@@ -236,7 +236,11 @@ sub backup_routine {
                     $main::nextfile = 0;
                     &log('| Rewinding & erasing tape...');
                     &mt('rewind','erase');
-                }
+                } else {
+                    $main::nextfile = &contents();
+                    &log('| Making sure tape is at end of data...');
+                    &mt('generic-eod');
+		}
 
             } else {
 
