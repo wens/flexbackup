@@ -1,3 +1,4 @@
 Makefile
+flesbackup.lsm.template
 tar.exclude
 CVS
