@@ -5,18 +5,19 @@ edit index.html for verions/date
 
 make all VER=x.x.x
 
-upload files/web to edwinh.org
-upload files/web to sourceforge.net
+make rsync
+  uploads files/web to edwinh.org
+  uploads files/web to sourceforge.net
 
 get flexbackup.org synced
 
-upload files to sunsite
-  ncftpput ibiblio.org /incoming/Linux www/tarball/flexbackup-0.9.9.6.tar.gz
-  ncftpput ibiblio.org /incoming/Linux flexbackup.lsm
+make all VER=x.x.x
+  uploads files to sunsite
+  uploads files to rh contrib
   
 freshmeat notice
 
 flexbackup-announce notice
 
-get John to do FreeBSd port stuff
+get John to do FreeBSD port stuff
 

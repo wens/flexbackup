@@ -40,11 +40,16 @@ rpm: version tar
 	rm $(RPM)/RPMS/noarch/flexbackup-$(VER)-1.noarch.rpm
 	rm $(RPM)/SRPMS/flexbackup-$(VER)-1.src.rpm
 
-
 rsync:
 	rsync --archive --verbose --delete $(SITE)/ edwinh.org:public_html/flexbackup
 	rsync --archive --verbose --delete $(SITE)/ flexbackup.sourceforge.net:/home/groups/f/fl/flexbackup/htdocs
 
+upload: version lsm
+	test -e www/tarball/flexbackup-$(VER).tar.gz
+	ncftpput ibiblio.org /incoming/Linux www/tarball/flexbackup-$(VER).tar.gz
+	ncftpput ibiblio.org /incoming/Linux flexbackup.lsm
+	ncftpput incoming.redhat.com /noarch www/RPMS/flexbackup-$(VER)-1.noarch.rpm
+	ncftpput incoming.redhat.com /noarch www/RPMS/flexbackup-$(VER)-1.src.rpm
 
 version:
 	test -n "$(VER)"
