@@ -2461,7 +2461,10 @@ sub mt {
 		if (defined($main::remotetapehost)) {
 		    $command = &maybe_remote_cmd($command, $main::remotetapehost);
 		}
-		system($command);
+                if (defined($main::debug)) {
+                    &log("(debug) $command");
+                }
+                system($command);
 		if ($CHILD_ERROR) {
 		    &log("| Trying \"mt defblksize\" instead of \"mt setblk\"");
 		    my $oldoperation = $operation;
@@ -2470,7 +2473,10 @@ sub mt {
 		    if (defined($main::remotetapehost)) {
 			$command = &maybe_remote_cmd($command, $main::remotetapehost);
 		    }
-		    system($command);
+                    if (defined($main::debug)) {
+                        &log("(debug) $command");
+                    }
+                    system($command);
 		    if ($CHILD_ERROR) {
 			&log("Error setting block size");
 			&log("Neither of these commands worked:");

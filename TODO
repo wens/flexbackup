@@ -58,7 +58,10 @@ Misc:
 Features to add:
 
   - Finish stdout output option.  Just need the archive itself I think, all
-    message output should be ok. Try a stdin input option as well.
+    message output should be ok.
+       Turn indexes off
+       Turn sets off
+       Try a stdin input option as well for reads?
 
   - Handle multi-volume backups (original idea w/ 'multibuf' never panned out)
 
