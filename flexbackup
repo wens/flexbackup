@@ -2013,7 +2013,7 @@ sub versionstring {
     if ($ver eq '') {
         $ver = "devel";
     }
-    return($ver . " <support\@flexbackup.org>");
+    return($ver);
 
 }
 

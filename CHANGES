@@ -4,8 +4,9 @@ $Name$
 Version 0.9.9 (200301XX)
 
 Bug Fixes:
-  - syntax with the -cnewer find addition
-
+  - syntax with the -cnewer find addition. Whoops...
+  - default config uses /var/lib rather than /var/state (FHS spec on this
+    went away long ago)
 
 ----------------------------------------------------------------------
 Version 0.9.8.3 (20020824)
