@@ -7,18 +7,20 @@ Version 1.1.7 (20030615)
   - Added "copy" type that just mirrors the files into a directory tree
     if archiving to disk
 
-  - Use "find -prune" for subtree pruning.  When this happens, we have to
-    turn off "-depth" switch, as with GNU find 4.1.7 they don't work
-    together. Need to check into...
   - Initial support of "-pkgdelta" with FreeBSD packages
   - On FreeBSD, use mt to set 1-filemark behavior globally
   - Globally ignore sockets
 
 Bugfixes/cleanup:
+  - Don't use --same-order for tar. -extract -files would fail if you had
+    more than one file and they weren't in the expected order
+  - Use "find -prune" for subtree pruning.  When this happens, we have to
+    turn off "-depth" switch, as with GNU find 4.1.7 they don't work
+    together. Need to check into findutils vs. others more.
   - Use --ignore-failed-read for tar
   - Remote tape drive device didn't create index key correctly
   - Typo in star flags
-  - Wweak quiet flags
+  - Tweak quiet flags
 
 ----------------------------------------------------------------------
 Version 1.1.6 (20030313)
