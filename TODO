@@ -16,6 +16,10 @@ Cleanup/fix:
 
 Misc:
  - make a manual page (or other enchanced doc)! too many options now :)
+   someone made us a good start or two:
+     http://myezserver.com/downloads/mitel/howto/flexbackup-howto.html
+     http://www.cyber-euskadi.com/howtos/contrib/flexbackup-restore-from-disk-howto.html
+
  - someone needs to put a bunch of stuff in a faq
  - Check lsm template/ibiblio.org stuff. automate
  - Try bfr or dbuffer (buffer seems unmaintained; no O_LARGEFILE)
@@ -65,6 +69,11 @@ Features to add:
 
  - remote tape drive (rmt) support
      Caleb Crome <caleb@crome.org>
+ - non-root use (remote too)
+    document sudo workaround
+      Defaults:backup !authenticate
+      Cmnd_Alias BACKUP = /usr/bin/afio, /usr/bin/find
+      backup  ALL = NOPASSWD: BACKUP
  - make remote machine path overrides possible, that supercede others
  - check for existence of remote executables (John had something)
  - make -extract -files for afio/cpio/zip recurse dirs
