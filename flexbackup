@@ -93,7 +93,7 @@ if (defined($main::opt{'help'})) {
 # Version
 if (defined($main::opt{'version'})) {
     print ('$Id$ ');
-    print "\nflexbackup version " . &versionstring();
+    print "\nflexbackup version " . &versionstring() . "\n";
     exit(0);
 }
 
@@ -731,9 +731,6 @@ sub list_routine {
         $cmd .= "tar -t -M --totals $main::tar_verb_flag -b $main::tar_blksize -f -";
 
     } elsif ($cfg::type eq 'cpio') {
-        if ($main::device =~ m/\.rpm$/) {
-            $cmd .= "rpm2cpio | ";
-        }
         $cmd .= "cpio -t $main::cpio_verb_flag -C $main::cpio_blksize";
 
     }
@@ -759,9 +756,6 @@ sub extract_routine {
         $cmd .= "tar -x -M --totals -p -s $main::tar_verb_flag -b $main::tar_blksize -f -";
 
     } elsif ($cfg::type eq 'cpio') {
-        if ($main::device =~ m/\.rpm$/) {
-            $cmd .= "rpm2cpio | ";
-        }
         $cmd .= "cpio -i -m -d $main::cpio_verb_flag -C $main::cpio_blksize";
     }
 
@@ -1628,6 +1622,7 @@ sub maybe_remote_cmd {
 sub setup_before_read {
 
     $main::device = &maybe_get_filename();
+    my $cmd;
 
     &line();
     &mt("generic-blksize $main::mt_blksize");
@@ -1638,7 +1633,13 @@ sub setup_before_read {
     &mt('generic-query');
     &line();
 
-    return("$main::unz < $main::device | ");
+    $cmd = "$main::unz < $main::device | ";
+
+    if ($main::device =~ m/\.rpm$/) {
+        $cmd .= "rpm2cpio | ";
+    }
+
+    return($cmd);
 
 }
 

@@ -1,5 +1,6 @@
 
 edit CHANGES,TODO,README
+change verison header in TODO list
 make all VER=x.x.x
 edit index.html
 sync up web pages
