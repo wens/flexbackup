@@ -898,14 +898,19 @@ sub optioncheck {
 
             # Really need buffer in units of blksize not k
             if (defined($cfg::dump_length)) {
-                if ($cfg::dump_length =~ m/^\d+$/) {
-                    if (($cfg::dump_length % $cfg::blksize) != 0) {
-                        die("config file error: \$dump_length must be multiple of \$blksize\n");
-                    }
-                    $cfg::dump_length = $cfg::dump_length / $cfg::blksize;
-                } else {
-                    die("config file error: \$dump_length must be set to integer number of kilobytes\n");
-                }
+#
+# Huh? this seems to be a bogus req, B flag is always
+# taken in k. Is the man page for dump wrong?
+#
+#                if ($cfg::dump_length =~ m/^\d+$/) {
+#                    if (($cfg::dump_length % $cfg::blksize) != 0) {
+#                        die("config file error: \$dump_length must be multiple of \$blksize\n");
+#                    }
+#                    $cfg::dump_length = $cfg::dump_length / $cfg::blksize;
+#                } else {
+#                    die("config file error: \$dump_length must be set to integer number of kilobytes\n");
+#                }
+#
             }
 
 	} elsif ($cfg::type eq 'tar') {
