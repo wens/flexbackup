@@ -2078,6 +2078,9 @@ sub optioncheck {
     } else {
 	$main::path{'mt'} = &checkinpath('mt');
     }
+    if (defined($main::remotetapehost)) {
+        push(@remoteprogs,$main::path{'mt'}); 
+    }
 
     # Exclude regexp for find
     # Deal with the old non-array setting that may be in the config file
@@ -2644,13 +2647,16 @@ sub optioncheck {
 	}
     }
 
-    #
+
     # Last step - check buffer and any remote hosts for required programs
-    #
-    &line('screen');
+    if (($cfg::buffer ne 'false') or %remotehosts) {
+	&line('screen');
+    }
+
     if ($cfg::buffer eq 'buffer') {
 	&test_bufferprog($main::path{'buffer'}, $cfg::buffer_megs, 'localhost');
     }
+
     &check_remote_progs(\%remotehosts, \@remoteprogs);
 
     if (@main::errors) {
@@ -3726,107 +3732,69 @@ sub file_list_cmd {
 sub test_bufferprog {
 
     my $buffer_prog = shift(@_);
-    my $mem = shift(@_) . 'm';
+    my $mem = shift(@_);
     my $host = shift(@_);
-    my $tmp_name = "$cfg::tmpdir/testbuff.$PROCESS_ID.txt";
+    my $tmp_data = "$cfg::tmpdir/buftest.$PROCESS_ID.txt";
+    my $tmp_script = "$cfg::tmpdir/buftest.$host.$PROCESS_ID.sh";
     my $retval = 0;
-    my $out;
+    my $pipecmd;
+
+    # Create a script which tests the buffer program
+    open(SCR,"> $tmp_script") || die;
+    print SCR "#!/bin/sh\n";
+    print SCR "tmp_data=/tmp/bufftest\$\$.txt\n";
+    print SCR "echo testme > \$tmp_data\n";
+    print SCR "out=\`$buffer_prog -m ${mem}m -o /dev/null < \$tmp_data 2>&1\`\n";
+    print SCR "res=\$?\n";
+    print SCR "if [ \$res -eq 0 ]; then\n";
+    print SCR "   echo successful\n";
+    print SCR "else\n";
+    print SCR "   echo \"unsuccessful: exit code \$res: \$out\" \n";
+    print SCR "fi\n";
+    print SCR "rm -f \$tmp_data\n";
+    close(SCR);
 
     if ($host eq 'localhost') {
-
-	print "| Checking '$buffer_prog' on this host... ";
-
-	if (!open(TMP, ">$tmp_name")) {
-	    printf (STDERR "Could not open tmp file '$tmp_name' for writing - $!\n");
-	    exit (2);
-	}
-	printf (TMP "testme\n");
-	close (TMP);
-	if (!defined($main::opt{'n'})) {
-	    chomp($out = `$buffer_prog -m $mem -o /dev/null < $tmp_name 2>&1`);
-	    if ($CHILD_ERROR) {
-		$retval = $? >> 8;
-	    }
-	} else {
-	    print "(debug) $buffer_prog -m $mem -o /dev/null < $tmp_name 2>&1\n";
-	    $retval = 0;
-	}
-	unlink("$tmp_name");
-
-	if ($retval != 0) {
-	    print "Failed!\n";
-	    push(@main::errors, "Problems encountered testing 'buffer' command:");
-	    push(@main::errors, "  --> " . $out);
-	    if ($retval == 255) {
-		push(@main::errors, "  You don't have enough shared memory to run 'buffer' on this host, or");
-		push(@main::errors, "  have exceeded buffering limits. Try lowering the amount specified in");
-		push(@main::errors, "  \$buffer_megs in your flexbackup.conf file, or reconfigure your");
-		push(@main::errors, "  kernel to include more SysV shared memory pages if using *BSD.");
-	    } else {
-		push(@main::errors, "  Unknown problem trying to run 'buffer' (exit code $retval). Try disabling it.");
-	    }
-	} else {
-	    print "Ok\n";
-	}
-
-
-
+        print "| Checking '$buffer_prog' on this machine... ";
+	$pipecmd = "sh $tmp_script";
     } else {
+        print "| Checking '$buffer_prog' on host $host... ";
+	$pipecmd =  "cat $tmp_script | ($main::remoteshell $host 'cat > $tmp_script; sh $tmp_script; rm -f $tmp_script')";
+    }
 
-	print "| Checking 'buffer' on host $host... ";
+    if (!defined($main::opt{'n'})) {
 
-	my $tmpfile = "$cfg::tmpdir/buftest.$host.$PROCESS_ID.sh";
-
-	# Create a script which tests the buffer program
-	open(SCR,"> $tmpfile") || die;
-	print SCR "#!/bin/sh\n";
-	print SCR "tmp_name=/tmp/bufftest\$\$.txt\n";
-	print SCR "echo testme > \$tmp_name\n";
-	print SCR "$buffer_prog -m $mem -o /dev/null 2> /dev/null < \$tmp_name\n";
-	print SCR "res=\$?\n";
-	print SCR "if [ \$res -eq 0 ]; then\n";
-	print SCR "   echo \"buffer was successful\"\n";
-	print SCR "else\n";
-	print SCR "   echo \"buffer was unsuccessful: exit code \$res\"\n";
-	print SCR "fi\n";
-	print SCR "/bin/rm -f \$tmp_name\n";
-	close(SCR);
-
-	if (!(open PIPE,"cat $tmpfile | ($main::remoteshell $host 'cat > $tmpfile; chmod 755 $tmpfile; $tmpfile; /bin/rm -f $tmpfile') | ")) {
-	    push (@main::errors, "Could not open pipe to temporary script. - $!");
-	    $retval = 1;
-
-	} else {
-
-	    while (<PIPE>) {
-		chomp($out = $_);
-		if (/^$buffer_prog was unsuccessful: exit code (\d+)/) {
-		    $retval = $1;
-		    print "Failed!\n";
-		    if ($retval != 0) {
-			push(@main::errors, "Problems encountered testing 'buffer' command on host '$host':");
-			push(@main::errors, "  --> " . $out);
-			if ($retval == 255) {
-			    push(@main::errors, "  You don't have enough shared memory to run 'buffer' on $host, or");
-			    push(@main::errors, "  have exceeded buffering limits. Try lowering the amount specified in");
-			    push(@main::errors, "  \$buffer_megs in your flexbackup.conf file, or reconfigure your");
-			    push(@main::errors, "  kernel to include more SysV shared memory pages if using *BSD.");
-			} else {
-			    push(@main::errors, "  Unknown problem trying to run 'buffer' (exit code $retval). Try disabling it.");
-			}
+	open(PIPE,"$pipecmd |") || die;
+	while (<PIPE>) {
+	    if (/^unsuccessful: exit code (\d+): (.*)/) {
+		$retval = $1;
+		my $out = $2;
+		if ($retval != 0) {
+		    push(@main::errors, "Problems encountered testing 'buffer' command on host '$host':");
+		    push(@main::errors, "  --> " . $out);
+		    if ($retval == 255) {
+			push(@main::errors, "  You don't have enough shared memory to run 'buffer' on $host, or");
+			push(@main::errors, "  have exceeded buffering limits. Try lowering the amount specified in");
+			push(@main::errors, "  \$buffer_megs in your flexbackup.conf file, or reconfigure your");
+			push(@main::errors, "  kernel to include more SysV shared memory pages if using *BSD.");
+		    } else {
+			push(@main::errors, "  Unknown problem trying to run 'buffer' (exit code $retval). Try disabling it.");
 		    }
 		}
 	    }
-	    close (PIPE);
 	}
+	close (PIPE);
 
-	if ($retval == 0) {
-	    print "Ok\n";
-	}
-
-	unlink("$tmpfile");
-
+    } else {
+	print "\n(debug) $pipecmd\n";
     }
+
+    if ($retval == 0) {
+	print "Ok\n";
+    }  else {
+	print "Failed!\n";
+    }
+    unlink("$tmp_script");
 
     return($retval);
 }
@@ -3856,7 +3824,7 @@ sub check_remote_progs {
 	print "| Checking for required programs on host $host... ";
 	my $cmd = "$main::remoteshell $host sh -c '$string'";
 	if (defined($main::opt{'n'})) {
-	    print "(debug) $cmd\n";
+	    print "\n(debug) $cmd\n";
 	    next;
 	}
 	if (!(open(PIPE,"$cmd |"))) {
@@ -3879,12 +3847,12 @@ sub check_remote_progs {
 	    print "Failed!\n";
 	}
 
-	if ($cfg::buffer eq 'buffer') {
-	    &test_bufferprog($main::path{'buffer'} ,$cfg::buffer_megs, $host);
-	}
-
-
     }
 
+    if ($cfg::buffer eq 'buffer') {
+	foreach my $host (keys %$remotehost_ref) {
+	    &test_bufferprog($main::path{'buffer'} ,$cfg::buffer_megs, $host);
+	}
+    }
 
 }
