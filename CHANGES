@@ -1,7 +1,7 @@
 $Id$
 $Name$
 
-Version 1.0 (20030202)
+Version 1.0.1 (20030202)
 
 Bug fixes:
  - afio + null fix in pre6 didn't work in FreeBSD due to a problem with its
