@@ -906,6 +906,7 @@ sub optioncheck {
                 } else {
                     die("config file error: \$dump_length must be set to integer number of kilobytes\n");
                 }
+            }
 
 	} elsif ($cfg::type eq 'tar') {
 
