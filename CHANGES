@@ -1,37 +1,49 @@
-
 Version 0.9.4
 
- - dump -a and dump -T work now.  Found my problems were known bugs.
-     For Linux + dump,  you MUST install dump-0.4b4-10 (redhat lorax) 
-     or newer, or equivalent patches for other distributions.
+New features:
+ - bzip2 option for afio and tar archives, as well as log files
  - multiple tapes for an "all" level 0.  This just lets you split up
      backups onto different tapes, not end-of-media type of
      multivolume problems (that's on the todo list)
- - problem fix: afio doublebuffer only if local backup
- - fix bug: dump length bug for "-fs all"
- - fix bug: output of archive commands didn't go to log file
- - fix bug: with label "host:path-dir"; didn't work w/ remomte + files
-     labels are now "host-path-dir"
-   
-Version 0.9.3 (19990921) (just for testing)
+ - support for remote dump over ssh - use dd over sn ssh pipe
+ - support ssh for cpio remote backups - use dd over an ssh pipe
 
+Bug fixes/cleanup:
+ - dump -a (autosize) works now. Found my problem was a known bug.
+    >>> NOTE for Linux w/dump, you MUST install dump-0.4b4-10
+       (redhat lorax) or newer, or equivalent patches if you want
+       dump -a to work
+ - afio doublebuffer only if local backup
+ - dump length bug for "-fs all"
+ - get last timestamp was off-by-one
+ - output of archive commands didn't go to log file
+ - with label "host:path-dir"; didn't work w/ remomte + files
+     labels are now "host-path-dir"
+ - sanity checks in the setup, flag variables
+
+---------------------------------------------------------------
+Version 0.9.3 (for testing only)
+
+New features:
  - can now archive to files instead of devices
      just set $device to a directory for backup
      compare/extract/list/restore can now take a filename argument
+ - add -n option that doesn't run mt or the actual backup
  - timestamp changes:
      use "touch -t" not "touch -d" so FreeBSD works
      all dates now in YYYYMMDDhhmm.SS format
      use timestamps of the epoch for level 0 (simplifies code)
-     dump can use /etc/dumpdates or flexbackup's timestamps
  - add "-d var=val" for overriding config values
  - tar mode uses "find" just like afio & cpio
  - afio doublebuffering option
+
+Bug fixes/cleanup:
  - FreeBSD: if $dump_length set to 0 use dump -a
  - FreeBSD: fix for mt setblk
  - error if level > 0 and no level 0 stamp exists
  - fix label string for remote paths
- - add -n option that doesn't run mt and the actual backup
 
+---------------------------------------------------------------
 Version 0.9.2 (19990920)
 
  - initial release to the public

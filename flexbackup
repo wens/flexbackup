@@ -53,14 +53,15 @@
 use Getopt::Long;
 use English;
 use strict;
+use diagnostics;
 
 # No output buffering
 $OUTPUT_AUTOFLUSH = 1;
 
-package global;
+package main;
 
-%global::opt = ();
-if (! &main::GetOptions(\%global::opt,
+%main::opt = ();
+if (! &main::GetOptions(\%main::opt,
                         "help",
                         "c=s",
                         "level=i",
@@ -83,13 +84,13 @@ if (! &main::GetOptions(\%global::opt,
 }
 
 # Give usage message
-if (defined($global::opt{'help'})) {
+if (defined($main::opt{'help'})) {
     &usage();
     exit(0);
 }
 
 # Version
-if (defined($global::opt{'version'})) {
+if (defined($main::opt{'version'})) {
     print ('$Id$ ');
     print "\nflexbackup version " . &versionstring();
     exit(0);
@@ -100,7 +101,7 @@ if (defined($global::opt{'version'})) {
 &readconfigfile();
 
 # Set OS type
-chomp($global::uname = `uname -s`);
+chomp($main::uname = `uname -s`);
 
 # Sanity check things
 &optioncheck();
@@ -109,29 +110,29 @@ chomp($global::uname = `uname -s`);
 @_ = localtime(time);
 $_[5] += 1900;
 $_[4] += 1;
-$global::date = $_[5] . sprintf("%02d",$_[4]) . sprintf("%02d",$_[3]);
+$main::date = $_[5] . sprintf("%02d",$_[4]) . sprintf("%02d",$_[3]);
 
 # Set blocksize (mt blocksize is in bytes, config file is in k
 $_ = $cfg::blksize * 1024;
 &mt("generic-blksize $_");
 
 # Decide what to do
-if (defined($global::opt{'restore'})) {
+if (defined($main::opt{'restore'})) {
     &restore_routine();
 
-} elsif (defined($global::opt{'extract'})) {
+} elsif (defined($main::opt{'extract'})) {
     &extract_routine();
 
-} elsif (defined($global::opt{'compare'})) {
+} elsif (defined($main::opt{'compare'})) {
     &compare_routine();
 
-} elsif (defined($global::opt{'list'})) {
+} elsif (defined($main::opt{'list'})) {
     &list_routine();
 
-} elsif (defined($global::opt{'fs'})) {
+} elsif (defined($main::opt{'fs'})) {
     &backup_routine();
 
-} elsif (defined($global::opt{'toc'})) {
+} elsif (defined($main::opt{'toc'})) {
 
     if ($cfg::ftape eq 'true') {
 	&mt('rewind');
@@ -153,26 +154,26 @@ sub backup_routine {
     my @files;
     my $label;
     my $list;
-    my $tapecounter = 1;
+    my $tapecounter = 0;
 
     # Get backup level...
-    if (defined($global::opt{'level'})) {
-        $global::level = $global::opt{'level'};
+    if (defined($main::opt{'level'})) {
+        $main::level = $main::opt{'level'};
     } else {
-        $global::level = 0;
+        $main::level = 0;
     }
 
     # Die if no fs specified
-    if (!defined($global::opt{'fs'})) {
+    if (!defined($main::opt{'fs'})) {
         &usage();
         exit(0);
     }
 
     # Figure out log file name & empty log file
-    $label = &get_label($global::opt{'fs'});
-    $global::log = "$cfg::logdir/$cfg::prefix$label.$global::level.$global::date";
-    if (! open(LOG,">$global::log")) {
-        die "Can't write to $global::log: $!\n";
+    $label = &get_label($main::opt{'fs'});
+    $main::log = "$cfg::logdir/$cfg::prefix$label.$main::level.$main::date";
+    if (! open(LOG,">$main::log")) {
+        die "Can't write to $main::log: $!\n";
     }
     close(LOG);
 
@@ -180,7 +181,7 @@ sub backup_routine {
     &log("flexbackup version " . &versionstring());
     $_ = &current_time();
     &log("Current time is $_");
-    &log("Doing level $global::level backup of $global::opt{fs} using $cfg::type");
+    &log("Doing level $main::level backup of $main::opt{fs} using $cfg::type");
 
     # Remove old log files
     # ("old" = any higher-numbered logs for this label)
@@ -189,8 +190,8 @@ sub backup_routine {
     foreach (reverse sort @files) {
         next if (! m/^$cfg::prefix$label\.([0-9])\.([0-9]+)(.gz)?$/);
         my $olddate = $2;
-        if ($1 > $global::level) {
-            print "Removing old level $1 log of $global::opt{fs} ($olddate)\n";
+        if ($1 > $main::level) {
+            print "Removing old level $1 log of $main::opt{fs} ($olddate)\n";
             unlink("$cfg::logdir/$_") or warn("Can't remove $_: $!\n");
         }
     }
@@ -202,8 +203,8 @@ sub backup_routine {
     @files = readdir(DIR);
     foreach (reverse sort @files) {
         next if (! m/^$cfg::sprefix$label\.([0-9])$/);
-        if ($1 > $global::level) {
-            print "Removing old level $1 timestamp of $global::opt{fs}\n";
+        if ($1 > $main::level) {
+            print "Removing old level $1 timestamp of $main::opt{fs}\n";
             unlink("$cfg::stampdir/$_") or warn("Can't remove $_: $!\n");
         }
     }
@@ -215,27 +216,27 @@ sub backup_routine {
     # Main backup routine
     #
     ##########################
-    if ($global::opt{'fs'} eq 'all') {
+    if ($main::opt{'fs'} eq 'all') {
 
         foreach $list (@cfg::filesystems) {
 
             &line();
 
-            if ($global::level eq "0") {
+            if ($main::level eq "0") {
 
                 &log("Tape \#$tapecounter filesystems = $list");
 
                 # All
                 # Level zero - rewind and erase a new tape
-                if (!defined($global::opt{'noreten'})) {
+                if (!defined($main::opt{'noreten'})) {
                     &log('Retensioning tape...');
                     &mt('retension');
                 }
-                if (!defined($global::opt{'noerase'})) {
+                if (!defined($main::opt{'noerase'})) {
                     &log('Rewinding & erasing tape...');
                     &mt('rewind');
                     &mt('erase');
-                    $global::nextfile = 0;
+                    $main::nextfile = 0;
                 }
 
             } else {
@@ -244,12 +245,12 @@ sub backup_routine {
 
                 # All
                 # Incremental backup - list what's on it, then go to end of tape
-                if (!defined($global::opt{'erase'})) {
-                    $global::nextfile = &contents();
+                if (!defined($main::opt{'erase'})) {
+                    $main::nextfile = &contents();
                     &log('Making sure tape is at end of data...');
                     &mt('generic-eod');
                 } else {
-                    $global::nextfile = 0;
+                    $main::nextfile = 0;
                     &log('Rewinding & erasing tape...');
                     &mt('rewind');
                     &mt('erase');
@@ -263,13 +264,13 @@ sub backup_routine {
             # Iterate over the filesystems and back 'em up
             foreach (split(/\s+/,$list)) {
                 &backup($cfg::type,$_);
-                $global::contents{$global::nextfile} = "$cfg::type $_ ($global::level)";
-                $global::nextfile++;
+                $main::contents{$main::nextfile} = "$cfg::type $_ ($main::level)";
+                $main::nextfile++;
             }
 
             # Prompt for new tape if more than one set in list & level 0
-            if ($global::level == 0) {
-                if ($tapecounter < $global::num_tapes) {
+            if ($main::level == 0) {
+                if ($tapecounter < $main::num_tapes) {
 
                     # Rewind
                     &line();
@@ -296,35 +297,35 @@ sub backup_routine {
 
         # Just one filesystem
 	&line();
-        if (!defined($global::opt{'erase'})) {
-            $global::nextfile = &contents();
+        if (!defined($main::opt{'erase'})) {
+            $main::nextfile = &contents();
             &log('Making sure tape is at end of data...');
             &mt('generic-eod');
         } else {
-            $global::nextfile = 0;
+            $main::nextfile = 0;
             &log('Rewinding & erasing tape...');
             &mt('rewind');
             &mt('erase');
         }
         &line();
         &mt('generic-query');
-        &backup($cfg::type,$global::opt{'fs'});
+        &backup($cfg::type,$main::opt{'fs'});
         &line();
         &log("Rewinding...");
         &mt('rewind');
         if ($cfg::ftape eq 'true') {
             &log('Updating table of contents...');
-            &tag($global::nextfile,"$cfg::type $global::opt{'fs'} ($global::level)");
+            &tag($main::nextfile,"$cfg::type $main::opt{'fs'} ($main::level)");
         }
     }
 
     # Print out new contents
     &contents();
 
-    # gzip log file
-    if ($cfg::gzip_log eq 'true') {
-        print "Compressing log file ($global::log)\n";
-        system("gzip -f $global::log");
+    # compress log file
+    if ($cfg::comp_log ne 'false') {
+        print "Compressing log file ($main::log)\n";
+        system("$cfg::comp_log -f $main::log");
         if ($?) {
             warn("error compressing log file\n");
         }
@@ -405,13 +406,18 @@ sub backup {
 
     # Create file name if writing to a file
     # (config file's $device points to a dir in this case)
-    if (defined($global::use_file)) {
-        $_ = $global::date . "." . $type;
-        if (($type eq "tar") and ($cfg::tar_compress ne '')) {
-            $_ .= ".gz";
+    if (defined($main::use_file)) {
+        $_ = $main::date . "." . $type;
+        if ($type eq "tar") {
+            if ($cfg::tar_compress eq "gzip") {
+                $_ .= ".gz";
+            } elsif ($cfg::tar_compress eq "bzip2") {
+                $_ .= ".bz2";
+            }
         }
         $cfg::device = $cfg::device . "/" . $label . "." . $_;
     }
+
 
     if ($type eq 'dump') {
 	$cmd = &backup_dump($label,$localdir,$remote,$tapehost);
@@ -427,12 +433,12 @@ sub backup {
     # we know the file number, since we erased the tape
     # (or if using ftape/vtblc, since we can find the file number)
     # (or if we had -erase on the commandline)
-    if ((($global::opt{'fs'} eq "all") and ($global::level eq "0") and (!defined($global::opt{'noerase'})))
+    if ((($main::opt{'fs'} eq "all") and ($main::level eq "0") and (!defined($main::opt{'noerase'})))
         or
         ($cfg::ftape eq "true")
         or
-        ($global::opt{'erase'})) {
-        &log("Backup will be file number $global::nextfile");
+        ($main::opt{'erase'})) {
+        &log("Backup will be file number $main::nextfile");
     }
 
     # Just get the date for now; don't write the timestamp
@@ -443,8 +449,8 @@ sub backup {
     &line();
     &log("$cmd");
     &line();
-    if (!defined($global::opt{'n'})) {
-        system("($cmd) 2>&1 | tee -a $global::log");
+    if (!defined($main::opt{'n'})) {
+        system("($cmd) 2>&1 | tee -a $main::log");
         if ($?) {
             &log("$type: error from backup, exiting....\n");
             exit(1);
@@ -461,8 +467,8 @@ sub backup {
     # Create timestamp file, but use date from before the backup started
     # so next time we will catch files that might have been toucehd during the run
     &line();
-    &log("Timestamp $date_at_start $cfg::stampdir/$cfg::sprefix$label.$global::level");
-    system("touch -t $date_at_start $cfg::stampdir/$cfg::sprefix$label.$global::level");
+    &log("Timestamp $date_at_start $cfg::stampdir/$cfg::sprefix$label.$main::level");
+    system("touch -t $date_at_start $cfg::stampdir/$cfg::sprefix$label.$main::level");
     $_ = &current_time();
     &log("Current time is $_");
 
@@ -486,7 +492,7 @@ sub backup_dump {
     my $length = $cfg::dump_length;
 
     if ($remote) {
-        $cmd .= "$cfg::remoteshell $remote -n \'";
+        $cmd .= "$cfg::remoteshell $remote \'";
     }
 
     if ($length eq "0") {
@@ -496,27 +502,16 @@ sub backup_dump {
         $length = "-B $cfg::dump_length";
     }
 
-    if ($cfg::dump_dumpdates eq "true") {
-
-        $cmd .= "dump -$global::level -u $length -b $cfg::blksize";
-
-    } else {
-
-        $tmpstamp = "/tmp/refdate.$label";
-        $_ = &get_last_date($label,$global::level);
-        $cmd .= "touch -t $_ $tmpstamp && ";
-
-        $cmd .= "dump -$global::level -T $tmpstamp $length -b $cfg::blksize";
-    }
+    $cmd .= "dump -$main::level -u $length -b $cfg::blksize";
 
     if ($remote) {
-        $cmd .= " -f $tapehost:$cfg::device $dir";
+        if ($cfg::remoteshell =~ /ssh/) {
+            $cmd .= " -f - $dir | ssh $tapehost \"dd of=$cfg::device bs=$main::dd_blksize\"";
+        } else {
+            $cmd .= " -f $tapehost:$cfg::device $dir";
+        }
     } else {
         $cmd .= " -f $cfg::device $dir";
-    }
-
-    if ($cfg::dump_dumpdates eq "false") {
-        $cmd .= " && rm -f $tmpstamp";
     }
 
     if ($remote) {
@@ -541,22 +536,22 @@ sub backup_afio {
     my $double;
 
     if ($remote) {
-	$cmd  .= "$cfg::remoteshell $remote -n \'";
+	$cmd  .= "$cfg::remoteshell $remote \'";
     }
 
     if ($remote) {
 	$double = '';
     } else {
-        $double = $cfg::afio_doublebuffer;
+        $double = $main::afio_dbl_flag;
     }
 
     $tmpstamp = "/tmp/refdate.$label";
-    $_ = &get_last_date($label,$global::level);
+    $_ = &get_last_date($label,$main::level);
     $cmd .= "touch -t $_ $tmpstamp && ";
 
     $cmd .= "cd $dir && find . -xdev -newer $tmpstamp -print | ";
 
-    $cmd .= "afio -o -s $cfg::afio_length $cfg::afio_compress $double $cfg::afio_verbose -b $cfg::afio_blksize -c $cfg::afio_buffer";
+    $cmd .= "afio -o -s $main::afio_length $main::afio_z_flag $double $main::afio_verb_flag -b $main::afio_blksize -c $main::afio_buffer";
 
     if ($remote) {
         $cmd .= " -B $tapehost%$cfg::remoteshell:$cfg::device";
@@ -587,19 +582,26 @@ sub backup_cpio {
     my $tmpstamp;
 
     if ($remote) {
-        $cmd .= "$cfg::remoteshell $remote -n \'";
+        $cmd .= "$cfg::remoteshell $remote \'";
     }
 
     $tmpstamp = "/tmp/refdate.$label";
-    $_ = &get_last_date($label,$global::level);
+    $_ = &get_last_date($label,$main::level);
     $cmd .= "touch -t $_ $tmpstamp && ";
 
     $cmd .= "cd $dir && find . -xdev -newer $tmpstamp -print | ";
 
-    $cmd .= "cpio -o $cfg::cpio_verbose -H $cfg::cpio_format -C $cfg::cpio_blksize";
+    $cmd .= "cpio -o $main::cpio_verb_flag -H $cfg::cpio_format -C $main::cpio_blksize";
 
     if ($remote) {
-        $cmd .= " -F $tapehost:$cfg::device";
+        if ($cfg::remoteshell =~ /ssh/) {
+            $cmd .= " | $cfg::remoteshell $tapehost \"dd of=$cfg::device bs=$main::dd_blksize\"";
+            if ($cfg::cpio_verbose eq "true") {
+                &log("NOTE - \$cpio_verbose ignored: remote host + ssh");
+            }
+        } else {
+            $cmd .= " -F $tapehost:$cfg::device";
+        }
     } else {
         $cmd .= " -F $cfg::device";
     }
@@ -626,16 +628,16 @@ sub backup_tar {
     my $tmpstamp;
 
     if ($remote) {
-        $cmd .= "$cfg::remoteshell $remote -n \'";
+        $cmd .= "$cfg::remoteshell $remote \'";
     }
 
     $tmpstamp = "/tmp/refdate.$label";
-    $_ = &get_last_date($label,$global::level);
+    $_ = &get_last_date($label,$main::level);
     $cmd .= "touch -t $_ $tmpstamp && ";
 
     $cmd .= "cd $dir && find . -xdev -newer $tmpstamp -print | ";
 
-    $cmd .= "tar -c -T - -p -V \"$label\" $cfg::tar_verbose $cfg::tar_compress -b $cfg::tar_blksize";
+    $cmd .= "tar -c -T - -p -V \"$label\" $main::tar_verb_flag $main::tar_z_flag -b $main::tar_blksize";
 
     if ($remote) {
         $cmd .= " --rsh-command $cfg::remoteshell -f $tapehost:$cfg::device";
@@ -672,17 +674,17 @@ sub list_routine {
 	$cmd = "restore -t -b $cfg::blksize -f $cfg::device";
 
     } elsif ($cfg::type eq 'afio') {
-        $cmd = "afio -t $cfg::afio_verbose -b $cfg::afio_blksize -B $cfg::device";
+        $cmd = "afio -t $main::afio_verb_flag -b $main::afio_blksize -B $cfg::device";
 
     } elsif ($cfg::type eq 'tar') {
-        $cmd = "tar -t $cfg::tar_verbose $cfg::tar_compress -b $cfg::tar_blksize -f $cfg::device";
+        $cmd = "tar -t $main::tar_verb_flag $main::tar_z_flag -b $main::tar_blksize -f $cfg::device";
 
     } elsif ($cfg::type eq 'cpio') {
-        $cmd = "cpio -t $cfg::cpio_verbose -H $cfg::cpio_format -C $cfg::cpio_blksize -F $cfg::device";
+        $cmd = "cpio -t $main::cpio_verb_flag -H $cfg::cpio_format -C $main::cpio_blksize -F $cfg::device";
 
     }
 
-    if (!defined($global::opt{'n'})) {
+    if (!defined($main::opt{'n'})) {
         system($cmd);
     } else {
         &log("$cmd");
@@ -713,16 +715,16 @@ sub extract_routine {
 	$cmd = "restore -r -v -b $cfg::blksize -f $cfg::device";
 
     } elsif ($cfg::type eq 'afio') {
-        $cmd = "afio -i -x $cfg::afio_compress $cfg::afio_verbose -b $cfg::afio_blksize -B $cfg::device";
+        $cmd = "afio -i -x $main::afio_z_flag $main::afio_verb_flag -b $main::afio_blksize -B $cfg::device";
 
     } elsif ($cfg::type eq 'tar') {
-        $cmd = "tar -x -p $cfg::tar_compress $cfg::tar_verbose -b $cfg::tar_blksize -f $cfg::device";
+        $cmd = "tar -x -p $main::tar_z_flag $main::tar_verb_flag -b $main::tar_blksize -f $cfg::device";
 
     } elsif ($cfg::type eq 'cpio') {
-        $cmd = "cpio -i -m -d $cfg::cpio_verbose -H $cfg::cpio_format -C $cfg::cpio_blksize -F $cfg::device";
+        $cmd = "cpio -i -m -d $main::cpio_verb_flag -H $cfg::cpio_format -C $main::cpio_blksize -F $cfg::device";
     }
 
-    if (!defined($global::opt{'n'})) {
+    if (!defined($main::opt{'n'})) {
         system($cmd);
     } else {
         &log("$cmd");
@@ -753,17 +755,17 @@ sub compare_routine {
 	$cmd = "restore -C -b $cfg::blksize -f $cfg::device";
 
     } elsif ($cfg::type eq 'afio') {
-        $cmd = "afio -r $cfg::afio_compress -b $cfg::afio_blksize -B $cfg::device";
+        $cmd = "afio -r $main::afio_z_flag -b $main::afio_blksize -B $cfg::device";
 
     } elsif ($cfg::type eq 'tar') {
-        $cmd = "tar -d $cfg::tar_compress -b $cfg::tar_blksize -f $cfg::device";
+        $cmd = "tar -d $main::tar_z_flag -b $main::tar_blksize -f $cfg::device";
 
     } elsif ($cfg::type eq 'cpio') {
         die("cpio not capable of comparing files\n");
 
     }
 
-    if (!defined($global::opt{'n'})) {
+    if (!defined($main::opt{'n'})) {
         system($cmd);
     } else {
         &log("$cmd");
@@ -797,7 +799,7 @@ sub restore_routine {
         die("Interactive restore for $cfg::type not implemented yet\n");
     }
 
-    if (!defined($global::opt{'n'})) {
+    if (!defined($main::opt{'n'})) {
         system($cmd);
     } else {
         &log("$cmd");
@@ -849,7 +851,7 @@ sub get_last_date {
     my @files = readdir(DIR);
     foreach $file (reverse sort @files) {
         next if ($file !~ m/^$cfg::sprefix$label\.([0-9])$/);
-        if ($1 < $global::level) {
+        if ($1 <= $main::level) {
             $targetfile = "$cfg::stampdir/$file";
             last;
         }
@@ -859,12 +861,12 @@ sub get_last_date {
     # get date from targetfile
     # or complain if level > 0 and no timestamp
     # or use the epoch for level 0
-    if ($targetfile ne '') {
+    if ($level eq "0") {
+        return('197001010000.00');
+
+    } elsif ($targetfile ne '') {
         chomp($_ = `date -r $targetfile +%Y%m%d%H%M.%S`);
         return($_);
-
-    } elsif ($level eq "0") {
-        return('197001010000.00');
 
     } else {
         die("Can't do a level $level backup - no level 0 timestamp found\n");
@@ -881,8 +883,8 @@ sub log {
     my $msg = shift(@_);
 
     print "$msg\n";
-    if (defined($global::log)) {
-        open(LOG,">>$global::log");
+    if (defined($main::log)) {
+        open(LOG,">>$main::log");
         print LOG "$msg\n";
         close(LOG);
     }
@@ -894,8 +896,8 @@ sub log {
 ######################################################################
 sub line {
     print "---------------------------------------\n";
-    if (defined($global::log)) {
-        open(LOG,">>$global::log");
+    if (defined($main::log)) {
+        open(LOG,">>$main::log");
         print LOG "---------------------------------------\n";
         close(LOG);
     }
@@ -909,10 +911,10 @@ sub readconfigfile {
     my $configfile;
     my $var;
     my $value;
-    my $defines = $global::opt{'d'};
+    my $defines = $main::opt{'d'};
 
-    if (defined($global::opt{'c'})) {
-        $configfile = $global::opt{'c'};
+    if (defined($main::opt{'c'})) {
+        $configfile = $main::opt{'c'};
     } else {
         $configfile = "/etc/flexbackup.conf";
     }
@@ -926,7 +928,7 @@ sub readconfigfile {
 
     package cfg;
     require "$configfile";
-    package global;
+    package main;
 
     # Overrides
     foreach $var (keys %$defines) {
@@ -964,25 +966,25 @@ sub mt {
 
     # BSD mt is slightly different
     if ($operation =~ /generic-blksize/) {
-        if ($global::uname =~ /BSD/) {
+        if ($main::uname =~ /BSD/) {
             $operation =~ s/generic-blksize/blocksize/;
         } else {
             $operation =~ s/generic-blksize/setblk/;
         }
     }
 
-    if (defined($global::use_file)) {
+    if (defined($main::use_file)) {
         &log("Archiving to file; \"mt $operation\" skipped");
-    } elsif (defined($global::opt{'n'})) {
-        &log("(debug) $global::mt -f $cfg::device $operation");
+    } elsif (defined($main::opt{'n'})) {
+        &log("(debug) $main::mt -f $cfg::device $operation");
     } else {
-        if (defined($global::log)) {
-            system("$global::mt -f $cfg::device $operation 2>&1 | tee -a $global::log");
+        if (defined($main::log)) {
+            system("$main::mt -f $cfg::device $operation 2>&1 | tee -a $main::log");
         } else {
-            system("$global::mt -f $cfg::device $operation 2>&1");
+            system("$main::mt -f $cfg::device $operation 2>&1");
         }
         if ($?) {
-            &log("Error from $global::mt $operation\n");
+            &log("Error from $main::mt $operation\n");
             exit(1);
         }
     }
@@ -994,205 +996,209 @@ sub mt {
 sub optioncheck {
 
     # archive type on commandline
-    if (defined($global::opt{'type'})) {
-        $cfg::type = $global::opt{'type'};
+    if (defined($main::opt{'type'})) {
+        $cfg::type = $main::opt{'type'};
+    }
+
+    # First check if things are defined in the config file
+    # Checks exist, true/false, or one of options
+    &check(\$cfg::type,'type','dump afio tar cpio');
+    &check(\$cfg::device,'device','exist');
+    &check(\$cfg::blksize,'blksize','exist');
+    &check(\$cfg::remoteshell,'remoteshell','ssh ssh2 ssh1 rsh');
+    &check(\$cfg::logdir,'logdir','exist');
+    &check(\$cfg::comp_log,'comp_log','gzip bzip2 false');
+    &check(\$cfg::stampdir,'stampdir','exist');
+    &check(\$cfg::prefix,'prefix','exist');
+    &check(\$cfg::sprefix,'sprefix','exist');
+    &check(\$cfg::afio_buffer,'afio_buffer','exist');
+    &check(\$cfg::afio_verbose,'afio_verbose');
+    &check(\$cfg::afio_compress,'afio_compress','gzip bzip2 false');
+    &check(\$cfg::afio_doublebuffer,'afio_doublebuffer');
+    &check(\$cfg::afio_length,'afio_length','exist');
+    &check(\$cfg::dump_length,'dump_length','exist');
+    &check(\$cfg::tar_verbose,'tar_verbose');
+    &check(\$cfg::tar_compress,'tar_compress','gzip bzip2 false');
+    &check(\$cfg::cpio_verbose,'cpio_verbose');
+    &check(\$cfg::cpio_format,'cpio_format','bin odc newc crc tar ustar hpbin hpodc');
+    &check(\$cfg::ftape,'ftape');
+    &check(\$cfg::rawdevice,'rawdevice','exist');
+    if (@main::errors) {
+        print "\nErrors:\n";
+        while(@main::errors) {
+            print " " . pop(@main::errors) . "\n";
+        }
+        exit(1);
     }
 
     # check device (or dir)
     if (-c $cfg::device) {
         # ok
     } elsif (-d $cfg::device) {
-        $global::use_file = 1;
+        $main::use_file = 1;
         $cfg::device =~ s:/$::; # nuke trailing slash
-
     } else {
-        die("\$device must be set to a directory or a device\n");
+        push(@main::errors,"\$device must be set to a directory or a device\n");
     }
 
     # can we write to it?
     if (! -w $cfg::device) {
-        die("Can't write to $cfg::device\n");
+        push(@main::errors,"Can't write to $cfg::device\n");
     }
 
     # ftape support
-    if (defined($cfg::ftape)) {
-	if ($cfg::ftape eq 'true') {
-	    $global::mt = 'ftmt';
-	} elsif ($cfg::ftape eq 'false') {
-	    $global::mt = 'mt';
-	} else {
-	    die("config file error: \$ftape must be defined as true or false\n");
-	}
+    if ($cfg::ftape eq 'true') {
+        $main::mt = 'ftmt';
     } else {
-	die("config file error: \$ftape must be defined as true or false\n");
+        $main::mt = 'mt';
     }
 
     # blksize
-    if (defined($cfg::blksize)) {
-        if ($cfg::blksize !~ m/^\d+$/) {
-            die("config file error: \$blksize must be set to integer\n");
-        } else {
-            if ($cfg::blksize < 10) {
-                die("config file error: \$blksize minimum is 10k\n");
-            }
+    if ($cfg::blksize !~ m/^\d+$/) {
+        push(@main::errors,"\$blksize must be set to integer\n");
+    } else {
+        if ($cfg::blksize < 10) {
+            push(@main::errors,"\$blksize minimum is 10k\n");
         }
     }
 
+    # For when we use dd for remote stuff
+    $main::dd_blksize = $cfg::blksize . "k";
+
     # filesystems
-    $global::num_tapes = 0;
+    $main::num_tapes = -1;
     foreach (@cfg::filesystems) {
-        $global::num_tapes++;
+        $main::num_tapes++;
     }
-    if ($global::num_tapes == 0) {
-        die("config file error: no filesystem spec for \"all\" backups");
+    if ($main::num_tapes == -1) {
+        push(@main::errors,"no filesystem spec for \"all\" backups");
     }
 
 
     # Type-specific setup
-    if (defined($cfg::type)) {
+    if ($cfg::type eq 'afio') {
 
-	if ($cfg::type eq 'afio') {
-
-            # Compress flag
-            if ($cfg::afio_compress eq "true") {
-                $cfg::afio_compress = "-Z";
+        # Compress flag
+        if ($cfg::afio_compress eq "gzip") {
+            $main::afio_z_flag = "-Z";
+        } elsif ($cfg::afio_compress eq "bzip2") {
+            if (defined($main::opt{'fs'})) {
+                $main::afio_z_flag = "-P bzip2 -Z";
             } else {
-                $cfg::afio_compress = "";
+                $main::afio_z_flag = "-P bzip2 -Q -d -Z";
             }
+        } else {
+            $main::afio_z_flag = "";
+        }
 
-            # Verbose flag
-            if ($cfg::afio_verbose eq "true") {
-                $cfg::afio_verbose = "-v -z";
-            } else {
-                $cfg::afio_verbose = "";
+        # Verbose flag
+        if ($cfg::afio_verbose eq "true") {
+            $main::afio_verb_flag = "-v -z";
+        } else {
+            $main::afio_verb_flag = "";
+        }
+
+        # Length of tape
+        if ($cfg::afio_length =~ m/^\d+$/) {
+            $main::afio_length .= "k";
+        } else {
+            push(@main::errors,"\$afio_length must be set to integer number of megabytes\n");
+        }
+
+        # Double buffer flag
+        if ($cfg::afio_doublebuffer eq "true") {
+            $main::afio_dbl_flag = "-f";
+            if ($main::afio_length eq "0k") {
+                push(@main::errors,"\$afio_length must be nonzero if doublebuffer is on\n");
             }
+        } else {
+            $main::afio_dbl_flag = "";
+        }
 
-            # Length of tape
-            if (defined($cfg::afio_length)) {
-                if ($cfg::afio_length =~ m/^\d+$/) {
-                    $cfg::afio_length .= "k";
-                } else {
-                    die("config file error: \$afio_length must be set to integer number of megabytes\n");
-                }
+        # For afio, blocksize needs k appended
+        $main::afio_blksize = $cfg::blksize . "k";
 
-            } else {
-                die("config file error: \$afio_length not defined\n");
+        # Really need buffer in units of blksize not k
+        if ($cfg::afio_buffer =~ m/^\d+$/) {
+            if (($cfg::afio_buffer % $cfg::blksize) != 0) {
+                push(@main::errors,"\$afio_buffer must be multiple of \$blksize\n");
             }
+            $main::afio_buffer = $cfg::afio_buffer / $cfg::blksize;
+        } else {
+            push(@main::errors,"\$afio_buffer must be set to integer number of kilobytes\n");
+        }
 
-            # Double buffer flag
-            if ($cfg::afio_doublebuffer eq "true") {
-                $cfg::afio_doublebuffer = "-f";
-                if ($cfg::afio_length eq "0k") {
-                    die("config file error: afio_length must be nonzero if doublebuffer is on\n");
-                }
-            } else {
-                $cfg::afio_doublebuffer = "";
-            }
 
-            # For afio, blocksize needs k appended
-            $cfg::afio_blksize = $cfg::blksize . "k";
+    } elsif ($cfg::type eq 'dump') {
 
+        # Length of tape
+        if ($cfg::dump_length =~ m/^\d+$/) {
             # Really need buffer in units of blksize not k
-            if (defined($cfg::afio_buffer)) {
-                if ($cfg::afio_buffer =~ m/^\d+$/) {
-                    if (($cfg::afio_buffer % $cfg::blksize) != 0) {
-                        die("config file error: \$afio_buffer must be multiple of \$blksize\n");
-                    }
-                    $cfg::afio_buffer = $cfg::afio_buffer / $cfg::blksize;
-                } else {
-                    die("config file error: \$afio_buffer must be set to integer number of kilobytes\n");
-                }
-            }
+            #
+            # Huh? this seems to be a bogus req, B flag is always
+            # taken in k. Is the man page for dump wrong?
+            #if (($cfg::dump_length % $cfg::blksize) != 0) {
+            #    push(@main::errors,"\$dump_length must be multiple of \$blksize\n");
+            #}
+            #$cfg::dump_length = $cfg::dump_length / $cfg::blksize;
+        } else {
+            push(@main::errors,"\$dump_length must be set to integer number of kilobytes\n");
+        }
 
+    } elsif ($cfg::type eq 'tar') {
 
-	} elsif ($cfg::type eq 'dump') {
+        # Compress flag
+        if ($cfg::tar_compress eq "gzip") {
+            $main::tar_z_flag = "-z";
+        } elsif ($cfg::tar_compress eq "bzip2") {
+            $main::tar_z_flag = "--use-compress-program bzip2";
+        } else {
+            $main::tar_z_flag = "";
+        }
 
-            # use /etc/dumpdates?
-            if (defined($cfg::dump_dumpdates)) {
-                if ($cfg::dump_dumpdates !~ /^(true|false)$/) {
-                    die("config file error: \$dump_dumpdates must be defined as true or false\n");
-                }
-            }
+        # Verbose flag
+        if ($cfg::tar_verbose eq "true") {
+            $main::tar_verb_flag = "-v --totals";
+        } else {
+            $main::tar_verb_flag = "";
+        }
 
-            # Length of tape
-            if (defined($cfg::dump_length)) {
-                if ($cfg::dump_length =~ m/^\d+$/) {
-                    # Really need buffer in units of blksize not k
-                    #
-                    # Huh? this seems to be a bogus req, B flag is always
-                    # taken in k. Is the man page for dump wrong?
-                    #if (($cfg::dump_length % $cfg::blksize) != 0) {
-                    #    die("config file error: \$dump_length must be multiple of \$blksize\n");
-                    #}
-                    #$cfg::dump_length = $cfg::dump_length / $cfg::blksize;
-                } else {
-                    die("config file error: \$dump_length must be set to integer number of kilobytes\n");
-                }
+        # For tar, blocks are in 512-byte units
+        # not 1024 (1k) like dump, afio
+        $main::tar_blksize = $cfg::blksize * 2;
 
-            } else {
-                die("config file error: \$dump_length not defined\n");
-            }
+    } elsif ($cfg::type eq 'cpio') {
 
-	} elsif ($cfg::type eq 'tar') {
+        # Verbose flag
+        if ($cfg::cpio_verbose eq "true") {
+            $main::cpio_verb_flag = "-v";
+        } else {
+            $main::cpio_verb_flag = "";
+        }
 
-            # Compress flag
-            if ($cfg::tar_compress eq "true") {
-                $cfg::tar_compress = "-z";
-            } else {
-                $cfg::tar_compress = "";
-            }
-
-            # Verbose flag
-            if ($cfg::tar_verbose eq "true") {
-                $cfg::tar_verbose = "-v --totals";
-            } else {
-                $cfg::tar_verbose = "";
-            }
-
-            # For tar, blocks are in 512-byte units
-            # not 1024 (1k) like dump, afio
-            $cfg::tar_blksize = $cfg::blksize * 2;
-
-	} elsif ($cfg::type eq 'cpio') {
-
-            # Verbose flag
-            if ($cfg::cpio_verbose eq "true") {
-                $cfg::cpio_verbose = "-v";
-            } else {
-                $cfg::cpio_verbose = "";
-            }
-
-            # For cpio, blocks are in bytes
-            # not 1024 (1k) like dump, afio
-            $cfg::cpio_blksize = $cfg::blksize * 1024;
-
-	} else {
-	    die("config file error: \$type must be defined as afio, dump, tar, or cpio\n");
-	}
-    } else {
-	die("config file error: \$type must be defined as afio, dump, tar, or cpio\n");
+        # For cpio, blocks are in bytes
+        # not 1024 (1k) like dump, afio
+        $main::cpio_blksize = $cfg::blksize * 1024;
     }
 
     # log/stamp files
-    if (defined($cfg::logdir)) {
-	if (! -d $cfg::logdir) {
-            mkdir("$cfg::logdir",0755) or die("Can't mkdir $cfg::logdir: $!");
-	}
-    } else {
-	die("config file error: \$logdir must be defined\n");
+    if (! -d $cfg::logdir) {
+        mkdir("$cfg::logdir",0755) or push(@main::errors,"Can't mkdir $cfg::logdir: $!");
     }
-    if (defined($cfg::stampdir)) {
-        if (! -d $cfg::stampdir) {
-            mkdir("$cfg::stampdir",0755) or die("Can't mkdir $cfg::stampdir: $!");
-        }
-    } else {
-        die("config file error: \$stampdir must be defined\n");
+    if (! -w $cfg::logdir) {
+        push(@main::errors,"Can't write to $cfg::logdir: $!");
+    }
+    if (! -d $cfg::stampdir) {
+        mkdir("$cfg::stampdir",0755) or push(@main::errors,"Can't mkdir $cfg::stampdir: $!");
+    }
+    if (! -w $cfg::stampdir) {
+        push(@main::errors,"Can't write to $cfg::stampdir: $!");
     }
 
     # levels
-    if (defined($global::opt{'level'})) {
-        if ($global::opt{'level'} !~ m/^\d$/) {
-            die("-level must be 0 through 9 only\n");
+    if (defined($main::opt{'level'})) {
+        if ($main::opt{'level'} !~ m/^\d$/) {
+            push(@main::errors,"-level must be 0 through 9 only\n");
         }
     }
 
@@ -1201,31 +1207,32 @@ sub optioncheck {
     my @modes;
     my $modecount = 0;
     foreach (@modelist) {
-        if (defined($global::opt{$_})) {
+        if (defined($main::opt{$_})) {
             $modecount++;
             push(@modes,$_);
         }
     }
     if ($modecount > 1) {
         $_ = join(" -",@modes);
-        die("Can't specify more than one mode (given \"-$_\")\n");
+        push(@main::errors,"Can't specify more than one mode (given \"-$_\")\n");
     }
     if ($modecount == 0) {
-        die("Nothing to do!\n");
-    }
-
-    # gzip
-    if (defined($cfg::gzip_log)) {
-        if ($cfg::gzip_log !~ /^(true|false)$/) {
-            die("config file error: \$gzip_log must be defined as true or false\n");
-        }
+        push(@main::errors,"Nothing to do!\n");
     }
 
     # test
-    if (defined($global::opt{'n'})) {
+    if (defined($main::opt{'n'})) {
         &log('(debug) no backup or mt commands will be executed');
     }
 
+
+    if (@main::errors) {
+        print "\nErrors:\n";
+        while(@main::errors) {
+            print " " . pop(@main::errors) . "\n";
+        }
+        exit(1);
+    }
 
 }
 
@@ -1295,13 +1302,13 @@ sub maybe_get_filename {
 
     # optionscheck already guarantees only one is set
     foreach (@modes) {
-        if (defined($global::opt{$_})) {
-            $arg = $global::opt{$_};
+        if (defined($main::opt{$_})) {
+            $arg = $main::opt{$_};
         }
     }
 
     # if the flag given but null , and $device was not set to a dir, just return
-    if (($arg eq '') and (!defined($global::use_file))) {
+    if (($arg eq '') and (!defined($main::use_file))) {
         return($cfg::device);
     }
 
@@ -1309,13 +1316,13 @@ sub maybe_get_filename {
     # Then in $device dir (if conf file set to backup to files)
     if (-f "$arg") {
         $file = $arg;
-        $global::use_file = 1;
+        $main::use_file = 1;
 
-    } elsif (defined($global::use_file) and (-f "$cfg::device/$arg")) {
+    } elsif (defined($main::use_file) and (-f "$cfg::device/$arg")) {
         $file = $cfg::device . "/" . $arg;
 
     } else {
-        if (defined($global::use_file)) {
+        if (defined($main::use_file)) {
             die("Error: file \"$arg\" or \"$cfg::device/$arg\" not found\n");
         } else {
             die("Error: file \"$arg\" not found\n");
@@ -1334,8 +1341,44 @@ sub update_toc {
     # Only ftape has the toc capability
     if ($cfg::ftape eq 'true') {
         &log('Updating table of contents...');
-        foreach (keys %global::contents) {
-            &tag($_,$global::contents{$_});
+        foreach (keys %main::contents) {
+            &tag($_,$main::contents{$_});
         }
     }
+}
+
+######################################################################
+# Check validity of a config option
+######################################################################
+sub check {
+
+    my $ref = shift(@_);
+    my $varname = shift(@_);
+    my $ok = shift(@_);
+    my @ok;
+    my $found = 0;
+    my $realvarname;
+
+    if (!defined($ok)) {
+        @ok = ('true','false');
+    } else {
+        @ok = split(" ",$ok);
+    }
+
+    if (!defined($$ref)) {
+        push(@main::errors,"\$$varname not defined");
+    } else {
+        if ($ok[0] ne "exist") {
+            foreach (@ok) {
+                if ($_ eq $$ref) {
+                    $found = 1;
+                }
+            }
+            if ($found == 0 ) {
+                $_ = join(", ",@ok);
+                push(@main::errors,"\$$varname must be one of $_");
+            }
+        }
+    }
+
 }

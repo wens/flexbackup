@@ -99,11 +99,15 @@ NOTES
  Remote: rsh or ssh is used for remote backups.  Backups of remote machines
  are to be run from the machine with the tape drive!
 
- I suggest using either the "dump" or "afio" types.  Dump would be perfect
- if it did compression and could exclude file patterns, but it isn't
- designed that way... afio is a good bet if you want compression.  One bit
- error will not corrupt your entire archive like with a compressed tar
+ I suggest using either the "dump" or "afio" types.  Dump would be
+ perfect if it did compression and could exclude file patterns, but it
+ isn't designed that way... afio is a good bet if you want
+ compression, it does it one file at a time.  One bit error will not
+ corrupt your entire archive like with a compressed tar or cpio
  scheme.
+
+ Remote backups + ssh + cpio or dump won't give you verbose message since
+ stdout has to be piped across machines.
 
 ----------------------------------------------------------------------
 MISC

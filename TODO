@@ -2,33 +2,38 @@ Flexbackup todo list as of version 0.9.4a3
 
 Some of these might not happen, but figured I should jot them down
 
- - test remote timestamps again
- - test FreeBSD again
-
-cut off 0.9.4 here
-
  - exclude regexp's
      dump won't be able to do this
  - resurrect my old drive and test ftape stuff again
- - sanity check: make sure remoteshell,vtblc,afio,cpio,tar, etc in path; check dir validity
+ - check remoteshell,vtblc,afio,cpio,tar, etc in path
+ - check that dump dir exists
+ - compression for dump, cpio
+     do this with the dd pipeline like I did for ssh + cpio
  - autodetect ftape and raw device to eliminate configuration
- - nocompress list for afio
+ - nocompress file extension list for afio
  - arbitrary "list of files" extract
  - add reten switch
-
-cut off 1.0 features here?
-
+ - figure out why I can't get dump -T to work
+ - get restore to compare subdirectories of mountpoints correctly
+     the mountpoint is the top of the dump archive, even if you dump a
+     subdir
+ - related problem to the above 2 bullets.  dump updates
+     /etc/dumpdates if you dump a subdir, so if you do another
+     backup of a different dir of the same fs your timestamps are hosed
+ - support multiple tapes for a single archive
+     dump already does this? maybe afio & tar I think
+     Would it screw up on remote?
+     Need to test with an almost-full tape.
  - use a global "title" per backup
      work in a volume label scheme
-     ideas & code from Scott Penrose?
- - support multiple tapes for a single archive
- - commands are an array.  use &remote_command subroutine
-     abstract away duplicated code in afio,cpio,tar
- - does restore compare subdirectories of mountpoints correctly?
+     ideas from Scott Penrose?
  - interactive restore-like shell for types besides dump
+ - commands for backups become sequential rather rthan a huge
+     commandline.  Use subroutine to abstract away remote command.
+     Fix duplicated code in afio,cpio,tar
  - log files for extract/compare/etc?
- - transparent extract/compare/restore of remote volumes
-     restore needs to be interactive, so wont work - put sw on client
+ - remote extract/compare/restore
+      possible at all?
  - GUI driver/configurator utility
      "linux backup" util looked like the right kind of interface
      http://mirrors.darkelf.net. contact author.

@@ -11,6 +11,8 @@ BuildRoot: /var/tmp/flexbackup-root
 BuildArch: noarch
 Requires: mt-st
 Requires: gzip
+Requires: fileutils
+
 
 %description
 Flexible backup script.
