@@ -1,6 +1,14 @@
 $Id$
 $Name$
 
+IN CVS but not released
+
+Bug Fixes:
+ - Tweaks to shell detection to detect remote vanilla csh
+ - zsh has a pipestatus array variable similar to bash, use it
+ 
+
+----------------------------------------------------------------------
 Version 1.0pre3 (20030119)
 
 Bug Fixes:

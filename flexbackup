@@ -105,9 +105,11 @@ $main::CONFFILE="/etc/flexbackup.conf";
 # failed.  In real 'sh', there is no way to do this, you only get the
 # status of the last command in the pipeline...
 #
-# Only to be used if shell is bash 2 something
+# Only to be used if /bin/sh is really bash2 locally,
+# or remote shell is bash2/zsh.
 #
 $main::bash_pipe_exit = '; x=(${PIPESTATUS[@]}); i=0; while [ $i -lt ${#x[@]} ]; do [ ${x[$i]} -eq 0 ] || exit ${x[$i]}; i=$(($i+1)); done';
+$main::zsh_pipe_exit = '; x=(${pipestatus[@]}); i=1; while [ $i -le ${#x[@]} ]; do [ ${x[$i]} -eq 0 ] || exit ${x[$i]}; i=$(($i+1)); done';
 
 %main::opt = ();
 if (! &main::GetOptions(\%main::opt,
@@ -677,6 +679,8 @@ sub backup {
 
 	    if ($main::shelltype{'localhost'} eq 'bash2') {
 		open(CMD,"($cmd " . $main::bash_pipe_exit . ") 2>&1 |") || die;
+	    } elsif ($main::shelltype{'localhost'} eq 'zsh') {
+		open(CMD,"($cmd " . $main::zsh_pipe_exit . ") 2>&1 |") || die;
 	    } else {
 		open(CMD,"($cmd) 2>&1 |") || die;
 	    }
@@ -2997,6 +3001,8 @@ sub maybe_remote_cmd {
     if (defined($host) and ($host ne '')) {
 	if ($main::shelltype{$host} eq 'bash2') {
 	    $cmd  = "$main::remoteshell $host " . $quote . $cmd . $main::bash_pipe_exit . $quote;
+	} elsif ($main::shelltype{$host} eq 'zsh') {
+	    $cmd  = "$main::remoteshell $host " . $quote . $cmd . $main::zsh_pipe_exit . $quote;
 	} else {
 	    $cmd  = "$main::remoteshell $host " . $quote . $cmd . $quote;
 	}
