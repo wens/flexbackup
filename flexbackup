@@ -669,7 +669,7 @@ sub backup_afio {
     $cmd .= "touch $main::touch_flag \"$_\" $tmpstamp ; ";
 
     # list of file exenstions to not compress
-    if (($cfg::compress ne "false") and ($cfg::afio_nocompress_types ne "")) {
+    if (($cfg::compress !~ /^(false|hardware)$/) and ($cfg::afio_nocompress_types ne "")) {
         $cmd .= "echo \"$cfg::afio_nocompress_types\" > $tmpnocompress ; ";
         $no_compress = "-E $tmpnocompress";
     }
@@ -680,10 +680,9 @@ sub backup_afio {
     $cmd .= "(echo //--$tmplabel flexbackup.volume_header_info && ";
     $cmd .= "find . -xdev -newer $tmpstamp ";
     $cmd .= "$main::exclude_flag ";
-    $cmd .= "-print0) | ";
+    $cmd .= "-print) | ";
     $cmd .= "afio -o ";
     $cmd .= "$no_compress ";
-    $cmd .= "-0 ";
     $cmd .= "-z ";
     $cmd .= "$main::afio_z_flag ";
     $cmd .= "$main::afio_verb_flag ";
@@ -734,9 +733,8 @@ sub backup_cpio {
     $cmd .= "cd $dir ; ";
     $cmd .= "find . -xdev -newer $tmpstamp ";
     $cmd .= "$main::exclude_flag ";
-    $cmd .= "-print0 | ";
+    $cmd .= "-print | ";
     $cmd .= "cpio --create ";
-    $cmd .= "--null ";
     $cmd .= "--format $cfg::cpio_format ";
     $cmd .= "$main::cpio_verb_flag ";
     $cmd .= "$main::cpio_sparse_flag ";
@@ -773,7 +771,7 @@ sub backup_tar {
     # With this one we don't have to put a stampfile on the remote system
     # since we only need the date string
     if ($main::level == 0) {
-        &get_last_date($label); # Just to print dates, dont' need result
+        &get_last_date($label); # Just to print dates, don't need result
         $date_flag = "";
     } else {
         $_ = &get_last_date($label,'readable');
@@ -781,7 +779,7 @@ sub backup_tar {
     }
 
     # Have to handle this differently for tar, since we aren't using find in the first place.
-    # find everything that _matches_ the regexp, then use it as an exlcude list for tar
+    # find everything that _matches_ the regexp, then use it as an exclude list for tar
     if (defined($cfg::exclude_expr[0])) {
         $cmd .= "find $dir -xdev $main::inverse_exclude_flag -printf \"%P\\n\" > $tmpexclude ; ";
         $exclude_flag = "--exclude-from $tmpexclude";
@@ -892,7 +890,6 @@ sub list_routine {
 
     } elsif ($cfg::type eq 'afio') {
         $cmd .= "afio -t ";
-        $cmd .= "-s 0 ";
         $cmd .= "-z ";
         $cmd .= "-D $0 ";
         $cmd .= "$main::afio_unz_flag ";
@@ -1177,12 +1174,12 @@ sub get_last_date {
         $return_val = $string_val;
     }
 
+    &log("| Date of this level $main::level backup: $main::date_at_start");
     if ($main::level == 0) {
         &log("| Date of last level $lastlevel backup: the epoch");
     } else {
         &log("| Date of last level $lastlevel backup: $return_val");
     }
-    &log("| Date of this level $main::level backup: $main::date_at_start");
     &line();
 
     if (defined($readable)) {
@@ -1453,7 +1450,6 @@ sub optioncheck {
     if ($cfg::blksize !~ m/^\d+$/) {
         push(@main::errors,"\$blksize must be set to an integer");
     }
-
 
     # mt uses blocksize of bytes not k.  Also check for variable size
     if ($cfg::mt_var_blksize eq "true") {
@@ -1886,7 +1882,7 @@ sub maybe_get_filename {
         }
     }
 
-    # if the flag given but null , and $device was not set to a dir, just return
+    # if the flag given but null, and $device was not set to a dir, just return
     if (($arg eq '') and (!defined($main::use_file))) {
         return($main::device);
     }
@@ -1909,7 +1905,7 @@ sub maybe_get_filename {
     }
 
     # Try and guess file types and commpression scheme
-    # might as well since we are reading form a file in this case
+    # might as well since we are reading from a file in this case
     if ($file =~ m/\.(dump|cpio|tar)\.(gz|bz2|Z)$/) {
         $cfg::type = $1;
         $cfg::compress = $2;
