@@ -2,6 +2,12 @@ $Id$
 $Name$
 
 ----------------------------------------------------------------------
+Version 
+
+  - inital support of "-pkgdelta" with FreeBSD packages
+
+
+----------------------------------------------------------------------
 Version 1.1.6 (20030313)
 
 Changes beyond stable release:

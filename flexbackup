@@ -16,8 +16,9 @@
 #  flexbackup -set all             : backup all sets, level 0
 #  flexbackup [...] -level <n>     : backup level, can be integer or
 #                                    full/differential/incremental
-#  flexbackup [...] -pkgdelta rpm  : prune backup to files not part of an RPM
+#  flexbackup [...] -pkgdelta <x>  : prune backup to files not part of a package
 #                                    or changed from distributed version
+#                                    <x> can be "rpm" or "freebsd" package systems
 #  flexbackup [...] -wday <n>      : backup only if the week day matches
 #                                    the input number.  Sunday is 0 or 7.
 # READING ARCHIVES:
