@@ -364,10 +364,10 @@ sub backup_routine {
 
 	    # Show tape position
 	    if (defined($main::tapedevice)) {
-                # Multiple tapes are only for level 0
-                if (!defined($main::incremental_all) and ($main::level == 0)) {
-                    &log("| Tape \#$tapecounter");
-                }
+		# Multiple tapes are only for level 0
+		if (!defined($main::incremental_all) and ($main::level == 0)) {
+		    &log("| Tape \#$tapecounter");
+		}
 		&line();
 		&mt('generic-query');
 	    }
@@ -3372,6 +3372,16 @@ sub new_tape_key {
 	    close(KEY);
 
 	    &log("| Directory's existing key is $key");
+
+	    # Make sure keyfile entry is there
+	    if (!defined($main::index{"$key|$cfg::keyfile"})) {
+		my $label = "<index keyfile, dir=$cfg::device>";
+		if (defined($main::debug)) {
+		    &log("(debug) \$main::index{$key|$cfg::keyfile} = $label");
+		} else {
+		    $main::index{"$key|$cfg::keyfile"} = $label;
+		}
+	    }
 
 	    # Figure out the existing files
 	    foreach (sort keys %main::index) {

@@ -2,9 +2,11 @@ $Id$
 $Name$
 
 Bug fixes:
- - If using files, "all", and and multiple array entries for $filesystems,
+ - If using files, "-fs all", and and multiple array entries for $filesystems,
    index was getting hosed up.
 
+ - newtape/erase on dirs makes sure index keyfile listed in index
+ 
 ----------------------------------------------------------------------
 Version 1.0.2 (20030219)
 
