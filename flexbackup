@@ -1284,17 +1284,17 @@ sub mt {
 	if ($operation eq 'generic-erase') {
 
 
-            # If using files, an mt erase (from -newtape) rm's all files in the dir
-            if (defined($main::use_file)) {
-                opendir(DIR,$cfg::device) or die ("Can't open dir $cfg::device: $OS_ERROR");
-                foreach(readdir(DIR)) {
-                    next if (m:^\.\.?$:);
-                    &log("| Erasing old archive $_");
-                    unlink("$cfg::device/$_") or die ("Can't rm $cfg::device/$_: $OS_ERROR");
-                }
-                closedir(DIR);
+	    # If using files, an mt erase (from -newtape) rm's all files in the dir
+	    if (defined($main::use_file)) {
+		opendir(DIR,$cfg::device) or die ("Can't open dir $cfg::device: $OS_ERROR");
+		foreach(readdir(DIR)) {
+		    next if (m:^\.\.?$:);
+		    &log("| Erasing old archive $_");
+		    unlink("$cfg::device/$_") or die ("Can't rm $cfg::device/$_: $OS_ERROR");
+		}
+		closedir(DIR);
 
-            }
+	    }
 
 	    if ($cfg::erase_rewind_only eq "true") {
 		next;
@@ -1620,11 +1620,11 @@ sub optioncheck {
 
     # Block padding
     my $buffer_pad_flag;
-    if ($cfg::pad_blocks eq "true") {
+    if (($cfg::pad_blocks eq "true") and !defined($main::use_file)) {
 	$main::dd_pad_flag = "conv=noerror,sync";
 	$buffer_pad_flag = "-B";
     } else {
-	$main::dd_pad_flag = '';
+	$main::dd_pad_flag = 'conv=noerror';
 	$buffer_pad_flag = '';
     }
 
@@ -1992,9 +1992,9 @@ sub maybe_get_filename {
 
     # if the flag given but null, and $device is a dir, spew
     if (($arg eq '') and (defined($main::use_file))) {
-        print STDERR "Error: when extracting from a file, you must specify file name.\n";
-        print STDERR "(like \"-list file.tar.bz2\")\n";
-        die();
+	print STDERR "Error: when extracting from a file, you must specify file name.\n";
+	print STDERR "(like \"-list file.tar.bz2\")\n";
+	die();
     }
 
     # Look for file in current dir first (or full path given)
@@ -2194,11 +2194,11 @@ sub setup_before_read {
 
     if (defined($main::opt{'num'})) {
 	if (defined($main::use_file)) {
-            &die 
-        } else {
-            &log("| Positioning tape at file number $main::opt{num}");
-            &mt("rewind","fsf $main::opt{num}");
-        }
+	    &die
+	} else {
+	    &log("| Positioning tape at file number $main::opt{num}");
+	    &mt("rewind","fsf $main::opt{num}");
+	}
     } else {
 	if (defined($main::use_file)) {
 	    &log("| Reading from on-disk file $main::device");
@@ -2365,7 +2365,7 @@ sub split_and_echo {
 	}
 
 	# What a mess we went through above, just to print it...
-	&log("| $line" . $_);
+	&log(" $line" . $_);
 
 	# Indent next line(s) by one space
 	$line = " ";
@@ -2541,10 +2541,10 @@ sub toc_routine {
 
     } elsif ($main::opt{'toc'} =~ m/^\d+$/) {
 
-        &log("| Listing specific index");
+	&log("| Listing specific index");
 
-        # Print toc for a specific tape
-        $keys{"$main::opt{toc}"} = 1;
+	# Print toc for a specific tape
+	$keys{"$main::opt{toc}"} = 1;
 
     } elsif ($main::opt{'toc'} eq '') {
 
@@ -2579,13 +2579,13 @@ sub toc_routine {
 	my %contents;
 	my @contents = ();
 	my $found = 0;
-        my @tmpitems;
+	my @tmpitems;
 
-        if (defined($main::use_file)) {
-            @tmpitems = sort keys %main::index;
-        } else {
-            @tmpitems = sort bynumber keys %main::index;
-        }
+	if (defined($main::use_file)) {
+	    @tmpitems = sort keys %main::index;
+	} else {
+	    @tmpitems = sort bynumber keys %main::index;
+	}
 
 	foreach $file (@tmpitems) {
 	    ($tape,$filenum) = split(/\|/,$file);
@@ -2623,49 +2623,49 @@ sub rmindex {
 
     if ($main::opt{'rmindex'} =~ m/^\d+$/) {
 
-        # This section deletes a whole index record, or maybe just
-        # individual file records
-        foreach (sort keys %main::index) {
-            ($tape,$filenum) = split(/\|/,$_);
-            if (defined($main::opt{'f'})) {
+	# This section deletes a whole index record, or maybe just
+	# individual file records
+	foreach (sort keys %main::index) {
+	    ($tape,$filenum) = split(/\|/,$_);
+	    if (defined($main::opt{'f'})) {
 
-                # One file entry
-                if (($tape eq $main::opt{'rmindex'})
-                    and
-                    (defined($main::use_file) or ($filenum != 0))
-                    and
-                    ($filenum eq $main::opt{'f'})) {
-                    &log("| Deleting record for tape $tape file $filenum");
-                    if (defined($main::opt{'n'})) {
-                        &log("| (debug) delete \$main::index{$tape|$filenum}");
-                    } else {
-                        delete $main::index{"$tape|$filenum"};
-                    }
-                }
+		# One file entry
+		if (($tape eq $main::opt{'rmindex'})
+		    and
+		    (defined($main::use_file) or ($filenum != 0))
+		    and
+		    ($filenum eq $main::opt{'f'})) {
+		    &log("| Deleting record for tape $tape file $filenum");
+		    if (defined($main::opt{'n'})) {
+			&log("| (debug) delete \$main::index{$tape|$filenum}");
+		    } else {
+			delete $main::index{"$tape|$filenum"};
+		    }
+		}
 
-            } else {
+	    } else {
 
-                # Whole tape/dir entry
-                if ($tape eq $main::opt{'rmindex'}) {
-                    &log("| Deleting record for tape $tape file $filenum");
-                    if (defined($main::opt{'n'})) {
-                        &log("| (debug) delete \$main::index{$tape|$filenum}");
-                    } else {
-                        delete $main::index{"$tape|$filenum"};
-                    }
-                }
-            }
-        }
+		# Whole tape/dir entry
+		if ($tape eq $main::opt{'rmindex'}) {
+		    &log("| Deleting record for tape $tape file $filenum");
+		    if (defined($main::opt{'n'})) {
+			&log("| (debug) delete \$main::index{$tape|$filenum}");
+		    } else {
+			delete $main::index{"$tape|$filenum"};
+		    }
+		}
+	    }
+	}
 
-        &line();
-        return;
+	&line();
+	return;
 
     } elsif ($main::opt{'rmindex'} eq "all") {
 
 	&log("| Removing all in database!!!");
-        sleep(5);
+	sleep(5);
 	foreach (keys %main::index) {
-            delete $main::index{$_};
+	    delete $main::index{$_};
 	}
 	&line();
 
@@ -2691,28 +2691,28 @@ sub rmfile {
 
     if (-e $file) {
 
-        $key = &get_tape_key('quiet');
+	$key = &get_tape_key('quiet');
 
-        &log("| Deleting file $file");
-        unlink($file) or die ("Can't rm $file: $OS_ERROR");
+	&log("| Deleting file $file");
+	unlink($file) or die ("Can't rm $file: $OS_ERROR");
 
-        if ($key ne '') {
-            foreach (sort keys %main::index) {
-                ($tape,$filenum) = split(/\|/,$_);
+	if ($key ne '') {
+	    foreach (sort keys %main::index) {
+		($tape,$filenum) = split(/\|/,$_);
 
-                if (($tape eq $key) and ($filenum eq $main::opt{'rmfile'})) {
-                    &log("| Deleting record for $file");
-                    if (defined($main::opt{'n'})) {
-                        &log("| (debug) delete \$main::index{$tape|$filenum}");
-                    } else {
-                        delete $main::index{"$tape|$filenum"};
-                    }
-                }
-            }
-        }
+		if (($tape eq $key) and ($filenum eq $main::opt{'rmfile'})) {
+		    &log("| Deleting record for $file");
+		    if (defined($main::opt{'n'})) {
+			&log("| (debug) delete \$main::index{$tape|$filenum}");
+		    } else {
+			delete $main::index{"$tape|$filenum"};
+		    }
+		}
+	    }
+	}
 
     } else {
-        die ("Error: $file doesn't exist");
+	die ("Error: $file doesn't exist");
     }
 
     &line();
