@@ -21,6 +21,7 @@ Cleanup/fix:
  - Don't check for writeable stampdir for non-backup
  - Don't check for writeable logdir for non-backup
  - Fix afio w/null (FreeBSD printf can't spit out null char)
+ - Fix mt compression
 
 Misc:
  - Make a manual page (AND other enchanced documentation, more than a README)
@@ -34,6 +35,7 @@ Misc:
      bfr looks like it will work.  will need dd too to block...
  - Try against torture-test list:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
+ - Update mt manpages collection
 
 Features to add:
 
