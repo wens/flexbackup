@@ -338,12 +338,12 @@ sub backup_routine {
 	if (defined($main::local)) {
 	    &list_packages('localhost');
 	    &find_packaged_files('localhost');
-#	    &find_changed_files('localhost');
+	    &find_changed_files('localhost');
 	}
 	foreach my $host (keys %main::remotehosts) {
 	    &list_packages($host);
 	    &find_packaged_files($host);
-#	    &find_changed_files($host);
+	    &find_changed_files($host);
 	}
 	$main::pkgdelta_filelist = "$cfg::tmpdir/pkgdelta.$PROCESS_ID";
 	&line();
@@ -568,7 +568,7 @@ sub backup {
     my $catchexit;
     my $exitscript = "$cfg::tmpdir/collectexit.$PROCESS_ID.sh";
     my $result = "$cfg::tmpdir/exitstatus.$PROCESS_ID";
-    my $pkglist = "flexbackup.packagelist.$main::pkgdelta";
+    my $pkglist;
 
     &line();
 
@@ -658,6 +658,7 @@ sub backup {
 	$title = "level $level $dir $main::date_at_start $title from $host";
 	$title_without_type = "level $level $dir $main::date_at_start from $host";
     } else {
+	$pkglist = "flexbackup.packagelist.$main::pkgdelta";
 	$title = "level $level+$main::pkgdelta $dir $main::date_at_start $title from $host";
 	$title_without_type = "level $level+$main::pkgdelta $dir $main::date_at_start from $host";
     }
@@ -688,9 +689,8 @@ sub backup {
     }
 
     # Write list of packages
-    # FIXME config
     # FIXME not if -n
-    if (defined($main::pkgdelta)) {
+    if (defined($main::pkgdelta) and ($cfg::pkgdelta_archive_list eq 'true')) {
 	$pkglist = "$localdir/$pkglist";
 	my $write = "> $pkglist";
 	my $h;
@@ -742,7 +742,11 @@ sub backup {
 
     # Create/nuke tmp file list if we did local package delta
     if (defined($main::pkgdelta)) {
-	push(@cmds, &maybe_remote_cmd("$main::path{rm} -f $main::pkgdelta_filelist $pkglist", $remote));
+	if ($cfg::pkgdelta_archive_list eq 'true') {
+	    push(@cmds, &maybe_remote_cmd("$main::path{rm} -f $main::pkgdelta_filelist $pkglist", $remote));
+	} else {
+	    push(@cmds, &maybe_remote_cmd("$main::path{rm} -f $pkglist", $remote));
+	}
     }
 
     # Strip multiple spaces
@@ -2449,6 +2453,10 @@ sub optioncheck {
     &check(\$cfg::star_echo_block_num,'star_echo_block_num');
 
     &check(\$cfg::pax_format,'pax_format','cpio bcpio sv4cpio sv4crc tar ustar');
+
+    &check(\$cfg::pkgdelta_archive_list,'pkgdelta_archive_list');
+    &check(\$cfg::pkgdelta_archive_unowned,'pkgdelta_archive_unowned');
+    &check(\$cfg::pkgdelta_archive_changed,'pkgdelta_archive_changed');
 
     if (@main::errors) {
 	print "\nErrors:\n";
@@ -4276,15 +4284,19 @@ sub file_list_cmd {
 
 	# Use the normal level & timestamp mechanism to get a list of files
 	# Then only keep unowned or owned+changed files
-	# FIXME no cile create if -n
+	# FIXME no file create if -n
+
+	my $host;
 	my $find = &maybe_remote_cmd("cd \"$dir\"; $cmd -print", $remote);
 	my $write = "> $main::pkgdelta_filelist";
 	if(defined($remote)) {
 	    &log("| Listing level $level to-be-archived files for $remote:$dir");
 	    $write = &maybe_remote_cmd("$main::path{cat} $write", $remote);
 	    $write = "| $write";
+	    $host = $remote;
 	} else {
 	    &log("| Listing level $level to-be-archived files for $dir");
+	    $host = 'localhost';
 	}
 	&log("| Finding subset of files based on packaging system delta");
 	open(LIST,"$find |") || die;
@@ -4292,6 +4304,7 @@ sub file_list_cmd {
 	while(<LIST>) {
 
 	    my $key;
+	    my $archive = 0;
 	    chomp(my $file = $_);
 
 	    # Strip leading ./
@@ -4306,10 +4319,17 @@ sub file_list_cmd {
 		$key = "$dir/$file"
 	    }
 
-	    if (!defined($main::packaged{'localhost'}{$key})
-		or
-		defined($main::changed{'localhost'}{$key})) {
+	    if (($cfg::pkgdelta_archive_unowned eq 'true') and
+		!defined($main::packaged{$host}{$key})) {
+		$archive = 1;
+	    }
 
+	    if (($cfg::pkgdelta_archive_changed eq 'true') and
+		defined($main::changed{$host}{$key})) {
+		$archive = 1;
+	    }
+
+	    if ($archive == 1) {
 		if ($separator eq 'null') {
 		    print NEWLIST "./$file\0";
 		} else {
@@ -4336,6 +4356,8 @@ sub file_list_cmd {
 sub list_packages {
 
     my $host = shift (@_);
+
+    return if ($cfg::pkgdelta_archive_unowned eq 'false');
 
     if ($main::pkgdelta eq 'rpm') {
 
@@ -4367,6 +4389,8 @@ sub list_packages {
 sub find_packaged_files {
 
     my $host = shift (@_);
+
+    return if ($cfg::pkgdelta_archive_changed eq 'false');
 
     if ($main::pkgdelta eq 'rpm') {
 
@@ -4400,6 +4424,8 @@ sub find_packaged_files {
 sub find_changed_files {
 
     my $host = shift (@_);
+
+    return if ($cfg::pkgdelta_archive_changed eq 'false');
 
     if ($main::pkgdelta eq 'rpm') {
 
