@@ -55,9 +55,12 @@ rm -rf $RPM_BUILD_ROOT
 %doc CHANGES COPYING TODO README CREDITS INSTALL FAQ
 %dir /var/lib/flexbackup
 %dir /var/log/flexbackup
-%config /etc/flexbackup.conf
+%config(noreplace) /etc/flexbackup.conf
 
 %changelog
+* Tue Feb 18 2003 Edwin Huffstutler <edwinh@hercules.my-net>
+- config file is noreplace
+
 * Wed Jan 15 2003 Edwin Huffstutler <edwinh+flexbackup@edwinh.org>
 - defattr in right spot
 

@@ -6,6 +6,8 @@ Some of these might not happen
 
 Cleanup/fix:
  - Fix buffer test to handle bfr as well
+ - if staticfiles or staticlogs true, don't timestamp list/extract/compare
+    (make part of setup function as well)
  - Fix stdout/err flow when listing (maybe just "buffer")
  - Don't tie to db for list extract compare restore test-tape-drive
  - Don't check for writeable stampdir for non-backup
