@@ -7,14 +7,22 @@ Some of these might not happen, but figured I should jot them down
 Cleanup/fix:
  - go back trough old unread mail archive for obvious bugs etc
  - clean up all the $main:: vars, split into types
+ - make path overrides also search $PATH (say if we just changed the name
+     tar == gtar put still want to do normal path-seach)
+ - bash PIPESTATUS trick fails if remote filesystem and shell there!=bash
+     and shell local==bash. bah.
 
 Misc:
+ - make a manual page (or other enchanced doc)! too many options now :)
+ - someone needs to put a bunch of stuff in a faq
+ - mail lists running and used
  - Check lsm template/ibiblio.org stuff
  - Try bfr or dbuffer (buffer seems unmaintained; no O_LARGEFILE)
  - Try against torture-test list:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
 
 Features to add:
+ - make remote machine path overrides possible, that supercede others
  - make -extract -files for afio/cpio/zip recurse dirs
       dump/tar already to this.
  - try restore -D for comparing subdirs w/ restore
@@ -23,7 +31,6 @@ Features to add:
  - some "level" that uses rpm, verifies all packages, and just backs
       up any file not in a package OR changed from a package. and the rpm list.
       once the above works make it work for debian packages
- - make a manual page (or other enchanced doc)!  too many options now :)
  - differential mode (all since previous higher level)
      interaction w/ logs
      interaction w/ files
