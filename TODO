@@ -5,7 +5,6 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
- - Don't tie to db for list extract compare restore test-tape-drive
  - Don't check for writeable stampdir for non-backup
  - Don't check for writeable logdir for non-backup
 

@@ -238,7 +238,8 @@ if (defined($main::opt{'restore'})) {
 
 }
 
-if ($cfg::indexes eq 'true') {
+if (($main::mode !~ m/^(list|extract|restore|compare)$/) and
+    ($cfg::indexes eq "true")) {
     untie(%main::index);
 }
 
@@ -3021,12 +3022,6 @@ sub optioncheck {
 	push(@main::errors,"Can't write to $cfg::stampdir: $OS_ERROR");
     }
 
-    # Index database
-    if ($cfg::indexes eq "true") {
-	tie(%main::index,"AnyDBM_File",$cfg::index,O_CREAT|O_RDWR,0640) or
-	    push(@main::errors,"Can't tie DB $cfg::index: $OS_ERROR");
-    }
-
     # Levels
     if (defined($main::opt{'level'}) and
 	(defined($main::opt{'incremental'}) or
@@ -3118,6 +3113,7 @@ sub optioncheck {
     foreach my $mode (@modelist) {
 	if (defined($main::opt{$mode})) {
 	    $modecount++;
+	    $main::mode = $mode;
 	    push(@modes,$mode);
 	}
     }
@@ -3127,6 +3123,13 @@ sub optioncheck {
     }
     if ($modecount == 0) {
 	push(@main::errors,"Nothing to do (see -help)");
+    }
+
+    # Index database
+    if (($main::mode !~ m/^(list|extract|restore|compare)$/) and
+	($cfg::indexes eq "true")) {
+	tie(%main::index,"AnyDBM_File",$cfg::index,O_CREAT|O_RDWR,0640) or
+	    push(@main::errors,"Can't tie DB $cfg::index: $OS_ERROR");
     }
 
     # Test
