@@ -975,7 +975,7 @@ sub backup_star {
     $_ = &get_last_date($label, $level, 'numeric');
 
     $cmd = "$main::path{touch} -t \"$_\" $tmpstamp";
-    push(@cmds, &maybe_remote_cmd($cmd));
+    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
 
     $cmd = "cd $dir && ";
     $cmd .= &file_list_cmd($dir,$tmpstamp,'newline');
@@ -1000,7 +1000,7 @@ sub backup_star {
     $cmd .= "$main::z";
 
     # Wrap all that together
-    $cmd = &maybe_remote_cmd($cmd);
+    $cmd = &maybe_remote_cmd($cmd, $main::remote);
 
     # Append writer stuff
     $cmd = &append_writer_cmd($cmd);
@@ -1008,7 +1008,7 @@ sub backup_star {
     push(@cmds, $cmd);
 
     $cmd = "$main::path{rm} -f $tmpstamp";
-    push(@cmds, &maybe_remote_cmd($cmd));
+    push(@cmds, &maybe_remote_cmd($cmd, $main::remote));
 
     return(@cmds);
 
@@ -1109,7 +1109,7 @@ sub backup_zip {
     $cmd .= "$tmpzip";
 
     # Wrap all that together
-    $cmd = &maybe_remote_cmd($cmd);
+    $cmd = &maybe_remote_cmd($cmd, $main::remote);
     push(@cmds,$cmd);
 
     $cmd = "cat $tmpzip ";
@@ -1118,7 +1118,7 @@ sub backup_zip {
     }
 
     # Wrap all that together
-    $cmd = &maybe_remote_cmd($cmd);
+    $cmd = &maybe_remote_cmd($cmd, $main::remote);
 
     # Append writer stuff
     $cmd = &append_writer_cmd($cmd);
@@ -1330,6 +1330,7 @@ sub extract_routine {
 	}
 	$cmd .= "; ";
 	$cmd .= "$main::path{rm} -f $tmpfile";
+    }
 
     &run_or_echo_then_query($cmd);
 
