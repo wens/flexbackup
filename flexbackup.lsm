@@ -1,12 +1,12 @@
 Begin3
 Title:          flexbackup
-Version:        0.9.8.1
-Entered-date:   Sun Nov  7 13:18:43 MST 1999
+Version:        0.9.8.3
+Entered-date:   Sat Aug 24 11:03:54 MST 2002
 Description:
 Flexible backup script.
 Features:
    o Easy to configure
-   o Uses dump, afio, tar, or cpio with the flick of a switch
+   o Uses dump, afio, tar, cpio, or zip
    o Compression and buffering for all backup types
    o Handles multivolume backups
    o Backup, extract, compare, list modes
@@ -18,10 +18,10 @@ Features:
 Keywords:       backup dump restore afio tar cpio ftape
 Author:         edwinh@computer.org (Edwin Huffstutler)
 Maintained-by:  flexbackup@home.com (Edwin Huffstutler)
-Primary-site:   members.home.net /flexbackup/tarball
-                48k flexbackup-0.9.8.1.tar.gz
+Primary-site:   flexbackup.sourceforge.net /flexbackup/tarball
+                36k flexbackup-0.9.8.3.tar.gz
 Alternate-site: metalab.unc.edu /pub/linux/system/backup
-                48k flexbackup-0.9.8.1.tar.gz
+                36k flexbackup-0.9.8.3.tar.gz
 Original-site:
 Platforms:      IDE/SCSI tape drive
                 Linux ftape devices
