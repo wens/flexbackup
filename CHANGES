@@ -12,6 +12,7 @@ Changes:
 
 Cleanup:
   - Redid the way buffer/read/write strings were constructed to make more sense
+  - Don't set tape blocksize with -toc unless we want current tape (from John)
   - Interactive restore creates log file (was in e-smith stuff)
   - Extract/list/compare/restore use date-stamped logfiles (e-smith)
 

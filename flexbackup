@@ -190,7 +190,10 @@ if (defined($main::opt{'restore'})) {
 } elsif (defined($main::opt{'toc'})) {
 
     &line();
-    &mt("generic-blocksize $main::mt_blksize");
+    # Only do this if we're going to grab current tape index
+    if ($main::opt{'toc'} eq '') {
+        &mt("generic-blocksize $main::mt_blksize");
+    }
     &toc_routine();
 
 } elsif (defined($main::opt{'rmindex'})) {
