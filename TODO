@@ -18,6 +18,8 @@ Cleanup/fix:
  - Check for existence of remote executables (John had something)
  - Use system with args list so it uses execve not shell.  or open |- & exec.
      will get one layer of shell expansion outta the way
+ - Split main program; use separate libs for archiver types that are stored
+   in different files?  install then requires more than just program + conf file.
 
 Misc:
  - Make a manual page (AND other enchanced documentation, more than a README)
