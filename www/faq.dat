@@ -106,11 +106,11 @@ files, by the way.
 <q>I get I/O errors or other errors from my tape drive.
 
 <a>Try these one at a time:<OL>
+<LI>If you are using buffering, turn it off (<CODE>$buffer='false'</CODE>) until you 
+    can get things working without it.
 <LI>Change the block size parameter (<CODE>$blksize</CODE>) in the 
     configuration file.  The default is 10k, but some tape drives like 32 or 64 
     much better.  
-<LI>If you are using buffering, turn it off (<CODE>$buffer='false'</CODE>) until you 
-    can get things working without it.
 <LI>Try setting <CODE>$pad_blocks</CODE> to false
 <LI>Switch the setting of <CODE>$mt_var_blocksize</CODE> to false
 </OL>
@@ -120,9 +120,9 @@ trouble, you might also try the 'ide-scsi' layer with the 'st' module, and
 treating the thing like a SCSI tape - I've had more success that way.
 
 <P>You can also just try writing/reading stuff straight from the drive
-with tar or dd (to factor flexbackup out of the loop).  If you can get that
+with tar and dd (to factor flexbackup out of the loop).  If you can get that
 working, but flexbackup still seems to malfunction, let us know.  Try
-things like:
+things like: (The example below uses afio to test, others will be different)
 <PRE>
   # Backup two dirs
   mt -f /dev/tape rewind
