@@ -56,12 +56,9 @@ Features to add:
  - star? (tar but w/ acl support)
  - smbtar/smbclient?
  - pax (just wraps tar/cpio)?
- - Remote extract/compare/restore
-      Just install s/w on client w/remote tape device. need config file
-      option
  - When using files
       Make lower numbered level nuke higher ones & rm index?
-      Do I really want erase to nuke the archive files?
+      Erase option to to nuke the archive files & records in dir?
  - Encryption with gnupg?
  - Gnome driver/configurator utility
       a separate program that just manipulates flexbackup
