@@ -3,7 +3,6 @@ Flexbackup to-do list as of version 0.9.4
 Some of these might not happen, but figured I should jot them down
 
 Features:
- - afio compression factor
  - exclude regexp's
      dump won't be able to do this
  - compression for dump, cpio
@@ -33,13 +32,14 @@ Features:
  - cd-rom burning (or just .iso type?) for full backups?
 
 Cleanup/fix:
+ - use -print0 and make cpio,tar,afio use null terminated lists
  - resurrect my old drive and test ftape stuff again
  - check that dump dir exists
  - autodetect ftape and raw device to eliminate configuration
  - commands for backups become sequential rather than a huge
      commandline.  Use subroutine to abstract away remote command.
      Fix duplicated code in afio,cpio,tar
- - figure out dump length being multple of blocksize problem
+ - figure out dump length being multiple of blocksize problem
      manpage says one thing, behavior is another
  - figure out why I can't get dump -T to work
  - get restore to compare subdirectories of mountpoints correctly
@@ -48,3 +48,5 @@ Cleanup/fix:
  - related problem to the above 2 bullets.  dump updates
      /etc/dumpdates if you dump a subdir, so if you do another
      backup of a different dir of the same fs your timestamps are hosed
+ - config file in just text?  Wondering if anyone is bothered by the
+     perl syntax.

@@ -23,7 +23,8 @@ Features:
    o Nice log files
 
 Software needed:
-   o perl, gzip
+   o perl
+   o gzip or bzip2
    o mt (or ftmt if using ftape)
    o one or more of
        dump/restore afio tar cpio
@@ -105,9 +106,6 @@ NOTES
  compression, it does it one file at a time.  One bit error will not
  corrupt your entire archive like with a compressed tar or cpio
  scheme.
-
- Remote backups + ssh + cpio or dump won't give you verbose message since
- stdout has to be piped across machines.
 
 ----------------------------------------------------------------------
 MISC

@@ -6,7 +6,7 @@ New features:
  - multiple tapes for an "all" level 0.  This just lets you split up
      backups onto different tapes, not end-of-media type of
      multivolume problems (that's on the todo list)
- - support for remote dump over ssh - use dd over sn ssh pipe
+ - support for remote dump over ssh - use dd over an ssh pipe
  - support ssh for cpio remote backups - use dd over an ssh pipe
  - add -reten switch to retension before backup or any other operation
  - print "date of this level" sort of like dump does
@@ -21,7 +21,7 @@ Bug fixes/cleanup:
  - dump length bug for "-fs all"
  - get last timestamp was off-by-one
  - output of archive commands didn't go to log file
- - with label "host:path-dir"; didn't work w/ remomte + files
+ - with label "host:path-dir"; didn't work w/ remote + files
      labels are now "host-path-dir"
  - sanity checks in the setup, flag variables
  - check for programs in your path
