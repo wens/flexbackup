@@ -147,8 +147,9 @@ file, as root is treated with more care than normal user accounts. Note:
 you might choose without-password or forced-commands-only instead of yes
 for more security. See your ssh(1) and sshd(1) man pages.
 
-<P>If you do not want to use passphrase-less ssh keys or don't want to
-permit root logins, See the section on use with "sudo".
+<P>If you do not want to use passphrase-less ssh keys with root logins, See
+the section on use with "sudo".  (Or else sit at the terminal and type
+passwords during the backups if you *really* want to...)
 
 <c>Common problems
 
