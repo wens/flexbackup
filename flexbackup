@@ -606,7 +606,7 @@ sub backup {
 	    $filename =~ s/ar$/a/;
 	}
 
-	if ($cfg::type =~ m/^(tar|dump|cpio|star|pax|ar|shar)$/) {
+	if ($cfg::type =~ m/^(tar|dump|cpio|star|pax|ar|shar|filelist)$/) {
 	    if ($cfg::compress eq "gzip") {
 		$filename .= ".gz";
 	    } elsif ($cfg::compress eq "bzip2") {
@@ -690,6 +690,8 @@ sub backup {
 	@cmds = &backup_shar($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'lha') {
 	@cmds = &backup_lha($label, $localdir, $title, $level, $remote);
+    } elsif ($cfg::type eq 'filelist') {
+	@cmds = &backup_filelist($label, $localdir, $title, $level, $remote);
     }
 
     # Strip multiple spaces
@@ -1519,6 +1521,59 @@ sub backup_lha {
 }
 
 ######################################################################
+# Just back up the file listing (useful for debugging)
+######################################################################
+sub backup_filelist {
+
+    my $label = shift(@_);
+    my $dir = shift(@_);
+    my $title = shift(@_);
+    my $level = shift(@_);
+    my $remote = shift(@_);
+    my $cmd = '';
+    my @cmds;
+    my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
+    my $filelist = "$cfg::tmpdir/filelist.$PROCESS_ID";
+    my $remove;
+
+    if (defined($remote) and ($level != 0)) {
+	my $time = &get_last_date($label, $level, 'numeric');
+	$cmd = "$main::path{touch} -t \"$time\" $stamp";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+    } else {
+	$stamp = &get_last_date($label, $level, 'filename');
+    }
+
+    $cmd = "cd \"$dir\" && ";
+    $cmd .= &file_list_cmd( $dir, $stamp, 'newline', $level, $remote);
+    $cmd .= "> $filelist; $main::path{cat} $filelist 1>&2; $main::path{cat} $filelist ";
+    $cmd .= "$main::z";
+
+    # Buffer both sides if remote
+    if (defined($remote)) {
+	$cmd .= $main::buffer_cmd;
+    }
+
+    # Wrap all that together
+    $cmd = &maybe_remote_cmd($cmd, $remote);
+
+    # Append writer stuff
+    $cmd = &append_writer_cmd($cmd);
+
+    push(@cmds, $cmd);
+
+    $remove = "$filelist";
+    if (defined($remote) and ($level != 0)) {
+	$remove .= " $stamp";
+    }
+
+    $cmd = "$main::path{rm} -f $remove";
+    push(@cmds, &maybe_remote_cmd($cmd, $remote));
+    return(@cmds);
+
+}
+
+######################################################################
 # List the files in an archive
 ######################################################################
 sub list_routine {
@@ -1609,6 +1664,10 @@ sub list_routine {
 	$cmd .= "$main::lha_verb_flag ";
 	$cmd .= "$tmpfile ; ";
 	$cmd .= "$main::path{rm} -f $tmpfile";
+
+    } elsif ($cfg::type eq 'filelist') {
+
+	$cmd .= "$main::path{cat}";
 
     } elsif ($cfg::type eq 'arj') {
 	$cmd .= "$main::path{unarj} ";
@@ -1766,6 +1825,10 @@ sub extract_routine {
 	if (defined($main::opt{'files'})) {
 	    &log("| NOTE: \"-files\" is ignored for shar");
 	}
+
+    } elsif ($cfg::type eq 'filelist') {
+
+        die("You can't extract the 'filelist' type, it's just for testing...");
 
     } elsif ($cfg::type eq 'lha') {
 	my $tmpfile = "$cfg::tmpdir/lha.$PROCESS_ID";
@@ -2306,7 +2369,7 @@ sub optioncheck {
 
     # First check if things are defined in the config file
     # Checks exist, true/false, or one of options
-    &check(\$cfg::type,'type','dump afio cpio tar star pax zip ar shar lha');
+    &check(\$cfg::type,'type','dump afio cpio tar star pax zip ar shar lha filelist');
     &check(\$cfg::compress,'compress','gzip bzip2 compress zip false hardware');
     &check(\$cfg::compr_level,'compr_level','exist');
     &check(\$cfg::verbose,'verbose');
@@ -3185,7 +3248,7 @@ sub maybe_get_filename {
 
     # Try and guess file types and commpression scheme
     # might as well since we are reading from a file in this case
-    if ($file =~ m/\.(dump|cpio|tar|star|pax|a|shar)\.(gz|bz2|Z|zip)$/) {
+    if ($file =~ m/\.(dump|cpio|tar|star|pax|a|shar|filelist)\.(gz|bz2|Z|zip)$/) {
 	$cfg::type = $1;
 	$cfg::compress = $2;
 	$cfg::type =~ s/^a$/ar/;
@@ -3204,7 +3267,7 @@ sub maybe_get_filename {
 	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
 	&optioncheck();                  # redo to set a few variables over
 
-    } elsif ($file =~ m/\.(dump|afio|cpio|tar|star|pax|zip|a|shar|lha)$/) {
+    } elsif ($file =~ m/\.(dump|afio|cpio|tar|star|pax|zip|a|shar|lha|filelist)$/) {
 	$cfg::type = $1;
 	$cfg::type =~ s/^a$/ar/;
 	$cfg::compress = "false";

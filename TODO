@@ -19,6 +19,9 @@ Cleanup/fix:
      logic in some spots..
  - Split main program; use separate libs for archiver types that are stored
    in different files?  install then requires more than just program + conf file.
+ - Don't tie to db when we don't have to (-list,-extract,-compare)
+     Don't check for writeable stampdir, logdir when we don't have to.
+     Others?
  - Fix afio w/null (FreeBSD printf can't spit out null char)
 
 Misc:
@@ -28,7 +31,6 @@ Misc:
      http://myezserver.com/downloads/mitel/howto/flexbackup-howto.html
      http://www.cyber-euskadi.com/howtos/contrib/flexbackup-restore-from-disk-howto.html
      how about french?  http://sgmf.free.fr/flexbackup_doc.html
-   Better faq in the works
  - Try bfr? (buffer seems unmaintained; no O_LARGEFILE)
      Maybe document how to recompile buffer
      bfr looks like it will work.  will need dd too to block...
@@ -45,11 +47,6 @@ Features to add:
      the program
 
      Will do this post 1.0
-
- - Add a "filelist" type that just does the find & saves it, not the files
-    themselves.  Will help for debugging
-
-    Will do this post 1.0
 
  - Some switch that in addition to level timestamp checks, filters via rpm,
      and just backs up any file not in a package OR changed from a

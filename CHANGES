@@ -1,6 +1,16 @@
 $Id$
 $Name$
 
+Changes:
+  - Added 'filelist' type that doesn't back up anything, but prints/saves
+    the list of files that would have been done.  Good for debugging
+    timestamps, levels, and file exclusion.
+  - Added support for lha, shar, and ar archives just to be stupid
+
+Cleanup:
+  - Fix more uses of $_
+
+----------------------------------------------------------------------
 Version 1.0.1 (20030202)
 
 Bug fixes:
