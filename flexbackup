@@ -367,8 +367,8 @@ sub backup {
 
     # Just get the date for now; dont' write the timestamp
     # Until after the backup has run
-    my $date_at_start_of_this_backup;
-    chomp($date_at_start_of_this_backup = `date`);
+    my $date_at_start;
+    chomp($date_at_start = `date`);
 
     # Enough fooling around... run it
     &line();
@@ -386,9 +386,9 @@ sub backup {
     # Create timestamp file, but use date from before the backup started
     # so next time we will catch files that might have been toucehd during the run
     my $stamp = &get_label($dir);
-    &log("Timestamp $cfg::stampdir/$cfg::sprefix.$stamp.$global::level");
-    system("touch -d \"$date_at_start_of_this_backup\" $cfg::stampdir/$cfg::sprefix.$stamp.$global::level");
     &line();
+    &log("Timestamp $cfg::stampdir/$cfg::sprefix.$stamp.$global::level ($date_at_start)");
+    system("touch -d \"$date_at_start\" $cfg::stampdir/$cfg::sprefix.$stamp.$global::level");
 
     # Show where we are on the tape
     &line();
