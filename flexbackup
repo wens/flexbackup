@@ -661,6 +661,8 @@ sub backup {
 	    $filename =~ s/ar$/a/;
 	} elsif ($cfg::type eq 'copy') {
 	    $filename =~ s/\.copy$//;
+	} elsif ($cfg::type eq 'rsync') {
+	    $filename =~ s/\.rsync$//;
 	}
 
 	# Note compression setting in filename
@@ -786,7 +788,9 @@ sub backup {
     } elsif ($cfg::type eq 'lha') {
 	($remove, @cmds) = &backup_lha($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'copy') {
-	($remove, @cmds) = &backup_copy($label, $localdir, $title, $level, $remote);
+	($remove, @cmds) = &backup_copy_cpio($label, $localdir, $title, $level, $remote);
+    } elsif ($cfg::type eq 'rsync') {
+	($remove, @cmds) = &backup_copy_rsync($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'filelist') {
 	($remove, @cmds) = &backup_filelist($label, $localdir, $title, $level, $remote);
     }
@@ -915,7 +919,7 @@ sub backup {
 		}
 		# If file, rm botched file regardless of index
 		if (defined($::use_file)) {
-		    if ($cfg::type eq 'copy') {
+		    if ($cfg::type =~ m/^(copy|rsync)$/) {
 			system("rm -rf $::device");
 		    } else {
 			unlink($::device);
@@ -1196,7 +1200,7 @@ sub backup_cpio {
 ######################################################################
 # Return command to copy directory tree
 ######################################################################
-sub backup_copy {
+sub backup_copy_cpio {
 
     my $label = shift(@_);
     my $dir = shift(@_);
@@ -1259,6 +1263,67 @@ sub backup_copy {
     $cmd .= "-d ";
     $cmd .= "$::cpio_blk_flag";
     $cmd .= ")";
+
+    push(@cmds, $cmd);
+
+    return($remove, @cmds);
+
+}
+
+######################################################################
+# Return command to copy directory tree via rsync
+######################################################################
+sub backup_copy_rsync {
+
+    my $label = shift(@_);
+    my $dir = shift(@_);
+    my $title = shift(@_);
+    my $level = shift(@_);
+    my $remote = shift(@_);
+    my $cmd = '';
+    my @cmds;
+    my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
+    my $remove = '';
+
+    if ($cfg::buffer ne 'false') {
+	&log("| NOTE: \$buffer is ignored for type=rsync");
+    }
+
+    if (defined($remote) and ($level != 0)) {
+	my $time = &get_last_date($label, $level, 'numeric');
+	$cmd = "$::path{touch} -t \"$time\" $stamp";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= " $stamp";
+    } else {
+	$stamp = &get_last_date($label, $level, 'filename');
+    }
+
+    $cmd = "cd \"$dir\" && ";
+    $cmd .= &file_list_cmd($dir, $stamp, 'newline', $level, $remote);
+
+    # Just the find may run on the remote - rsync call will always be local
+    $cmd = &maybe_remote_cmd($cmd, $remote);
+
+    # Have to take leading './' off to make rsync's include/exclude work right
+    $cmd .= " | $::path{sed} -e \"s/\\.\\///g\" | ";
+
+    $cmd .= "$::path{rsync} ";
+    $cmd .= "--include-from=- --exclude=* ";
+    $cmd .= "--archive ";
+    $cmd .= "$::rsync_verb_flag ";
+    $cmd .= "--delete --delete-excluded ";
+    if ($cfg::compress ne 'false') {
+	$cmd .= "--compress ";
+    }
+    if (defined($remote)) {
+	$cmd .= "--rsh=$::path{$cfg::remoteshell} ";
+	if ($cfg::remoteuser ne '') {
+	    $cmd .= "$cfg::remoteuser" . '@' . "$remote:";
+	} else {
+	    $cmd .= "$remote:";
+	}
+    }
+    $cmd .= "$dir/ $::device";
 
     push(@cmds, $cmd);
 
@@ -1848,7 +1913,7 @@ sub list_routine {
 
 	$cmd .= "perl -pe 'last if (! m/^#/)'";
 
-    } elsif ($cfg::type eq 'copy') {
+    } elsif ($cfg::type =~ m/^(copy|rsync)$/) {
 
 	if ($cfg::verbose eq "true") {
 	    $cmd = "ls -laR $::device";
@@ -2015,7 +2080,7 @@ sub extract_routine {
 	    &log("| NOTE: \"-flist/-onefile\" ignored for shar");
 	}
 
-    } elsif ($cfg::type eq 'copy') {
+    } elsif ($cfg::type =~ m/^(copy|rsync)$/) {
 
 	die("Ummm... just copy your files, you have the whole tree...");
 
@@ -2087,7 +2152,7 @@ sub compare_routine {
 	$cmd .= "-B ";
 	$cmd .= "file=-";
 
-    } elsif ($cfg::type eq 'copy') {
+    } elsif ($cfg::type =~ m/^(copy|rsync)$/) {
 
 	$::path{'diff'} = &checkinpath('diff');
 
@@ -2611,7 +2676,7 @@ sub optioncheck {
 
     # First check if things are defined in the config file
     # Checks exist, true/false, or one of options
-    &checkvar(\$cfg::type,'type','dump afio cpio tar star pax zip ar shar lha copy filelist','tar');
+    &checkvar(\$cfg::type,'type','dump afio cpio tar star pax zip ar shar lha copy rsync filelist','tar');
     &checkvar(\$cfg::compress,'compress','gzip bzip2 compress zip false hardware','gzip');
     &checkvar(\$cfg::compr_level,'compr_level','exist','4');
     &checkvar(\$cfg::verbose,'verbose','bool','true');
@@ -3068,6 +3133,7 @@ sub optioncheck {
 	$::ar_verb_flag = "v";
 	$::shar_verb_flag = "";
 	$::lha_verb_flag = "";
+	$::rsync_verb_flag = "--verbose";
     } else {
 	$::dump_verb_flag = "";
 	$::afio_verb_flag = "";
@@ -3079,6 +3145,7 @@ sub optioncheck {
 	$::ar_verb_flag = "";
 	$::shar_verb_flag = "-q";
 	$::lha_verb_flag = "q";
+	$::rsync_verb_flag = "";
     }
 
     # Sparse flag
@@ -3204,6 +3271,19 @@ sub optioncheck {
 	    if (defined($::use_pipe)) {
 		push(@::errors,"Can't use type \"copy\" with -pipe!");
 	    }
+	}
+
+    } elsif ($cfg::type eq 'rsync') {
+
+	$::path{'rsync'} = &checkinpath('rsync');
+	$::path{'sed'} = &checkinpath('sed');
+	push(@::remoteprogs, $::path{'rsync'});
+
+	if (!defined($::use_file)) {
+	    push(@::errors,"Can't use type \"rsync\" unless archiving to disk!");
+	}
+	if (defined($::use_pipe)) {
+	    push(@::errors,"Can't use type \"rsync\" with -pipe!");
 	}
 
     } elsif ($cfg::type eq 'tar') {
@@ -3703,7 +3783,7 @@ sub maybe_get_filename {
 	&optioncheck();                  # redo to set a few variables over
 
     } elsif (-d "$file") {
-	$cfg::type = 'copy';
+	$cfg::type = "copy";
 	$cfg::compress = "false";
 	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
 	&optioncheck();                  # redo to set a few variables over

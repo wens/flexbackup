@@ -43,8 +43,6 @@ Features to add:
 
  - Make package delta work with debian pkgs or others
 
- - Use rsync for "copy" mode once it has a files-from type of flag
-
  - CD-ROM burning (or just .iso type?) for full backups? any level?
       just act like to-file archives, and take those files & write to CD?
       "iso" type with a dirtree copy?  wasted space this way.
