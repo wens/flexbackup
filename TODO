@@ -63,6 +63,9 @@ Features to add:
    1 == 'differential', and implement 'incremental'.
            - maybe just make imcremental + the number from last time
 	   - remove the limit of 9.
+        (WIP in hacked version) 
+	   fix "-level incremental" and fs=all problem
+           fix sorting of timestamps for level > 1 digit
 
 
  - remote tape drive (rmt) support
@@ -83,7 +86,7 @@ Features to add:
       up any file not in a package OR changed from a package. and the rpm list.
       once the above works make it work for debian packages
  - "no blocking at all" option
- - handle tape sizes or end-of-tape situation (hard to do generically)
+ - log tape sizes (putput of buffer or dd can be used?)
  - handle multi-volume backups (original idea never panned out)
  - arbitratry "groups" that act sort of like "all"
  - multiple tapes for levels that aren't 0
