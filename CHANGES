@@ -1,3 +1,10 @@
+
+New Features:
+
+Bug fixes/cleanup:
+ - if -noerase, move to eod before starting
+
+----------------------------------------------------------------------
 Version 0.9.5 (19990927)
 
 New features:

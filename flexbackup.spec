@@ -53,7 +53,7 @@ rm -rf $RPM_BUILD_ROOT
 %files
 /usr/bin/flexbackup
 %defattr(-,root,root)
-%doc CHANGES COPYING TODO README flexbackup.lsm
+%doc CHANGES COPYING TODO README CREDITS flexbackup.lsm
 %dir /var/lib/flexbackup
 %dir /var/log/flexbackup
 %config /etc/flexbackup.conf
