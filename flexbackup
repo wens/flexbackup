@@ -1229,7 +1229,7 @@ sub optioncheck {
         push(@main::errors,"Can't specify more than one mode (given \"-$_\")\n");
     }
     if ($modecount == 0) {
-        push(@main::errors,"Nothing to do!\n");
+        push(@main::errors,"Nothing to do!");
     }
 
     # test
