@@ -559,7 +559,7 @@ sub backup_routine {
 	    $comp_cmd = "$::path{bzip2} -f \"$::log\"";
 	} elsif ($cfg::comp_log eq "lzop") {
 	    $logext = ".lzo";
-	    $comp_cmd = "$::path{lzop} -f \"$::log\"";
+	    $comp_cmd = "$::path{lzop} -U -f \"$::log\"";
 	} elsif ($cfg::comp_log eq "zip") {
 	    $logext = ".zip";
 	    $comp_cmd = "$::path{cat} \"$::log\" | $::path{zip} -q - - > \"$::log" . $logext . "\"; $::path{rm} -f \"$::log\"";
