@@ -28,7 +28,8 @@ your expression matches what you want to exclude by:<BR><BR> <CODE>cd
 <LI>Set up a passphraseless ssh key for a user to run the backups.
 <LI>Set <CODE>$remoteuser</CODE> in the config file to this user.
 <LI>Set <CODE>$path{command} = 'sudo command';</CODE> in the config file.
-Do this for all commands that will need privilege (find, afio/tar/etc, perhaps buffer)
+    Do this for all commands that will need privilege (find, afio/tar/etc, 
+    perhaps buffer)
 <LI>Set up an /etc/sudoers file with something like this:<BR><BR>
 <CODE>
 Cmnd_Alias BACKUP = /usr/bin/afio, /usr/bin/find<BR>
@@ -56,12 +57,12 @@ removes this limit if you are using any of the non-dump archive formats.
 dump-style numeric levels, the latest versions of flexbackup have added
 <CODE>-full</CODE>, <CODE>-differential</CODE>, <CODE>-incremental</CODE>
 that get translated into appropriate dump-style level numbers.
-Definitions:
-<UL>
+Definitions:<UL>
 <LI>full: everything (duh!)
-<LI>differential: only files that have been changed or added since the last full backup
+<LI>differential: only files that have been changed or added since the last 
+    full backup
 <LI>incremental: only the files that have changed or been added to a system
-since doing the last backup (of any type)
+    since doing the last backup (of any type)
 </UL>
 <P>These are simply aliased to numeric levels: full = 0, differential = 1, and
 incremental = (latest backup + 1)
@@ -104,11 +105,15 @@ files, by the way.
 
 <q>I get I/O errors or other errors from my tape drive.
 
-<a>Try changing the block size parameter in the configuration file.  The
-default is 10k, but some tape drives like 32 or 64 much better.  If you are
-using buffering, turn it off until you can get things working without
-it.  Also try setting <CODE>$pad_blocks</CODE> to false, or if that doesn't
-help change <CODE>$mt_var_blocksize</CODE> to false.
+<a>Try these one at a time:<OL>
+<LI>Change the block size parameter (<CODE>$blksize</CODE>) in the 
+    configuration file.  The default is 10k, but some tape drives like 32 or 64 
+    much better.  
+<LI>If you are using buffering, turn it off (<CODE>$buffer='false'</CODE>) until you 
+    can get things working without it.
+<LI>Try setting <CODE>$pad_blocks</CODE> to false
+<LI>Switch the setting of <CODE>$mt_var_blocksize</CODE> to false
+</OL>
 
 <P>If you are using an IDE tape drive under Linux, and are still having
 trouble, you might also try the 'ide-scsi' layer with the 'st' module, and
@@ -218,10 +223,12 @@ simple "tag" text file.  The rest of the tape is your normal archives.
 <q>Why keep the table of contents db on disk rather than on the tape?
 
 <a><UL>
-<LI>We don't know the table size ahead of time unless we use a hard-limited reserved size.
-<LI>Updating the db at the beginning of the tape will add tape-travel overhead for every backup.
-<LI>a backup->rewind->write start of tape sequence will lose the rest of the contents
-past the first file unless we start to play filemark tricks.
+<LI>We don't know the table size ahead of time unless we use a hard-limited 
+    reserved size.
+<LI>Updating the db at the beginning of the tape will add tape-travel overhead 
+    for every backup.
+<LI>a backup->rewind->write start of tape sequence will lose the rest of the 
+    contents past the first file unless we start to play filemark tricks.
 </UL>
 
 <c>Implementation
