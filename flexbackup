@@ -469,16 +469,16 @@ sub backup_routine {
 
     # Remove old log files now that we are done
     my $rmlogs = 0;
-    foreach (sort keys %oldlogs) {
+    foreach my $lf (sort keys %oldlogs) {
 	$rmlogs++;
-	my ($lev,$d) = split(/\|/,$oldlogs{$_});
+	my ($lev,$d) = split(/\|/,$oldlogs{$lf});
 	if (defined($d)) {
 	    &log("| Removing old level $lev log of $main::opt{fs} (dated $d)");
 	} else{
 	    &log("| Removing old level $lev log of $main::opt{fs}");
 	}
 	if (!defined($main::opt{'n'})) {
-	    unlink("$_") or warn("Can't remove $_: $OS_ERROR\n");
+	    unlink("$lf") or warn("Can't remove $lf: $OS_ERROR\n");
 	}
     }
     &line('log') if ($rmlogs > 0);
@@ -561,10 +561,10 @@ sub backup {
     # (we will be touching the one of equal level, so don't mark for removal)
     opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $OS_ERROR");
     @files = readdir(DIR);
-    foreach (reverse sort @files) {
-	next if (! m/^$cfg::sprefix$label\.(\d+)$/);
+    foreach my $f (reverse sort @files) {
+	next if ($f !~ m/^$cfg::sprefix$label\.(\d+)$/);
 	if ($1 > $level) {
-	    $oldstamps{"$cfg::stampdir/$_"} = $1
+	    $oldstamps{"$cfg::stampdir/$f"} = $1
 	}
     }
     close(DIR);
@@ -614,9 +614,9 @@ sub backup {
 
     # Label for this archive
     chomp($host = `hostname`);
-    $_ = $cfg::type . "+" . $cfg::compress;
-    $_ =~ s/\+false//;
-    $title = "level $level $dir $main::date_at_start $_ from $host";
+    $title = $cfg::type . "+" . $cfg::compress;
+    $title =~ s/\+false//;
+    $title = "level $level $dir $main::date_at_start $title from $host";
     $title_without_type = "level $level $dir $main::date_at_start from $host";
 
     # Modify table of contents
@@ -666,8 +666,8 @@ sub backup {
 
     # Format commands for nice printing
     @echo_cmds = @cmds;
-    foreach (@echo_cmds) {
-	&split_and_echo($_);
+    foreach my $line (@echo_cmds) {
+	&split_and_echo($line);
     }
     &line();
 
@@ -2645,7 +2645,7 @@ sub optioncheck {
     }
 
 
-    # Last step - check buffer, shelltype and any remote hosts for required programs
+    # Last step - check buffer, shelltype, and any remote hosts for required programs
     &line('screen');
 
     if ($cfg::buffer eq 'buffer') {
@@ -3404,7 +3404,6 @@ sub toc_routine {
     my $label;
     my $dir;
     my $file;
-    my $key;
     my %tape_files;
     my %disk_files;
 
@@ -3426,10 +3425,10 @@ sub toc_routine {
 
 	# Print toc for current tape/device
 	&mt('rewind');
-	$_ = &get_tape_key();
+	my $key = &get_tape_key();
 	&mt('rewind');
-	if ($_ ne '') {
-	    $desired_keys{$_} = 1;
+	if ($key ne '') {
+	    $desired_keys{$key} = 1;
 	}
 	&line();
 
@@ -3449,7 +3448,7 @@ sub toc_routine {
 
 
     # Go through the index and fill hashes
-    foreach $key (keys %main::index) {
+    foreach my $key (keys %main::index) {
 	($tape,$file) = split(/\|/,$key);
 	if ($file =~ m/^\d+$/) {
 	    $tape_files{$tape}{$file} = $main::index{$key};
