@@ -709,11 +709,12 @@ sub backup {
 		$saveremote = $1;
 	    }
 
-	    # Replace piped commands with catch-script
-	    if ($cmd =~ s: \| : \| $exitscript :g) {
-		# Put on the front of the pipe as well
-		#  -Can't do this because of "cd <dir> &&" at front...
-		#  -It makes the cd happen in a subshell.
+	    # Replace piped or anded commands with catch-script
+	    #   -Not if the command started a subshell ( .. )
+	    if ($cmd =~ s: (\||&&) ([^\(]): $1 $exitscript $2:g) {
+		# You would think we'd put on the front of the pipe as well.
+		# Can't do this because of "cd <dir> &&" at front makes
+		# the cd happen in a subshell.
 		#$cmd = "$exitscript $cmd";
 	    }
 
@@ -3289,7 +3290,7 @@ sub split_and_echo {
     my $subsequent_tab;
 
     local($Text::Wrap::columns) = 76;
-    
+
     # Older perl's don't have this var. Use twice to shut up
     # -w in that case.  Output almost the same...
     local($Text::Wrap::separator) = " \\\n";
