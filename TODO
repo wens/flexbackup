@@ -6,10 +6,12 @@ Some of these might not happen
 
 Currently:
  - Check for mt blksize = factor of blksize
- - FIXMEs in code
+ - other FIXMEs in code
+
  - mbuffer testing w/ device (need mt_blksize not to be 0?)
  - mbuffer testing w/ remote
  - mbuffer testing w/ end of media
+
  - Test -test-tape-drive mod
 
  - Check old release for use_file + -erase.  nukes db entry for keyfile
@@ -17,9 +19,9 @@ Currently:
  - -erase for use_file wipes files+index+key?
 
  - Finish up -set / -dir
-     yell if given set not defined
      test with tapes too
      how to spec dirs with spaces?
+
  - Exclude paths, not just expressions?  per-fs?
 
 Cleanup/fix:

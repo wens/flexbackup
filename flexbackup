@@ -369,7 +369,7 @@ sub backup_routine {
 	if ($main::opt{'set'} eq 'all') {
 	    @do_sets = keys(%cfg::set);
 	    if (defined($main::tapedevice)) {
-		$_ = length(@do_sets) + 1;
+		$_ = scalar(@do_sets);
 		$_ = join(" ", @do_sets) . " ($_ tapes)";
 	    } else {
 		$_ = join(" ", @do_sets);
@@ -379,7 +379,7 @@ sub backup_routine {
 	    @do_sets = ($main::opt{'set'});
 	}
 
-	my $num_tapes = length(@do_sets);
+	my $num_tapes = scalar(@do_sets) - 1;
 	foreach my $this_set (@do_sets) {
 
 	    # Maybe retension
@@ -2742,20 +2742,26 @@ sub optioncheck {
 	my @do_sets;
 	if ($main::opt{'set'} eq 'all') {
 	    @do_sets = keys(%cfg::set);
+	    if (scalar(@do_sets) == 0) {
+		push(@main::errors,"no backup sets defined");
+	    }
 	} else {
 	    @do_sets = ($main::opt{'set'});
 	}
 
 	foreach my $this_set (@do_sets) {
-	    foreach my $dir (split(/\s+/,$cfg::set{$this_set})) {
-		if ($dir =~ /^(\S+):/g) {
-		    $main::remotehosts{$1} = 1;
-		} else {
-		    $main::local = 1;
+	    if (!defined($cfg::set{$this_set})) {
+		push(@main::errors,"set $this_set is not defined");
+	    } else {
+		foreach my $dir (split(/\s+/,$cfg::set{$this_set})) {
+		    if ($dir =~ /^(\S+):/g) {
+			$main::remotehosts{$1} = 1;
+		    } else {
+			$main::local = 1;
+		    }
 		}
 	    }
 	}
-
     }
 
     # Verbose flag
