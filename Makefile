@@ -9,8 +9,8 @@ tag: version commit
 
 tar: version commit tag
 	cd /tmp; cvs co -r $(CVSVER) flexbackup; mv flexbackup flexbackup-$(VER)
-	tar -C /tmp -c -v -X tar.exclude -f ../flexbackup-$(VER).tar.gz flexbackup-$(VER)
-	cd /tmp; cvs release -d flexbackup-$(VER)
+	tar -C /tmp -z -c -v -X tar.exclude -f ../flexbackup-$(VER).tar.gz flexbackup-$(VER)
+	cd /tmp; echo yes | cvs release -d flexbackup-$(VER)
 
 rpm: version commit tar
 
