@@ -340,7 +340,7 @@ sub backup_routine {
 	}
 	foreach my $host (keys %main::remotehosts) {
 	    &find_packaged_files($host);
-#            &find_changed_files($host);
+            &find_changed_files($host);
 	}
 	$main::pkg_delta_filelist = "$cfg::tmpdir/pkgdelta.$PROCESS_ID";
 	&line();
