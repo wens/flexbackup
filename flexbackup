@@ -5,7 +5,7 @@
 # $Id$
 # $Name$
 #
-#         >>>> Also see the README file <<<<
+#         >>>> Also see the README file & FAQ <<<<
 #
 # USAGE:
 #  flexbackup -help                : this message
@@ -41,7 +41,12 @@
 #  flexbackup -rmindex <key>       : force db delete of specified tape
 #  flexbackup -rmindex <key> -f <file>
 #                                  : force db delete of specified tape/filenumber
-#
+# TESTING:
+#  flexbackup -test-tape-drive     : tries writing/reading multiple files to make sure you
+#                                    have tape parameters set up correctly and it works
+#  flexbackup [opt] -n             : don't run actual dump or mt commands, just echo
+#  flexbackup [opt] -type filelist : special backup type that just saves list of files
+#                                    that would have been archvied
 # MISC:
 #  flexbackup -newtape             : erase & create new index key (but no backup)
 #  flexbackup -rmfile <file>       : if backups to disk, rm specific file & index info
@@ -57,7 +62,6 @@
 #  flexbackup -fs <x> -erase       : force a rewind/erase before backup
 #  flexbackup -fs <x> -norewind    : don't rewind tape after a single backup
 #  flexbackup [operation] -reten   : force a retension before read
-#  flexbackup [opt] -n             : don't run actual dump or mt commands
 #  flexbackup -version             : show version
 #
 ######################################################################
@@ -119,33 +123,34 @@ $main::zsh_pipe_exit = '; x=(${pipestatus[@]}); i=1; while [ $i -le ${#x[@]} ]; 
 
 %main::opt = ();
 if (! &main::GetOptions(\%main::opt,
-			"help",
 			"c=s",
-			"level=s",
-			"incremental",
-			"differential",
-			"full",
-			"fs=s",
-			"extract:s",
-			"files=s",
-			"restore:s",
-			"list:s",
 			"compare:s",
-			"num:i",
-			"toc:s",
-			"rmindex:s",
-			"f=s",
-			"rmfile:s",
-			"type=s",
 			"compress=s",
+			"d=s%",
 			"device=s",
+			"differential",
 			"erase!",
-			"rewind!",
-			"reten!",
-			"newtape",
-			"version",
+			"extract:s",
+			"f=s",
+			"files=s",
+			"fs=s",
+			"full",
+			"help",
+			"incremental",
+			"level=s",
+			"list:s",
 			"n",
-			"d=s%"
+			"newtape",
+			"num:i",
+			"restore:s",
+			"reten!",
+			"rewind!",
+			"rmfile:s",
+			"rmindex:s",
+			"test-tape-drive",
+			"toc:s",
+			"type=s",
+			"version"
 		  )) {
     &usage();
     exit(0);
@@ -235,9 +240,15 @@ if (defined($main::opt{'restore'})) {
     &line();
     &rmfile();
 
+} elsif (defined($main::opt{'test-tape-drive'})) {
+
+    &test_tape_drive();
+
 }
 
-untie(%main::index);
+if ($cfg::indexes eq 'true') {
+    untie(%main::index);
+}
 
 exit(0);
 
@@ -1544,6 +1555,8 @@ sub backup_filelist {
 	$stamp = &get_last_date($label, $level, 'filename');
     }
 
+    &log("| NOTE: Writing list of files that would have been backed up to current directory");
+
     $cmd = "cd \"$dir\" && ";
     $cmd .= &file_list_cmd( $dir, $stamp, 'newline', $level, $remote);
     $cmd .= "> $filelist; $main::path{cat} $filelist 1>&2; $main::path{cat} $filelist ";
@@ -1828,7 +1841,7 @@ sub extract_routine {
 
     } elsif ($cfg::type eq 'filelist') {
 
-        die("You can't extract the 'filelist' type, it's just for testing...");
+	die("You can't extract the 'filelist' type, it's just for testing...");
 
     } elsif ($cfg::type eq 'lha') {
 	my $tmpfile = "$cfg::tmpdir/lha.$PROCESS_ID";
@@ -2451,7 +2464,14 @@ sub optioncheck {
 
     # Check device (or dir)
     $main::ftape = 0;
-    if (-c $realdev) {
+    if ($cfg::type eq 'filelist') {
+
+        $main::use_file = 1;
+        chomp($cfg::device = `pwd`);
+        $cfg::device =~ s:/$::;
+        $cfg::indexes = 'false';
+
+    } elsif (-c $realdev) {
 
 	# Check for ftape driver
 	if ($realdev =~ /n?z?[qr]ft(\d+)/) {
@@ -2954,6 +2974,16 @@ sub optioncheck {
 	    $cfg::compress = "false";
 	}
 
+    } elsif ($cfg::type eq 'filelist') {
+
+	if ($cfg::compress =~ /^(gzip|bzip2|compress|zip)$/) {
+	    warn("Using type \"filelist\" with compress=$cfg::compress makes no sense");
+	    warn("Setting compression to false");
+	    $main::unz = "";
+	    $main::z = "";
+	    $cfg::compress = "false";
+	}
+
     } # type-specific
 
 
@@ -3065,7 +3095,7 @@ sub optioncheck {
     }
 
     # Mode
-    my (@modelist) = qw(fs list extract compare restore toc newtape rmindex rmfile);
+    my (@modelist) = qw(fs list extract compare restore toc newtape rmindex rmfile test-tape-drive);
     my @modes;
     my $modecount = 0;
     foreach my $mode (@modelist) {
@@ -3248,7 +3278,7 @@ sub maybe_get_filename {
 
     # Try and guess file types and commpression scheme
     # might as well since we are reading from a file in this case
-    if ($file =~ m/\.(dump|cpio|tar|star|pax|a|shar|filelist)\.(gz|bz2|Z|zip)$/) {
+    if ($file =~ m/\.(dump|cpio|tar|star|pax|a|shar)\.(gz|bz2|Z|zip)$/) {
 	$cfg::type = $1;
 	$cfg::compress = $2;
 	$cfg::type =~ s/^a$/ar/;
