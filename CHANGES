@@ -5,7 +5,7 @@ $Name$
 Version 
 
   - inital support of "-pkgdelta" with FreeBSD packages
-
+  - on FreeBSD, set use mt to 1-filemark behavior globally
 
 ----------------------------------------------------------------------
 Version 1.1.6 (20030313)

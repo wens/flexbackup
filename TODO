@@ -20,6 +20,7 @@ Cleanup/fix:
 
 Misc:
  - put faq in devel/stable trees so I can have two versions
+ - Add faq on files changing underneath tar 
  - re-word faq re trying by hand.
  - Add faq on max size
  - Add faq on -erase -newtape taking forever / erase_rewind_only
