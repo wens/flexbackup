@@ -1,6 +1,6 @@
 Summary: Flexible backup script
 Name: flexbackup
-%define version 0.9.4a2
+%define version 0.9.4a3
 Version: %{version}
 Release: 1
 Source: http://members.home.net/edwinh/flexbackup/flexbackup-%{version}.tar.gz
