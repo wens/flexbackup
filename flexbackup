@@ -2420,9 +2420,6 @@ sub optioncheck {
     &check(\$cfg::buffer_megs,'buffer_megs','exist');
     &check(\$cfg::pad_blocks,'pad_blocks');
     &check(\$cfg::device,'device','exist');
-    &check(\$cfg::blksize,'blksize','exist');
-    &check(\$cfg::mt_var_blksize,'mt_var_blksize');
-    &check(\$cfg::traverse_fs,'traverse_fs','false local all');
     &check(\$cfg::remoteshell,'remoteshell','ssh ssh2 ssh1 rsh');
     &check(\$cfg::remoteuser,'remoteuser','exist');
     &check(\$cfg::erase_tape_all_level_zero,'erase_tape_all_level_zero');
@@ -2435,28 +2432,6 @@ sub optioncheck {
     &check(\$cfg::staticlogs,'staticlogs');
     &check(\$cfg::prefix,'prefix','exist');
     &check(\$cfg::sprefix,'sprefix','exist');
-
-    &check(\$cfg::dump_length,'dump_length','exist');
-    &check(\$cfg::dump_use_dumpdates,'dump_use_dumpdates');
-
-    &check(\$cfg::afio_echo_block,'afio_echo_block');
-    &check(\$cfg::afio_compress_cache_size,'afio_compress_cache_size','exist');
-    &check(\$cfg::afio_compress_threshold,'afio_compress_threshold','exist');
-
-    &check(\$cfg::cpio_format,'cpio_format','bin odc newc crc tar ustar hpbin hpodc');
-
-    &check(\$cfg::tar_echo_record_num,'tar_echo_record_num');
-
-    &check(\$cfg::star_acl,'star_acl');
-    &check(\$cfg::star_fifo,'star_fifo');
-    &check(\$cfg::star_format,'star_format','tar star gnutar ustar pax xstar xustar exustar suntar');
-    &check(\$cfg::star_echo_block_num,'star_echo_block_num');
-
-    &check(\$cfg::pax_format,'pax_format','cpio bcpio sv4cpio sv4crc tar ustar');
-
-    &check(\$cfg::pkgdelta_archive_list,'pkgdelta_archive_list');
-    &check(\$cfg::pkgdelta_archive_unowned,'pkgdelta_archive_unowned');
-    &check(\$cfg::pkgdelta_archive_changed,'pkgdelta_archive_changed');
 
     if (@main::errors) {
 	print "\nErrors:\n";
@@ -2548,10 +2523,6 @@ sub optioncheck {
     }
 
     # Exclude regexp for find
-    # Deal with the old non-array setting that may be in the config file
-    if (!defined($cfg::exclude_expr[0]) and defined($cfg::exclude_expr)) {
-	$cfg::exclude_expr[0] = $cfg::exclude_expr;
-    }
     $main::exclude_expr = '';
     if (defined($cfg::exclude_expr[0])) {
 	my @excl_array;
@@ -2593,6 +2564,7 @@ sub optioncheck {
     }
 
     # Traverse mountpoints?
+    &check(\$cfg::traverse_fs,'traverse_fs','false local all');
     if ($cfg::traverse_fs eq "local") {
 	$main::mountpoint_flag = "! -fstype nfs ! -fstype smbfs";
     } elsif ($cfg::traverse_fs eq "all") {
@@ -2601,18 +2573,36 @@ sub optioncheck {
 	$main::mountpoint_flag = "-xdev";
     }
 
+    ##### Check for deprecated mt_var_blksize
+    ##### FIXME remove this section  after transition
+    if (!defined($cfg::mt_blksize) and defined($cfg::mt_var_blksize)) {
+	if ($cfg::mt_var_blksize eq "true") {
+	    $cfg::mt_blksize = 0;
+	} else {
+	    $cfg::mt_blksize = $cfg::blksize * 1024;
+	}
+	print "NOTE: Your config file uses deprecated \$mt_var_blksize.\n";
+	print "      Please update to using \$mt_blksize\n\n";
+	sleep(1);
+    }
+    ##### FIXME remove this section  after transition
+
+    # mt block size (in bytes not k)
+    if (!defined($cfg::mt_blksize)) {
+	$cfg::mt_blksize = $cfg::blksize * 1024;
+	$main::mt_blksize = $cfg::mt_blksize;
+    }
+    if ($cfg::mt_blksize !~ m/^\d+$/) {
+	push(@main::errors,"\$mt_blksize must be set to an integer");
+    } else {
+	$main::mt_blksize = $cfg::mt_blksize;
+    }
+
     # Block size
+    &check(\$cfg::blksize,'blksize','exist');
     if ($cfg::blksize !~ m/^\d+$/) {
 	push(@main::errors,"\$blksize must be set to an integer");
     }
-
-    # mt uses blocksize of bytes not k.  Also check for variable size
-    if ($cfg::mt_var_blksize eq "true") {
-	$main::mt_blksize = 0;
-    } else {
-	$main::mt_blksize = $cfg::blksize * 1024;
-    }
-
     if ($cfg::blksize ne '0') {
 	# buffer blocksize needs k appended
 	$buffer_blk_flag = "-s " . $cfg::blksize . "k";
@@ -2825,6 +2815,9 @@ sub optioncheck {
     # Type-specific setup
     if ($cfg::type eq 'dump') {
 
+	&check(\$cfg::dump_length,'dump_length','exist');
+	&check(\$cfg::dump_use_dumpdates,'dump_use_dumpdates');
+
 	$main::path{'dump'} = &checkinpath('dump');
 	$main::path{'restore'} = &checkinpath('restore');
 	push(@main::remoteprogs, $main::path{'dump'});
@@ -2842,6 +2835,10 @@ sub optioncheck {
 	}
 
     } elsif ($cfg::type eq 'afio') {
+
+	&check(\$cfg::afio_echo_block,'afio_echo_block');
+	&check(\$cfg::afio_compress_cache_size,'afio_compress_cache_size','exist');
+	&check(\$cfg::afio_compress_threshold,'afio_compress_threshold','exist');
 
 	$main::path{'afio'} = &checkinpath('afio');
 	push(@main::remoteprogs, $main::path{'afio'});
@@ -2903,10 +2900,14 @@ sub optioncheck {
 
     } elsif ($cfg::type eq 'cpio') {
 
+	&check(\$cfg::cpio_format,'cpio_format','bin odc newc crc tar ustar hpbin hpodc');
+
 	$main::path{'cpio'} = &checkinpath('cpio');
 	push(@main::remoteprogs, $main::path{'cpio'});
 
     } elsif ($cfg::type eq 'tar') {
+
+	&check(\$cfg::tar_echo_record_num,'tar_echo_record_num');
 
 	$main::path{'tar'} = &checkinpath('tar');
 	push(@main::remoteprogs, $main::path{'tar'});
@@ -2920,6 +2921,11 @@ sub optioncheck {
 	}
 
     } elsif ($cfg::type eq 'star') {
+
+	&check(\$cfg::star_acl,'star_acl');
+	&check(\$cfg::star_fifo,'star_fifo');
+	&check(\$cfg::star_format,'star_format','tar star gnutar ustar pax xstar xustar exustar suntar');
+	&check(\$cfg::star_echo_block_num,'star_echo_block_num');
 
 	$main::path{'star'} = &checkinpath('star');
 	push(@main::remoteprogs, $main::path{'star'});
@@ -2950,6 +2956,8 @@ sub optioncheck {
 	}
 
     } elsif ($cfg::type eq 'pax') {
+
+	&check(\$cfg::pax_format,'pax_format','cpio bcpio sv4cpio sv4crc tar ustar');
 
 	$main::path{'pax'} = &checkinpath('pax');
 	push(@main::remoteprogs, $main::path{'pax'});
@@ -3109,6 +3117,11 @@ sub optioncheck {
 
     # Package delta option
     if (defined($main::opt{'pkgdelta'})) {
+
+	&check(\$cfg::pkgdelta_archive_list,'pkgdelta_archive_list');
+	&check(\$cfg::pkgdelta_archive_unowned,'pkgdelta_archive_unowned');
+	&check(\$cfg::pkgdelta_archive_changed,'pkgdelta_archive_changed');
+
 	if ($main::opt{'pkgdelta'} eq 'rpm') {
 	    $main::pkgdelta = 'rpm';
 	    $main::path{'rpm'} = &checkinpath('rpm');
@@ -4807,7 +4820,7 @@ sub test_tape_drive () {
 
     if ($fail != 0) {
 	print "\nFAILURE! Problem with tape driver or parameters.  Please see the FAQ\n";
-	print "or try changing the \$blksize, \$pad_blocks, or \$mt_var_blksize settings.\n";
+	print "or try changing the \$blksize, \$pad_blocks, or \$mt_blksize settings.\n";
 	exit(1);
     } else {
 	print "SUCCESS! Tape drive parameters seem to work just fine\n";

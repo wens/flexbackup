@@ -10,9 +10,18 @@ Changes:
     either (a) not owned by a package, or (b) owned by a package but
     modified from the distributed version.
 
+    New config variables to tweak behavior:
+      $pkgdelta_archive_list
+      $pkgdelta_archive_unowned
+      $pkgdelta_archive_changed
+
   - Added 'filelist' type that doesn't back up anything, but prints/saves
-    the list of files that would have been done.  Good for debugging
+    the list of files that would have been archived.  Good for debugging
     timestamps, levels, and file exclusion.
+
+  - Changed boolean mt_var_blksize into mt_blocksize integer (in bytes).
+    Set to 0 for variable blocksize (old "true" value), comment out or
+    set to "$blksize * 1024" for old "false" value.
 
   - Added '-test-tape-drive' switch that just makes sure blocks, filemarks,
     and padding work as expected and we can read,write,compare.  If people
