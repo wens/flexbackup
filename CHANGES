@@ -5,7 +5,8 @@ $Name$
 Version 1.2.0 ()
 
 Changes:
-  - Added -pipe option to archive single dir to stdout
+  - Added -pipe option to archive single dir to stdout, or read archive
+    from stdin
   - Added -nodefaults option for debug
   - Merge devel -> stable
 

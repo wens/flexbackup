@@ -21,7 +21,7 @@
 #                                    <x> can be "rpm" or "freebsd" package systems
 #  flexbackup [...] -wday <n>      : backup only if the week day matches
 #                                    the input number.  Sunday is 0 or 7.
-#  flexbackup [...] -pipe          : write to stdout rather than archive/device
+#  flexbackup [...] -pipe          : write to stdout rather than file/device
 #
 # READING ARCHIVES:
 #  flexbackup -list                : list files in archive
@@ -38,7 +38,8 @@
 #                                    uses current tape position
 #  flexbackup [...] <file>         : if archiving to files rather than a device,
 #                                    list/extract/compare/restore options take
-#                                    a filename argument
+#  flexbackup [...] -pipe          : read archive from stdin
+#
 # INDEX RELATED:
 #  flexbackup -toc                 : list current device's table of contents
 #  flexbackup -toc all             : list all known table of contents
@@ -126,6 +127,10 @@ $::CONFFILE="/etc/flexbackup.conf";
 $::bash_pipe_exit = '; x=(${PIPESTATUS[@]}); i=0; while [ $i -lt ${#x[@]} ]; do [ ${x[$i]} -eq 0 ] || exit ${x[$i]}; i=$(($i+1)); done';
 $::zsh_pipe_exit = '; x=(${pipestatus[@]}); i=1; while [ $i -le ${#x[@]} ]; do [ ${x[$i]} -eq 0 ] || exit ${x[$i]}; i=$(($i+1)); done';
 
+# tar has a limit of this many chars in its volume label
+$::tar_max_label = 99;
+
+# Get commandline flags
 %::opt = ();
 if (! &::GetOptions(\%::opt,
 			"c=s",
@@ -868,7 +873,7 @@ sub backup {
     if (!defined($::debug)) {
 	foreach $cmd (@cmds) {
 
-	    if (defined($::use_stdout)) {
+	    if (defined($::use_pipe)) {
 		system("$cmd");
 	    } else {
 		if ($::shelltype{'localhost'} eq 'bash2') {
@@ -1297,6 +1302,10 @@ sub backup_tar {
     $cmd .= "--no-recursion ";
     $cmd .= "--totals ";
     if ($cfg::label ne 'false') {
+	if (length($title) > $::tar_max_label) {
+	    &log("| NOTE: truncating tar label (> $::tar_max_label chars)");
+	    $title = substr($title, 0, $::tar_max_label);
+	}
 	$cmd .= "--label \"$title\" ";
     }
     $cmd .= "$::tar_verb_flag ";
@@ -1775,7 +1784,10 @@ sub list_routine {
     } elsif ($cfg::type eq 'afio') {
 	$cmd .= "$::path{afio} -t ";
 	$cmd .= "-z ";
-	$cmd .= "-D $0 ";
+	# Don't use label reader if reading from pipe (needs stdin)
+	if (!defined($::use_pipe)) {
+	    $cmd .= "-D $0 ";
+	}
 	$cmd .= "$::afio_unz_flag ";
 	$cmd .= "$::afio_verb_flag ";
 	$cmd .= "$::afio_sparse_flag ";
@@ -1920,7 +1932,10 @@ sub extract_routine {
 	}
 	$cmd .= "-z ";
 	$cmd .= "-x ";
-	$cmd .= "-D $0 ";
+	# Don't use label reader if reading from pipe (needs stdin)
+	if (!defined($::use_pipe)) {
+	    $cmd .= "-D $0 ";
+	}
 	$cmd .= "$::afio_unz_flag ";
 	$cmd .= "$::afio_verb_flag ";
 	$cmd .= "$::afio_sparse_flag ";
@@ -2038,7 +2053,10 @@ sub compare_routine {
     } elsif ($cfg::type eq 'afio') {
 	$cmd .= "$::path{afio} -r ";
 	$cmd .= "-z ";
-	$cmd .= "-D $0 ";
+	# Don't use label reader if reading from pipe (needs stdin)
+	if (!defined($::use_pipe)) {
+	    $cmd .= "-D $0 ";
+	}
 	$cmd .= "$::afio_unz_flag ";
 	$cmd .= "$::afio_sparse_flag ";
 	$cmd .= "$::afio_blk_flag ";
@@ -2661,13 +2679,9 @@ sub optioncheck {
 	# Dump to stdout.
 	# Disable indexing, all messages to stderr
 	$::use_file = 1;
-	$::use_stdout = 1;
+	$::use_pipe = 1;
 	$cfg::indexes = 'false';
 	$cfg::device = '-';
-
-	if ($::mode !~ m/(set|dir|newtape)$/) {
-	    push(@::errors,"Can't use -pipe in read mode");
-	}
 
     } else {
 
@@ -2992,7 +3006,7 @@ sub optioncheck {
 
     } elsif (defined($::opt{'set'})) {
 
-	if (defined($::use_stdout)) {
+	if (defined($::use_pipe)) {
 	    push(@::errors,"can't use -set with -pipe option");
 	}
 
@@ -3178,7 +3192,10 @@ sub optioncheck {
 
 	if ($cfg::type eq 'copy') {
 	    if (!defined($::use_file)) {
-		push(@::errors,"Can't use copy unless archiving to disk!");
+		push(@::errors,"Can't use type \"copy\" unless archiving to disk!");
+	    }
+	    if (defined($::use_pipe)) {
+		push(@::errors,"Can't use type \"copy\" with -pipe!");
 	    }
 	}
 
@@ -3292,6 +3309,12 @@ sub optioncheck {
 
     } elsif ($cfg::type eq 'filelist') {
 
+	# FIXME allow this
+	if (defined($::use_pipe)) {
+	    push(@::errors,"Can't use type \"filelist\" with -pipe!");
+	}
+
+	# FIXME allow this
 	if ($cfg::compress =~ /^(gzip|bzip2|compress|zip)$/) {
 	    warn("Using type \"filelist\" with compress=$cfg::compress makes no sense");
 	    warn("Setting compression to false");
@@ -3578,12 +3601,17 @@ sub maybe_get_filename {
 	}
     }
 
-    # if the flag given but null, and $device was not set to a dir, just return
+    # If reading from stdin and we have -pipe switch...
+    if (defined($::use_pipe)) {
+	return('-');
+    }
+
+    # If the flag given but null, and $device was not set to a dir, just return
     if (($arg eq '') and (!defined($::use_file))) {
 	return($::device);
     }
 
-    # if the flag given but null, and $device is a dir, spew
+    # If the flag given but null, and $device is a dir, spew
     if (($arg eq '') and (defined($::use_file))) {
 	print STDERR "Error: when extracting from a file, you must specify file name.\n";
 	print STDERR "(like \"-list file.tar.bz2\")\n";
@@ -3909,7 +3937,7 @@ sub append_writer_cmd {
 	$dev = $::device;
     }
 
-    if (defined($::use_stdout)) {
+    if (defined($::use_pipe)) {
 
 	$cmd .= $::buffer_cmd;
 
@@ -3971,7 +3999,9 @@ sub setup_before_read {
 	    &mt("rewind","fsf $::opt{num}");
 	}
     } else {
-	if (defined($::use_file)) {
+	if (defined($::use_pipe)) {
+	    &log("| Reading from stdin (type=$cfg::type compress=$cfg::compress)");
+	} elsif (defined($::use_file)) {
 	    &log("| Reading from on-disk file $::device");
 	} elsif (defined($::blockdevice)) {
 	    &log("| Reading from block device $::device");
@@ -4016,12 +4046,22 @@ sub read_function {
     my $file = shift(@_);
     my $cmd;
 
-    # bfr/mbuffer need a blocking dd read ahead of them
-    if ($cfg::buffer =~ m/^(bfr|mbuffer)$/) {
-	$cmd = $::read_cmd . '"' . $file . '"' . $::buffer_cmd;
+    # If reading from stdin arg is '-'
+    if ($file eq '-') {
+
+	$cmd = $::buffer_cmd;
+	$cmd =~ s/^\s*\|\s*//; # Nuke leading " | " we normally use
+
     } else {
-	$cmd = $::read_cmd . '"' . $file . '"';
+
+	# bfr/mbuffer need a blocking dd read ahead of them
+	if ($cfg::buffer =~ m/^(bfr|mbuffer)$/) {
+	    $cmd = $::read_cmd . '"' . $file . '"' . $::buffer_cmd;
+	} else {
+	    $cmd = $::read_cmd . '"' . $file . '"';
+	}
     }
+
     return($cmd);
 
 }

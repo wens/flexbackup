@@ -6,17 +6,18 @@ Some of these might not happen
 
 Cleanup/fix:
 
+ - fix filelist with -pipe
  - Check -regex with '\(a\|b\)' with freebsd find
- - Need to pad for reads?  test all types
- - Test mbuffer more ; possibly remove
+
+ Blocked pending me having a work tape drive again:
+  - Need to pad for reads?  test all types.
+  - Test mbuffer more ; possibly remove
 
  - Better cleanup after error in backup
  - Clean up more $main:: vars, split into types or refactor code
  - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
  - If comp_log is changed, we don't nuke old logs that normally would be
    overwritten with ourselves if comp_log stayed the same. (cosmetic nit)
- - Try to refactor backup all/single, each fs, >1 tapes, etc.  Duplicated
-     logic in some spots..
  - Fix afio w/null (FreeBSD printf can't spit out null char)
  - Whole class of problems like:
     - Use dump combined flags (for older dumps that want abc not -a -b -c)
@@ -58,8 +59,6 @@ Misc:
 
 Features to add:
 
-  - pipe input option as well for reads?
-
   - Handle multi-volume backups (original idea w/ 'multibuf' never panned out)
 
       Found "multivol" program.
@@ -79,8 +78,6 @@ Features to add:
      and avoid the maybe-error in the index & what 'nextfile' is on the tape
 
  - Log tape sizes (output of buffer or dd or mt tell can be used?)
-
- - ftpbackup?
 
  - smbtar?
      doable - overload type 'tar'. smbtar triggers with a fs spec of something like
