@@ -2,17 +2,18 @@ Flexbackup todo list as of version $Name$
 
 Some of these might not happen, but I write them down anyway
 
- - finish incremental support for non-dump types
-     find -newer <file>
-     tar : -N "`date -r <file>`"
-     deal w/timestamps for remote files
+ - rm timestamp for failed dump
+ - optionscheck for only one mode
+ - test timestamps w remote files
  - finish testing list, extract, compare for non-dump types
  - FreeBSD checks out ok (hi john)
  - announce
      freshmeat, linux-tape, comp.os.linux.announce
      submit to metalab & redhat-contrib
 
- - resuurect my old drive and test ftape stuff again
+ - resurrect my old drive and test ftape stuff again
+ - why is tar mode busted?
+ - what if you try to do inncrementals and no level 0 exists?
  - log files for extract?
  - does restore compare subdirectories of mountpoints correctly?
  - exclude regexp's

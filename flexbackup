@@ -149,7 +149,8 @@ sub backup_routine {
         exit(0);
     }
 
-    &log('$Name$ $Id$ ');
+    &log('$Id$ ');
+    &log('$Name$ ');
     &log("Doing level $global::level backup of $global::opt{fs} using $cfg::type");
 
     # Figure out log file name & empty log file
@@ -162,9 +163,9 @@ sub backup_routine {
 
     # Remove old incremental log files
     # ("old" = any higher-numbered logs for this label)
-    opendir(DIR,"$cfg::logdir") or die("Can't open logdir: $!\n");
+    opendir(DIR,"$cfg::logdir") or die("Can't open cfg::logdir: $!\n");
     @files = readdir(DIR);
-    foreach (@files) {
+    foreach (reverse sort @files) {
         next if (! m/^$cfg::prefix$label\.([0-9])\.([0-9]+)$/);
         my $olddate = $2;
         if ($1 > $global::level) {
@@ -176,9 +177,9 @@ sub backup_routine {
 
     # Remove old incremental stamp files
     # ("old" = any higher-numbered logs for this label)
-    opendir(DIR,"$cfg::stampdir") or die("Can't open stampdir: $!\n");
+    opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $!\n");
     @files = readdir(DIR);
-    foreach (@files) {
+    foreach (reverse sort @files) {
         next if (! m/^$cfg::sprefix\.$label\.([0-9])$/);
         if ($1 > $global::level) {
             print "Removing old level $1 timestamp of $global::opt{fs}\n";
@@ -430,10 +431,10 @@ sub backup_afio {
     if ($global::level ne "0") {
         $tmpstamp = "/tmp/refdate.$label";
         $_ = &get_last_date($label,$global::level);
-        $string .= "touch -d \"$_\" $tmpstamp; ";
+        $string .= "touch -d \"$_\" $tmpstamp && ";
     }
 
-    $string .= "cd $dir; find . -xdev";
+    $string .= "cd $dir && find . -xdev";
 
     if ($global::level ne "0") {
          $string .= " -newer $tmpstamp";
@@ -442,9 +443,17 @@ sub backup_afio {
     $string .= " -print | afio -o $cfg::afio_compress $cfg::afio_verbose -b $cfg::afio_blksize -c $cfg::afio_buffer";
 
     if ($remote) {
-        $string .= " -B $tapehost%$cfg::remoteshell:$cfg::device\"";
+        $string .= " -B $tapehost%$cfg::remoteshell:$cfg::device";
     } else {
         $string .= " -B $cfg::device";
+    }
+
+    if ($global::level ne "0") {
+        $string .= " && rm -f $tmpstamp";
+    }
+
+    if ($remote) {
+        $string .= "\"";
     }
 
     return($string);
@@ -465,10 +474,10 @@ sub backup_cpio {
     if ($global::level ne "0") {
         $tmpstamp = "/tmp/refdate.$label";
         $_ = &get_last_date($label,$global::level);
-        $string .= "touch -d \"$_\" $tmpstamp; ";
+        $string .= "touch -d \"$_\" $tmpstamp && ";
     }
 
-    $string .= "cd $dir; find . -xdev";
+    $string .= "cd $dir && find . -xdev";
 
     if ($global::level ne "0") {
          $string .= " -newer $tmpstamp";
@@ -477,9 +486,17 @@ sub backup_cpio {
     $string .= " -print | cpio -o $cfg::cpio_verbose -H $cfg::cpio_format -C $cfg::cpio_blksize";
 
     if ($remote) {
-        $string .= " -F $tapehost:$cfg::device\"";
+        $string .= " -F $tapehost:$cfg::device";
     } else {
         $string .= " -F $cfg::device";
+    }
+
+    if ($global::level ne "0") {
+        $string .= " && rm -f $tmpstamp";
+    }
+
+    if ($remote) {
+        $string .= "\"";
     }
 
     return($string);
@@ -500,10 +517,10 @@ sub backup_tar {
     $string .= "tar -C $dir -c $cfg::tar_compress $cfg::tar_verbose -b $cfg::tar_blksize -l";
 
     if ($global::level ne "0") {
-        # With this one we dont have to copy the stampfile to the remote system
-        # since we only need the string from date -r on the stamp file
-        my $last_date = &get_last_date($label,$global::level);
-        $string .= " -N \'$last_date\'";
+        # With this one we don't have to put a stampfile on the remote system
+        # since we only need the date string
+        $_ = &get_last_date($label,$global::level);
+        $string .= " -N \'$_\'";
     }
 
     if ($remote) {
@@ -600,6 +617,8 @@ sub extract_routine {
 ######################################################################
 sub compare_routine {
 
+    &line();
+
     if ($cfg::type eq 'dump') {
         &mt('query');
         &line();
@@ -664,6 +683,37 @@ sub get_label {
     }
 
     return($label);
+
+}
+
+######################################################################
+# Return a date string of the timestamp file
+# from the last dump of this level or lower
+######################################################################
+sub get_last_date {
+
+    my($label,$level) = @_;
+    my $file;
+    my $targetfile = '';
+
+    opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $!\n");
+    my @files = readdir(DIR);
+    foreach $file (reverse sort @files) {
+        next if ($file !~ m/^$cfg::sprefix\.$label\.([0-9])$/);
+        if ($1 <= $global::level) {
+            $targetfile = "$cfg::stampdir/$file";
+            last;
+        }
+    }
+    close(DIR);
+
+    if ($targetfile ne '') {
+        chomp($_ = `date -r $targetfile`);
+        return($_);
+
+    }
+
+    return('');
 
 }
 
@@ -851,6 +901,12 @@ sub optioncheck {
 	die("\$type must be defined as afio, dump, tar, or cpio\n");
     }
 
+    # levels
+    if (defined($global::opt{'level'})) {
+        if ($global::opt{'level'} !~ m/^\d$/) {
+            die("-level must be 0 through 9 only\n");
+        }
+    }
 
 }
 
