@@ -340,7 +340,7 @@ sub backup_routine {
 	}
 	foreach my $host (keys %main::remotehosts) {
 	    &find_packaged_files($host);
-            &find_changed_files($host);
+	    &find_changed_files($host);
 	}
 	$main::pkg_delta_filelist = "$cfg::tmpdir/pkgdelta.$PROCESS_ID";
 	&line();
@@ -4300,7 +4300,6 @@ sub find_packaged_files {
 
     my $host = shift (@_);
 
-    # FIXME -n
     if ($main::delta eq 'rpm') {
 
 	my $cmd = "$main::path{rpm} -q -a -l";
@@ -4311,13 +4310,17 @@ sub find_packaged_files {
 	} else {
 	    &log("| Finding all files owned by RPM packages...");
 	}
-	open(LIST,"$cmd |") || die;
-	while(<LIST>) {
-	    if (m:^(/.*)$:) {
-		$main::packaged{$host}{$1} = 1;
+	if (defined($main::opt{'n'})) {
+	    &log("(debug) $cmd");
+	} else {
+	    open(LIST,"$cmd |") || die;
+	    while(<LIST>) {
+		if (m:^(/.*)$:) {
+		    $main::packaged{$host}{$1} = 1;
+		}
 	    }
+	    close(LIST);
 	}
-	close(LIST);
     }
 }
 
@@ -4330,7 +4333,6 @@ sub find_changed_files {
 
     my $host = shift (@_);
 
-    # FIXME -n
     if ($main::delta eq 'rpm') {
 
 	my $cmd = "$main::path{rpm} -V -a";
@@ -4342,15 +4344,19 @@ sub find_changed_files {
 	    &log("| Finding changed package files...");
 	}
 	&log("| May take quite a while, be patient");
-	open(LIST,"$cmd |") || die;
-	while(<LIST>) {
-	    # ex: if size, md5sum, and timestamp changed on a config file
-	    # S.5....T c /etc/ntp.conf
-	    if (m:^([\.S][\.M][\.5][\.D][\.L][\.U][\.G][\.T]) [dgc ] (.*)$:) {
-		$main::changed{$host}{$2} = 1;
+	if (defined($main::opt{'n'})) {
+	    &log("(debug) $cmd");
+	} else {
+	    open(LIST,"$cmd |") || die;
+	    while(<LIST>) {
+		# ex: if size, md5sum, and timestamp changed on a config file
+		# S.5....T c /etc/ntp.conf
+		if (m:^([\.S][\.M][\.5][\.D][\.L][\.U][\.G][\.T]) [dgc ] (.*)$:) {
+		    $main::changed{$host}{$2} = 1;
+		}
 	    }
+	    close(LIST);
 	}
-	close(LIST);
     }
 }
 
@@ -4570,7 +4576,6 @@ sub newtape () {
 #############################################################################
 sub test_tape_drive () {
 
-    # FIXME -n
     my $cmd;
     my $tmp1 = "$cfg::tmpdir/test1.$PROCESS_ID";
     my $tmp2 = "$cfg::tmpdir/test2.$PROCESS_ID";
@@ -4583,8 +4588,8 @@ sub test_tape_drive () {
     &line();
     sleep(10);
 
-    &log("| If for some reason this command does not finish within a few minutes,");
-    &log("| Hit CTRL-C, and adjust \$blksize, \$pad_blocks, or \$mt_var_blksize.");
+    &log("| If for some reason this prgram does not exit within a few minutes,");
+    &log("| Hit CTRL-C, and try adjusting \$blksize, \$pad_blocks, or \$mt_var_blksize.");
     &line();
 
     &newtape();
@@ -4596,9 +4601,13 @@ sub test_tape_drive () {
     &log("Writing test file #1");
     $cmd = "$main::path{cat} $0";
     $cmd = &append_writer_cmd($cmd);
-    system($cmd);
-    if ($CHILD_ERROR) {
-	$fail++;
+    if (!defined($main::opt{'n'})) {
+	system($cmd);
+	if ($CHILD_ERROR) {
+	    $fail++;
+	}
+    } else {
+	&log($cmd);
     }
 
     &mt('generic-query');
@@ -4607,9 +4616,13 @@ sub test_tape_drive () {
     &log("Writing test file #2");
     $cmd = "$main::path{cat} $0";
     $cmd = &append_writer_cmd($cmd);
-    system($cmd);
-    if ($CHILD_ERROR) {
-	$fail++;
+    if (!defined($main::opt{'n'})) {
+	system($cmd);
+	if ($CHILD_ERROR) {
+	    $fail++;
+	}
+    } else {
+	&log($cmd);
     }
 
     &mt('generic-query');
@@ -4637,15 +4650,19 @@ sub test_tape_drive () {
     } else {
 	$cmd .= "> $tmp1";
     }
-    system($cmd);
-    if ($CHILD_ERROR) {
-	$fail++;
+    if (!defined($main::opt{'n'})) {
+	system($cmd);
+	if ($CHILD_ERROR) {
+	    $fail++;
+	}
+    } else {
+	&log($cmd);
     }
 
     &mt('generic-query');
     &log('');
 
-    &log("Reading test file #1");
+    &log("Reading test file #2");
     $cmd = $main::read_cmd . '"' . $main::device . '"';
     if (defined($main::remotetapehost)) {
 	$cmd = &maybe_remote_cmd($cmd, $main::remotetapehost);
@@ -4658,7 +4675,14 @@ sub test_tape_drive () {
     } else {
 	$cmd .= "> $tmp2";
     }
-    system($cmd);
+    if (!defined($main::opt{'n'})) {
+	system($cmd);
+	if ($CHILD_ERROR) {
+	    $fail++;
+	}
+    } else {
+	&log($cmd);
+    }
 
     &mt('generic-query');
     &log('');
@@ -4666,14 +4690,22 @@ sub test_tape_drive () {
     &mt('rewind');
 
     &log("Comparing...");
-    system("$main::path{diff} -q $0 $tmp1");
-    if ($CHILD_ERROR) {
-	$fail++;
+    if (!defined($main::opt{'n'})) {
+	system("$main::path{diff} -q $0 $tmp1");
+	if ($CHILD_ERROR) {
+	    $fail++;
+	}
+    } else {
+	&log("$main::path{diff} -q $0 $tmp1");
     }
 
-    system("$main::path{diff} -q $0 $tmp2");
-    if ($CHILD_ERROR) {
-	$fail++;
+    if (!defined($main::opt{'n'})) {
+	system("$main::path{diff} -q $0 $tmp2");
+	if ($CHILD_ERROR) {
+	    $fail++;
+	}
+    } else {
+	&log("$main::path{diff} -q $0 $tmp2");
     }
 
     unlink $tmp1;
