@@ -11,7 +11,6 @@ make rsync
 
 make upload VER=x.x.x
   uploads files to sunsite
-  uploads files to rh contrib
   uploads files to sf.net file release incoming
 
 sourceforge.net file release (stupid web form not automatable)
