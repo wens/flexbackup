@@ -29,7 +29,7 @@ Features to add:
  - remote tape drive (rmt) support
      Caleb Crome <caleb@crome.org>
 
- Several suggestions of this type, need to sort out:
+ - Several suggestions of this type, need to sort out:
   o first verify behavior of dump using dumpdates
   o also re-check they way my timestamps work
   o then sort out the below
@@ -55,6 +55,8 @@ Features to add:
       up any file not in a package OR changed from a package. and the rpm list.
       once the above works make it work for debian packages
  - "no blocking at all" option
+ - handle tape sizes or end-of-tape situation (hard to do generically)
+ - handle multi-volume backups (original idea never panned out)
  - arbitratry "groups" that act sort of like "all"
  - multiple tapes for levels that aren't 0
  - extract options to not overwrite existing files
