@@ -1,6 +1,9 @@
 $Id$
 $Name$
 
+----------------------------------------------------------------------
+Version 1.0.3 (20030313)
+
 Bug fixes:
  - Only look for mt if we are using tape device
  - If using files, "-fs all", and and multiple array entries for $filesystems,
