@@ -4,7 +4,7 @@ SITE := $(HOME)/public_html/flexbackup
 RPM  := /usr/src/redhat
 DATE := $(shell date)
 
-SIZE = $(shell cd $(SITE);ls -sh flexbackup-$(VER).tar.gz)
+SIZE := $(shell cd $(SITE);ls -sh flexbackup-$(VER).tar.gz)
 
 commit:
 	cvs commit
