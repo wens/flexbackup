@@ -4,33 +4,34 @@ $Name$
 Flexbackup to-do list
 Some of these might not happen, but figured I should jot them down
 
+Test tapes again since it's been so long since I used it
+
 Move CVS to sourceforge.net
 
-Test everything again since it's been so long since I used it
+Try bfr or dbuffer (buffer seems unmaintained; no O_LARGEFILE)
 
-Fix so if if a remote fs backup errors out we know it 
-(errors lost right now)
+-------------------
 
-use -print0 for find and similar for the archivers
-  -need to use find's exclude not egrep (or egrep -0)
-  -how to fix the sed command? (not really needed, just for looks)
+Try against torture-test list:
+http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
 
-try bfr or dbuffer (buffer seems unmaintained; no O_LARGEFILE either)
-
-
+-------------------
 OLD LIST:
 
 when using files
   make lower numbered level nuke higher ones & rm index?
 
 Features to add:
+ - interactive restore-like shell for types besides dump
+      see notes below
+ - some "level" that uses rpm, verifies all packages, and just backs
+      up any file not in a package OR changed from a package. and the rpm list.
+ - once the above works make it work for debian packages
  - differential mode (all since previous higher level)
      interaction w/ logs
      interaction w/ files
  - "no blocking at all" option
  - make a manual page!  too many options now :)
- - interactive restore-like shell for types besides dump
-      see notes below
  - arbitratry "groups" that act sort of like "all"
  - multiple tapes for levels that aren't 0
  - Gnome driver/configurator utility
@@ -43,11 +44,12 @@ Features to add:
       option
  - encryption with gnupg
  - cd-rom burning (or just .iso type?) for full backups?
- - some "level" that uses rpm, verifies all packages, and just backs
-      up any file not in a package OR changed from a package. and the rpm list.
- - once the above works make it work for debian packages
  - put .zip back in if I can make it behave
-
+ - .zip as compression not archive type at least?  (can't unzip stdin)
+ - lha?
+ - star? (tar but w/ acl support)
+ - smbtar/smbclient?
+ - pax (just wraps tar/cpio)?
 
 Cleanup/fix:
  - make -extract -files for afio/cpio/zip recurse dirs

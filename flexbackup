@@ -98,6 +98,15 @@ if ($ARGV[0] =~ /flexbackup.volume_header_info/) {
 # This is changed during "make install"
 $main::CONFFILE="/etc/flexbackup.conf";
 
+# This took awhile to figure out.  if the shell is bash, we use this on the
+# end of any pipelines to see if any of the commands in the pipeline
+# failed.  In real 'sh', there is no way to do this, you only get the
+# status of the last command in the pipeline...
+#
+# Only used if $ENV{SHELL} contains "bash"
+#
+$main::bash_pipe_exit = '; x=(${PIPESTATUS[@]}); for index in `seq 0 $((${#x[@]}-1))`; do test ${x[$index]} -eq 0 || exit ${x[$index]} ; done';
+
 %main::opt = ();
 if (! &main::GetOptions(\%main::opt,
 			"help",
@@ -190,11 +199,12 @@ if (defined($main::opt{'restore'})) {
 
     &line();
     &mt("generic-blocksize $main::mt_blksize");
-    &log('| Rewinding & erasing tape...');
+    if (defined($main::tapedevice)) {
+	&log('| Rewinding & erasing tape...');
+    }
     &mt('rewind');
     &maybe_delete_old_index();
-    &mt('rewind');
-    &mt('generic-erase');
+    &mt('rewind','generic-erase');
     &new_tape_key();
     &line();
 
@@ -288,7 +298,9 @@ sub backup_routine {
 
 	    # Maybe rewind/erase
 	    if ($main::do_erase == 1) {
-		&log('| Rewinding & erasing tape...');
+		if(defined($main::tapedevice)) {
+		    &log('| Rewinding & erasing tape...');
+		}
 		&mt('rewind');
 		&maybe_delete_old_index();
 		&mt('rewind');
@@ -297,7 +309,9 @@ sub backup_routine {
 	    } else {
 		&mt('rewind');
 		$tape_key = &get_tape_key();
-		&log('| Making sure tape is at end of data...');
+		if(defined($main::tapedevice)) {
+		    &log('| Making sure tape is at end of data...');
+		}
 		&mt('generic-eod');
 	    }
 
@@ -310,8 +324,10 @@ sub backup_routine {
 	    &log("| Filesystems = $list");
 
 	    # Show tape position
-	    &line();
-	    &mt('generic-query');
+	    if (defined($main::tapedevice)) {
+		&line();
+		&mt('generic-query');
+	    }
 
 	    # Iterate over the filesystems and back 'em up
 	    foreach $fs (split(/\s+/,$list)) {
@@ -331,17 +347,19 @@ sub backup_routine {
 
 		    # Maybe rewind (usually true)
 		    if ($main::do_rewind_after == 1) {
-			&log("| Rewinding...");
+			if(defined($main::tapedevice)) {
+			    &log("| Rewinding...");
+			}
 			&mt('rewind');
 			&line();
 		    }
 
-		    if (!defined($main::use_file)) {
+		    if (defined($main::tapedevice)) {
 			&toc_routine($tape_key);
 		    }
 
 		    $tapecounter++;
-		    if (!defined($main::use_file)) {
+		    if (defined($main::tapedevice)) {
 			print "\n";
 			while(1) {
 			    print "---> Insert tape \#$tapecounter (enter y to continue) ";
@@ -361,13 +379,17 @@ sub backup_routine {
 
 	# Maybe retension
 	if ($main::do_reten == 1) {
-	    &log('| Retensioning tape...');
+	    if (defined($main::tapedevice)) {
+		&log('| Retensioning tape...');
+	    }
 	    &mt('retension');
 	}
 
 	# Maybe rewind/erase
 	if ($main::do_erase == 1) {
-	    &log('| Rewinding & erasing tape...');
+	    if (defined($main::tapedevice)) {
+		&log('| Rewinding & erasing tape...');
+	    }
 	    &mt('rewind');
 	    &maybe_delete_old_index();
 	    &mt('rewind');
@@ -376,21 +398,27 @@ sub backup_routine {
 	} else {
 	    &mt('rewind');
 	    $tape_key = &get_tape_key();
-	    &log('| Making sure tape is at end of data...');
+	    if (defined($main::tapedevice)) {
+		&log('| Making sure tape is at end of data...');
+	    }
 	    &mt('generic-eod');
 	}
 
-	&line();
-	&mt('generic-query');
+	if (defined($main::tapedevice)) {
+	    &line();
+	    &mt('generic-query');
+	}
 
 	&backup($main::opt{'fs'},$tape_key);
 
     } # end all or single fs
 
-    &line();
+    if (defined($main::tapedevice)) {
+	&line();
+    }
 
     # Maybe rewind (usually true)
-    if ($main::do_rewind_after == 1) {
+    if (($main::do_rewind_after == 1) and defined($main::tapedevice)) {
 	&log("| Rewinding...");
 	&mt('rewind');
     }
@@ -557,16 +585,21 @@ sub backup {
     # Enough fooling around... run it.
     if (!defined($main::opt{'n'})) {
 	foreach $cmd (@cmds) {
-	    open(CMD, "$cmd 2>&1 |") || die;
-	    open(LOG, ">>$main::log") || die;
+	    my $pid=$$;
+	    if ($ENV{SHELL} =~ m/bash/) {
+		open(CMD,"($cmd " . $main::bash_pipe_exit . ") 2>&1 |") || die;
+	    } else {
+		open(CMD,"($cmd) 2>&1 |") || die;
+	    }
+	    open(LOG,">>$main::log") || die;
 	    while(<CMD>) {
-		print;
-		print LOG;
+		print $_;
+		print LOG $_;
 	    }
 	    close(CMD);
 	    if ($CHILD_ERROR) {
 		&log('');
-                &log("ERROR from backup, exiting");
+		&log("ERROR from backup, exiting");
 		&log("offending command: $cmd");
 		exit(1);
 	    }
@@ -578,7 +611,7 @@ sub backup {
     &line();
 
     # Create timestamp file, but use date from before the backup started
-    # so next time we will catch files that might have been toucehd during the run
+    # so next time we will catch files that might have been touched during the run
     $_ = &current_time();
     &log("| Backup start: $main::date_at_start");
     &log("| Backup end:   $_");
@@ -605,6 +638,7 @@ sub backup_dump {
     my $label = shift(@_);
     my $dir = shift(@_);
     my $cmd = '';
+    my @cmds;
     my $tmpstamp = "$cfg::tmpdir/refdate.$$";
     my $date_flag;
 
@@ -626,6 +660,7 @@ sub backup_dump {
 	$date_flag = "-T \"$_\" ";
     }
 
+    $cmd = '';
     $cmd .= "dump -$main::level ";
     $cmd .= "$main::dump_blk_flag ";
     if ($cfg::dump_use_dumpdates eq "true") {
@@ -646,7 +681,9 @@ sub backup_dump {
     # Append writer stuff
     $cmd .= "$main::buffer_cmd $main::buffer_write_flags" . "$main::device";
 
-    return($cmd);
+    push(@cmds, $cmd);
+
+    return(@cmds);
 
 
 }
@@ -669,20 +706,17 @@ sub backup_afio {
 
     $_ = &get_last_date($label);
 
-    $cmd = '';
-    $cmd .= "$main::path{touch} $main::touch_flag \"$_\" $tmpstamp";
+    $cmd = "$main::path{touch} $main::touch_flag \"$_\" $tmpstamp";
     push(@cmds, &maybe_remote_cmd($cmd));
 
     # list of file exenstions to not compress
     if (($cfg::compress !~ /^(false|hardware)$/) and ($cfg::nocompress_types ne "")) {
-        $cmd = '';
-	$cmd .= "echo \"$cfg::nocompress_types\" > $tmpnocompress";
-        push(@cmds, &maybe_remote_cmd($cmd));
+	$cmd = "echo \"$cfg::nocompress_types\" > $tmpnocompress";
+	push(@cmds, &maybe_remote_cmd($cmd));
 	$no_compress = "-E $tmpnocompress";
     }
 
-    $cmd = '';
-    $cmd .= "$main::path{'printf'} \"\\nVolume Label:\\n$title\\n\\n\" > $tmplabel";
+    $cmd = "$main::path{'printf'} \"\\nVolume Label:\\n$title\\n\\n\" > $tmplabel";
     push(@cmds, &maybe_remote_cmd($cmd));
 
     $cmd = '';
@@ -690,11 +724,10 @@ sub backup_afio {
     $cmd .= "(echo //--$tmplabel flexbackup.volume_header_info && ";
     $cmd .= "$main::path{'find'} . $main::mountpoint_flag ";
     $cmd .= "-newer $tmpstamp ";
-    $cmd .= "-print | ";
-    $cmd .= "$main::path{'sed'} -e \"s%^\./%%\" ";
-    $cmd .= "$main::exclude_cmd ";
+    $cmd .= "$main::exclude_expr ";
+    $cmd .= "-print0 ";
     $cmd .= ") | ";
-    $cmd .= "$main::path{'afio'} -o ";
+    $cmd .= "$main::path{'afio'} -o -0 ";
     $cmd .= "$no_compress ";
     $cmd .= "-z ";
     $cmd .= "$main::afio_z_flag ";
@@ -719,8 +752,7 @@ sub backup_afio {
 
     push(@cmds, $cmd);
 
-    $cmd = '';
-    $cmd .= "$main::path{'rm'} -f $remove";
+    $cmd = "$main::path{'rm'} -f $remove";
     push(@cmds, &maybe_remote_cmd($cmd));
 
     return(@cmds);
@@ -741,28 +773,26 @@ sub backup_cpio {
 
     $_ = &get_last_date($label);
 
-    $cmd = '';
-    $cmd .= "$main::path{'touch'} $main::touch_flag \"$_\" $tmpstamp";
+    $cmd = "$main::path{'touch'} $main::touch_flag \"$_\" $tmpstamp";
     push(@cmds, &maybe_remote_cmd($cmd));
 
     # Kludge a title for by replacing / with - in the title
     # then touch a file in the dir we are going to back up.
     $title =~ s%/%-%g;
     $title =~ s% %_%g;
-    $cmd = '';
-    $cmd .= "$main::path{'touch'} \"$dir/$title\"";
+    $cmd = "$main::path{'touch'} \"$dir/$title\"";
     push(@cmds, &maybe_remote_cmd($cmd));
 
     $cmd = '';
     $cmd .= "cd $dir && ";
     $cmd .= "$main::path{'find'} . $main::mountpoint_flag ";
     $cmd .= "-newer $tmpstamp ";
-    $cmd .= "-print | ";
-    $cmd .= "$main::path{'sed'} -e \"s%^\./%%\" ";
-    $cmd .= "$main::exclude_cmd ";
+    $cmd .= "$main::exclude_expr ";
+    $cmd .= "-print0 ";
     $cmd .= "| ";
-    $cmd .= "$main::path{'cpio'} --create ";
-    $cmd .= "--format $cfg::cpio_format ";
+    $cmd .= "$main::path{'cpio'} -o ";
+    $cmd .= "-0 ";
+    $cmd .= "-H $cfg::cpio_format ";
     $cmd .= "$main::cpio_verb_flag ";
     $cmd .= "$main::cpio_blk_flag ";
     $cmd .= "$main::z";
@@ -778,8 +808,7 @@ sub backup_cpio {
 
     push(@cmds, $cmd);
 
-    $cmd = '';
-    $cmd .= "$main::path{'rm'} -f $tmpstamp \"$dir/$title\"";
+    $cmd = "$main::path{'rm'} -f $tmpstamp \"$dir/$title\"";
     push(@cmds, &maybe_remote_cmd($cmd));
 
     return(@cmds);
@@ -800,19 +829,18 @@ sub backup_tar {
 
     $_ = &get_last_date($label);
 
-    $cmd = '';
-    $cmd .= "$main::path{'touch'} $main::touch_flag \"$_\" $tmpstamp";
+    $cmd = "$main::path{'touch'} $main::touch_flag \"$_\" $tmpstamp";
     push(@cmds, &maybe_remote_cmd($cmd));
 
     $cmd = '';
     $cmd .= "cd $dir && ";
     $cmd .= "$main::path{find} . $main::mountpoint_flag ";
     $cmd .= "-newer $tmpstamp ";
-    $cmd .= "-print | ";
-    $cmd .= "$main::path{sed} -e \"s%^\./%%\" ";
-    $cmd .= "$main::exclude_cmd ";
+    $cmd .= "$main::exclude_expr ";
+    $cmd .= "-print0 ";
     $cmd .= "| ";
     $cmd .= "$main::path{tar} --create ";
+    $cmd .= "--null ";
     $cmd .= "--files-from=- ";
     $cmd .= "--same-permissions ";
     $cmd .= "--same-order ";
@@ -838,8 +866,7 @@ sub backup_tar {
 
     push(@cmds, $cmd);
 
-    $cmd = '';
-    $cmd .= "$main::path{'rm'} -f $tmpstamp";
+    $cmd = "$main::path{'rm'} -f $tmpstamp";
     push(@cmds, &maybe_remote_cmd($cmd));
 
     return(@cmds);
@@ -892,7 +919,7 @@ sub list_routine {
 	$cmd .= "--file -";
 
     } elsif ($cfg::type eq 'cpio') {
-	$cmd .= "$main::path{'cpio'} --list ";
+	$cmd .= "$main::path{'cpio'} -t ";
 	$cmd .= "$main::cpio_verb_flag ";
 	$cmd .= "$main::cpio_blk_flag";
     }
@@ -977,12 +1004,12 @@ sub extract_routine {
 	$cmd .= "--file -";
 
     } elsif ($cfg::type eq 'cpio') {
-	$cmd .= "$main::path{'cpio'} --extract ";
+	$cmd .= "$main::path{'cpio'} -i ";
 	if (defined($main::opt{'files'})) {
-	    $cmd .= "--pattern-file=$newlist ";
+	    $cmd .= "-E $newlist ";
 	}
-	$cmd .= "--preserve-modification-time ";
-	$cmd .= "--make-directories ";
+	$cmd .= "-m ";
+	$cmd .= "-d ";
 	$cmd .= "$main::cpio_verb_flag ";
 	$cmd .= "$main::cpio_blk_flag";
 
@@ -1323,6 +1350,7 @@ sub mt {
 		opendir(DIR,$cfg::device) or die ("Can't open dir $cfg::device: $OS_ERROR");
 		foreach(readdir(DIR)) {
 		    next if (m:^\.\.?$:);
+		    next if (m%^$cfg::keyfile$%);
 		    &log("| Erasing old archive $_");
 		    unlink("$cfg::device/$_") or die ("Can't rm $cfg::device/$_: $OS_ERROR");
 		}
@@ -1378,18 +1406,11 @@ sub mt {
 
 	if (defined($main::use_file)) {
 
-	    if (defined($main::opt{'fs'})) {
-		&log("| Archiving to file; \"mt $operation\" skipped");
-	    } else {
-		&log("| Reading from file; \"mt $operation\" skipped");
-	    }
+	    # mt ops skipped for files
 
 	} elsif (defined($main::blockdevice)) {
-	    if (defined($main::opt{'fs'})) {
-		&log("| Archiving to block device; \"mt $operation\" skipped");
-	    } else {
-		&log("| Reading from block device; \"mt $operation\" skipped");
-	    }
+
+	    # mt ops skipped for block device
 
 	} elsif (defined($main::opt{'n'})) {
 	    &log("| (debug) $main::mt -f $main::device $operation");
@@ -1505,6 +1526,7 @@ sub optioncheck {
 	if ($realdev =~ /n?z?[qr]ft(\d+)/) {
 	    $main::ftape = 1;
 	}
+	$main::tapedevice = 1;
 
     } elsif (-b $realdev) {
 
@@ -1540,13 +1562,12 @@ sub optioncheck {
     }
 
     # Exclude regexp for find
-    $main::exclude_cmd = '';
     # Deal with the old non-array setting that may be in the config file
     if (!defined($cfg::exclude_expr[0]) and defined($cfg::exclude_expr)) {
 	$cfg::exclude_expr[0] = $cfg::exclude_expr;
     }
+    $main::exclude_expr = '';
     if (defined($cfg::exclude_expr[0])) {
-	$main::path{'egrep'} = &checkinpath('egrep');
 	my @excl_array;
 	my $expr;
 	foreach $expr (@cfg::exclude_expr) {
@@ -1576,14 +1597,13 @@ sub optioncheck {
 	    # quotes and there is _no way_ for csh do deal with $ in that
 	    # situation.  This took a LONG time to figure out.
 	    if ($expr =~ m/^(.+)\$$/) {
-		$expr = '"' . $1 . '"' . '$'; #'# quote to keep font-lock happy
+		$expr = '"' . $1 . '"' . '$';
 	    } else {
 		$expr = '"' . $expr . '"';
 	    }
 
-	    push(@excl_array, "$main::path{egrep} -v $expr");
+	    $main::exclude_expr .= "-not -regex $expr ";
 	}
-	$main::exclude_cmd = "| " . join(" | ", @excl_array);
     }
 
     # Traverse mountpoints?
@@ -1621,7 +1641,7 @@ sub optioncheck {
     $main::tar_blk_flag = "-b $main::tar_blk_flag";
     # cpio blocks are in bytes
     $main::cpio_blk_flag = $cfg::blksize * 1024;
-    $main::cpio_blk_flag = "--io-size $main::cpio_blk_flag";
+    $main::cpio_blk_flag = "-C $main::cpio_blk_flag";
 
     # Generic compression (afio archives will do their own flags)
     if ($cfg::compress eq "gzip") {
@@ -1710,7 +1730,6 @@ sub optioncheck {
     $main::path{'rm'} = &checkinpath('rm');
     $main::path{'tee'} = &checkinpath('tee');
     $main::path{'find'} = &checkinpath('find');
-    $main::path{'sed'} = &checkinpath('sed');
 
     # Filesystems
     $main::num_tapes = -1;
@@ -1726,19 +1745,19 @@ sub optioncheck {
 	$main::afio_verb_flag = "-v";
 	$main::dump_verb_flag = "-v";
 	$main::tar_verb_flag = "--verbose";
-	$main::cpio_verb_flag = "--verbose";
+	$main::cpio_verb_flag = "-v";
     } else {
 	$main::afio_verb_flag = "";
 	$main::dump_verb_flag = "";
 	$main::tar_verb_flag = "";
-	$main::cpio_verb_flag = "--dot";
+	$main::cpio_verb_flag = "";
     }
 
     # Sparse flag
     if ($cfg::sparse eq "true") {
 	$main::afio_sparse_flag = "";
 	$main::tar_sparse_flag = "--sparse";
-	$main::cpio_sparse_flag = "--sparse";
+	$main::cpio_sparse_flag = "";
     } else {
 	$main::afio_sparse_flag = "-j";
 	$main::tar_sparse_flag = "";
@@ -1755,16 +1774,16 @@ sub optioncheck {
 	if ($cfg::compress =~ m/^(gzip|bzip2|compress)$/) {
 
 	    if ($cfg::compress eq "gzip") {
-		$main::afio_z_flag = "-P $cfg::compress -Q -$cfg::compr_level -Z";
-		$main::afio_unz_flag = "-P $cfg::compress -Q -d -Q -q -Z";
+		$main::afio_z_flag = "-P $main::path{$cfg::compress} -Q -$cfg::compr_level -Z";
+		$main::afio_unz_flag = "-P $main::path{$cfg::compress} -Q -d -Q -q -Z";
 
 	    } elsif ($cfg::compress eq "bzip2") {
-		$main::afio_z_flag = "-P $cfg::compress -Q -$cfg::compr_level -Z";
-		$main::afio_unz_flag = "-P $cfg::compress -Q -d -Z";
+		$main::afio_z_flag = "-P $main::path{$cfg::compress} -Q -$cfg::compr_level -Z";
+		$main::afio_unz_flag = "-P $main::path{$cfg::compress} -Q -d -Z";
 
 	    } elsif ($cfg::compress eq "compress") {
-		$main::afio_z_flag = "-P $cfg::compress -Q -c -Z";
-		$main::afio_unz_flag = "-P $cfg::compress -Q -d -Q -c -Z";
+		$main::afio_z_flag = "-P $main::path{$cfg::compress} -Q -c -Z";
+		$main::afio_unz_flag = "-P $main::path{$cfg::compress} -Q -d -Q -c -Z";
 
 	    }
 	    $main::unz = ""; # Reset & just use this for reading the archive file.
@@ -2144,10 +2163,10 @@ sub checkinpath {
     my ($dir, @path);
 
     if (defined($cfg::path{$file})) {
-        if (-x $cfg::path{$file}) {
-            print "path $file = $cfg::path{$file}\n";
-            return "$cfg::path{$file}";
-        }
+	if (-x $cfg::path{$file}) {
+	    print "path $file = $cfg::path{$file}\n";
+	    return "$cfg::path{$file}";
+	}
     }
 
     @path = split(/:/,$ENV{'PATH'});
@@ -2179,15 +2198,20 @@ sub run_or_echo_then_query {
 	&log("(debug) command output would be here");
     }
 
-    &line();
-    &mt('generic-query');
+    if (defined($main::tapedevice)) {
+	&line();
+	&mt('generic-query');
+    }
+
     &line();
 
     # Maybe rewind (usually false for reads)
     if ($main::do_rewind_after == 1) {
-	&log("| Rewinding...");
-	&mt('rewind');
-	&line();
+	if (defined($main::tapedevice)) {
+	    &log("| Rewinding...");
+	    &mt('rewind');
+	    &line();
+	}
     }
 
 
@@ -2206,7 +2230,11 @@ sub maybe_remote_cmd {
     }
 
     if ($main::remote) {
-	$cmd  = "$cfg::remoteshell $main::remote " . $quote . $cmd . $quote;
+	if ($ENV{SHELL} =~ m/bash/) {
+	    $cmd  = "$cfg::remoteshell $main::remote " . $quote . $cmd . $main::bash_pipe_exit . $quote;
+	} else {
+	    $cmd  = "$cfg::remoteshell $main::remote " . $quote . $cmd . $quote;
+	}
     } else {
 	$cmd  = "$cmd";
     }
@@ -2229,14 +2257,14 @@ sub setup_before_read {
     &mt("generic-blocksize $main::mt_blksize");
 
     # Maybe retension
-    if ($main::do_reten == 1) {
+    if (($main::do_reten == 1) and defined($main::tapedevice)) {
 	&log('| Retensioning tape...');
 	&mt('retension');
     }
 
     if (defined($main::opt{'num'})) {
-	if (defined($main::use_file)) {
-	    &die
+	if (!defined($main::tapedevice)) {
+	    die("Can't use -num unless reading from tape");
 	} else {
 	    &log("| Positioning tape at file number $main::opt{num}");
 	    &mt("rewind","fsf $main::opt{num}");
@@ -2244,13 +2272,18 @@ sub setup_before_read {
     } else {
 	if (defined($main::use_file)) {
 	    &log("| Reading from on-disk file $main::device");
+	} elsif (defined($main::blockdevice)) {
+	    &log("| Reading from block device $main::device");
 	} else {
 	    &log("| Reading from current tape position");
 	}
     }
 
-    &line();
-    &mt('generic-query');
+    if (defined($main::tapedevice)) {
+	&line();
+	&mt('generic-query');
+    }
+
     &line();
 
     $cmd .= $main::read_cmd . $main::device . " | ";
@@ -2372,6 +2405,11 @@ sub split_and_echo {
     my @chunks;
     my $line = "";
     my $linelimit = 76;
+
+    # Nuke this, it's messy to see in the log
+    if ($ENV{SHELL} =~ m/bash/) {
+	$string =~ s/; x=\(\${PIPESTATUS.*done//;
+    }
 
     # This looks convolved but it auto-wraps the
     # command lines down to a nice width for printing...

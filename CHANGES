@@ -1,8 +1,40 @@
 $Id$
 $Name$
 
-Version 0.9.9 (200301XX)
 
+----------------------------------------------------------------------
+Version 0.9.9.1 (20030107)
+
+Changes:
+  - use -print0 with find and null-terminated list flags for the archive
+      programs.  Now any weird filenames should be valid.  This necessitated
+      using find -regex rather than an egrep pipeline.  (FreeBSD find now has
+      "-regex" so the old argument is gone).
+  - also took out the sed of the leading "./" since the null-terminated
+      file list messed it up too.  Was just for looks anyway.
+  - when using files don't bother telling us we skip mt operations all the
+      time
+  - cpio flags use the short options so more compatible with other cpio's
+  - cleaned out tape-only messages when using files
+
+Bug fixes:
+
+  - Pipeline error status - if something went wrong with a shell pipeline, and
+      it was not the _last_ command, you can't catch it! I never knew this
+      was impossible...
+
+      bash has a PIPESTATUS array variable for this, so I took care of it for
+      systems where SHELL is bash...
+
+      I don't know if there is a way to fix it generically.
+
+  - Actually log output. doh! (related to above, actually)
+
+  - afio compress programs honor the path overrides
+
+
+----------------------------------------------------------------------
+Version 0.9.9 (20030106)
 
 Wonder of wonders... I'm actually using this again.  The guy who registered
 flexbackup.org never picked up the files or updates his page so I'm

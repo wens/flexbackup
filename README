@@ -12,7 +12,7 @@ Flexible backup script.
 
 Features:
    o Easy to configure
-   o Uses dump, afio, tar, or cpio archivers
+   o Uses dump, afio, tar (gnu), or cpio archivers
    o Backup, list, compare, extract, extract list of files modes
    o Compression and buffering options for all backup types
    o Full (0) and 1-9 levels of incremental backup (like "dump")
@@ -26,8 +26,8 @@ Software needed:
    o perl
    o fileutils, findutils
    o one or more of
-       dump/restore afio tar cpio
-   o mt
+       dump/restore, afio, gnu tar, cpio
+   o mt (if using tapes)
    o gzip, bzip2, or compress (optional)
    o buffer (optional) [needs patches for 2+GB file support]
 
