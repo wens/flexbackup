@@ -32,6 +32,9 @@ Misc:
 
 Features to add:
 
+  - give index in commandline - if current tape does not have that index,
+    dont' do anything
+
   - Remote directores for to-disk backups
 
   - Remote device via Net::FTP ?
