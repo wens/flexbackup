@@ -518,10 +518,8 @@ sub backup {
     system("touch -t $main::date_at_start $cfg::stampdir/$cfg::sprefix$label.$main::level");
     &line();
 
-    # tar is causing me fits; mt right after archive operations is giving i/o errors
-    if ($cfg::type eq 'tar') {
-        sleep 10;
-    }
+    # Got errors unless I paesed before trying to access the tape right way...
+    sleep 10;
 
     # Show where we are on the tape
     &mt('generic-query');
