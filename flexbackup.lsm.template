@@ -3,7 +3,7 @@ Title: flexbackup
 Version: VERSION
 Entered-date: DATE
 Description:
-Flexible backup script.
+A flexible backup tool
 Features:
    o Easy to configure
    o Uses dump, afio, tar, cpio, star, zip, or pax

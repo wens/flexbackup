@@ -16,7 +16,7 @@ Requires: fileutils
 Requires: findutils
 
 %description
-Flexible backup script.
+A flexible backup tool
 
 Features:
    o Easy to configure
