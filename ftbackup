@@ -1,0 +1,409 @@
+#!/usr/bin/perl -w
+######################################################################
+#
+# Edwin Huffstutler, <edwinh@computer.org>
+# $Id$
+#
+# Script to deal with running dump/restore with ftape
+# I did this to to help automate my life, keep standard logs, etc.
+# Also uses "vtblc" to label contents of dump tapes
+#
+# USAGE:
+#
+#  ftbackup -help      : this message
+#           -list      : list tape contents
+#           -restore   : restore from current tape position
+#                        into your current working directory
+#           -compare   : compare archive at current tape position
+#                        with the files on the system
+#           -all       : dump all filesystems, level 0
+#           -fs <fs>   : dump filesystem <fs>
+#           -level <n> : dump all filesystems, level n
+#
+# NOTE: Level 0 backups assume a new tape - will trigger
+# tape retension and erasure.  Other level dumps move tape to
+# current end of data and start the dump there
+#
+# Log files are of the format <prefix><fs>.<level>.<mmddyy>
+# Lower-level dumps will wipe out all higher-level log files in
+# the log directory for that filesystem.
+#
+# This script calls "ftmt", "dump", and "restore"; it also makes use
+# of "vtblc" from the contrib directory of ftape-3.04
+#
+######################################################################
+
+#
+# CONFIGURE
+# Edit this section
+#
+
+$archivetype = "afio";
+
+# List the filesystems you wish to dump for "all"
+# Just a simple space-separated list
+# remote filesystems should denoted as "host:dir"
+# $filesystems = "/ /usr /home";
+$filesystems = "/ /var ";
+$filesystems .= " goliath:/ goliath:/accounts goliath:/local goliath:/var";
+$filesystems .= " leopard:/ leopard:/accounts";
+
+# Log files
+$prefix = "";                # log files will start with this prefix
+$logdir = "/var/log/backup"; # directory where log files will be stored
+
+# Tape parameters
+$device    = "/dev/nqft0";  # device to dump to (non-rewinding)
+$rawdevice = "/dev/rawft0"; # raw version of the above
+$blksize   = "10";          # blocksize (k) to use
+
+# For "afio" only
+$buffer = "500";             # Number of blocks to buffer
+
+# For "dump" only
+$length    = "3100000";     # estimated tape size (k). This number doesn't really
+                            # do much but help "dump" get size estimates
+
+#
+# End of configuration section
+#
+######################################################################
+
+use English;
+use Getopt::Long;
+
+# No output buffering
+$OUTPUT_AUTOFLUSH = 1;
+
+%flag = ();
+GetOptions(\%flag,
+	   'help','restore','compare','fs=s','level=i'
+	   );
+
+# Give usage message
+if (!$ARGV[0]
+    or ($ARGV[0] eq "help")
+    or ($ARGV[0] eq "-h")) {
+    &usage();
+    exit(0);
+}
+
+
+# Get date
+chomp($date=`date +%m%d%y`);
+
+# Set blocksize if not default
+if ($blksize != 10) {
+    $_ = $blksize * 1024;
+    system("ftmt -f $device setblk $_");
+    if ($?) {
+	die("Error from ftmt setblk, exiting...\n");
+    }
+}
+
+$what = $ARGV[0];
+
+if ("$what" eq "restore") {
+
+   # If the 1st arg is "restore", just run restore and exit
+   exec("restore -v -i -b $blksize -f $device");
+   die "Failed exec of restore";
+
+} elsif ("$what" eq "compare") {
+
+   # If the 1st arg is "compare", check dump vs. filesystem
+   exec("restore -C -b $blksize -f $device");
+   die "Failed exec of restore";
+
+} elsif ("$what" eq "list") {
+
+    # Just list contents
+    system("ftmt -f $device rewind");
+    if ($?) {
+	die("Error from ftmt, exiting...\n");
+    }
+    exec("vtblc -p -f $rawdevice");
+    die "Failed exec of vtblc";
+
+}
+
+
+# Get dump level...
+$level = $ARGV[1];
+$level = 0 if (!$ARGV[1]);
+
+# Figure out log file name
+$tag = $what;
+if ($what ne 'all') {
+    $tag =~ s:^/::;
+    $tag =~ s:/:-:g;
+    if ($tag eq '') {
+	$tag = 'root';
+    } elsif ($tag =~ m/^(.+):-$/) {
+	$tag = "$1:root";
+    }
+    if (! -d "$what" && ($what !~ m/^.+:.+/)) {
+	print "Can't dump $what, no such directory\n";
+	exit(1);
+    }
+}
+
+
+REDOLOG:
+# Empty log file
+$log = "$logdir/$prefix" . $tag . "." . $level . "." . $date;
+if (! open(LOG,">$log")) {
+  die "Can't write to $log: $!\n";
+}
+close(LOG);
+
+
+if (($level != 0) and ($archivetype =~ /(afio|tar)/)) {
+    &log("$archivetype can't do incremental - using level 0");
+    $level = 0;
+    goto REDOLOG;
+}
+
+
+# Remove old incremental log files
+# ("old" = any higher-numbered logs for this "tag")
+opendir(DIR,"$logdir") or die("Can't open logdir: $!\n");
+@files = readdir(DIR);
+foreach (@files) {
+    next if (! m/^$prefix$tag\.([0-9])\.([0-9]+)$/);
+    if ($1 > $level) {
+	print "Removing old level $1 log of $what ($date)\n";
+	unlink("$logdir/$_") or warn("Can't remove $_: $!\n");
+    }
+}
+close(DIR);
+
+
+##########################
+#
+# Main dump routine
+#
+##########################
+&log('Script version: $Id$ ');
+&log("Doing level $level backup of $what using $archivetype");
+if ($what eq 'all') {
+
+    # All filesystems
+    if ($level eq "0") {
+	# Level zero - rewind and erase a new tape
+	&log('Retensioning tape...');
+	&mt('retension');
+	&log('Erasing tape...');
+	&mt('erase');
+	$nextfile = 0;
+
+    } else {
+	# Incremental dump - list what's on it, then go to end of tape
+	$nextfile = &contents();
+	&log('Making sure tape is at end of data...');
+	&mt('eom');
+    }
+
+    # Iterate over the filesystems and back 'em up
+    foreach (split(/\s+/,$filesystems)) {
+	&backup($archivetype,$_,$nextfile);
+	$tag{$nextfile} = "$archivetype $_ ($level)";
+	$nextfile++;
+    }
+
+    &line();
+    &log('Updating table of contents...');
+    &mt('rewind');
+    foreach (keys %tag) {
+	&tag($_,$tag{$_});
+    }
+
+} else {
+
+    # Just one filesystem.  list what's on the tape first
+    $nextfile = &contents();
+    &log('Making sure tape is at end of data...');
+    &mt('eom');
+    &backup($archivetype,$what,$nextfile);
+    &line();
+    &log('Updating table of contents...');
+    &mt('rewind');
+    &tag($nextfile,"$archivetype $what ($level)");
+}
+
+# Print out new contents
+&contents();
+
+exit(0);
+
+
+######################################################################
+# Rewind & print TOC using vtblc
+# returns an integer that is the next file number
+######################################################################
+sub contents {
+    my($output,$filenumber);
+    &mt('rewind');
+    &log('');
+    $output=`vtblc -p -f $rawdevice 2>&1`;
+    &log($output);
+    &log('');
+    $filenumber = -1;
+    foreach (split("\n",$output)) {
+        # Nr  Id          Label
+        #-------------------------------
+        #  0 VTBL "/var (level 9)
+	next if m/^\s+Nr\s+/;
+	next if m/^----------/;
+	if (m/^\s+(\d+)\s+\S+\s+\"/) {
+	    $filenumber = $1;
+	}
+    }
+    $filenumber++;
+    return($filenumber);
+}
+
+######################################################################
+# Modify a table of contents entry
+######################################################################
+sub tag {
+    my($filenum,$title) = @_;
+    system("vtblc -f $rawdevice -# $filenum -m date -m label=\'$title\'");
+}
+
+######################################################################
+# Backup a filesystem
+######################################################################
+sub backup {
+
+    my($type,$dir,$filenum) = @_;
+    my($string,$host,$tapehost);
+
+    if ($type eq 'dump') {
+	$string = &backup_dump($dir,$filenum);
+    } elsif ($type eq 'afio') {
+	$string = &backup_afio($dir,$filenum);
+    } elsif ($type eq 'tar') {
+	$string = &backup_tar($dir,$filenum);
+    } else {
+	die;
+    }
+
+    &line();
+    &log("Running \"$string\"");
+    &log("Backup will be file number $filenum");
+    &line();
+    system("$string 2>&1 | tee -a $log");
+    if ($?) {
+	&log("Error from $type backup, exiting....\n");
+	exit(1);
+    }
+    &line();
+    &mt('getsize');
+}
+
+
+######################################################################
+# Return command to backup a filesystem using dump
+######################################################################
+sub backup_dump {
+    my($dir,$filenum) = @_;
+    my($string,$host,$tapehost);
+
+    if ($dir =~ s/^(.+):(.+)$/$2/) {
+	$host = $1;
+	chomp($tapehost = `hostname`);
+	$string = "rsh $host \"/sbin/rdump $level"."uBbf $length $blksize $tapehost:$device $dir\"";
+    } else {
+	$string = "dump $level"."uBbf $length $blksize $device $dir";
+    }
+    return($string);
+}
+
+
+######################################################################
+# Return command to backup a filesystem using compressed afio
+######################################################################
+sub backup_afio {
+    my($dir,$filenum) = @_;
+    my($string,$host,$tapehost);
+
+    if ($dir =~ s/^(.+):(.+)$/$2/) {
+	$host = $1;
+	chomp($tapehost = `hostname`);
+	$string = "cd $dir; find . -xdev -print";
+	$string = "rsh $host -n \"$string | afio -o -Z -v -b $blksize" . "k -c $buffer -B $tapehost:$device\"";
+    } else {
+	$string = "cd $dir ; find . -xdev -print";
+	$string = "$string | afio -o -Z -v -b $blksize" . "k -c $buffer -B $device";
+    }
+    return($string);
+}
+
+
+######################################################################
+# Return command to backup a filesystem using tar
+######################################################################
+sub backup_tar {
+    my($dir,$filenum) = @_;
+    my($string,$host,$tapehost);
+
+    if ($dir =~ s/^(.+):(.+)$/$2/) {
+	$host = $1;
+	chomp($tapehost = `hostname`);
+	$string = "rsh $host \"tar -z --block-compress -c -v -l --totals -f $tapehost:$device $dir\"";
+    } else {
+	$string = "rsh $host \"tar -z --block-compress -c -v -l --totals -f $device $dir\"";
+    }
+    return($string);
+}
+
+
+######################################################################
+# Echo message to screen and log
+######################################################################
+sub log {
+    my($msg) = @_;
+    print "$msg\n";
+    open(LOG,">>$log");
+    print LOG "$msg\n";
+    close(LOG);
+}
+
+######################################################################
+# Echo a line to both screen and log
+######################################################################
+sub line {
+    print "----------------------------------------\n";
+    open(LOG,">>$log");
+    print LOG "----------------------------------------\n";
+    close(LOG);
+}
+
+######################################################################
+# Do a tape operation
+######################################################################
+sub mt {
+    my($operation) = @_;
+    system("ftmt -f $device $operation 2>&1 | tee -a $log");
+    if ($?) {
+	&log("Error from ftmt, exiting....\n");
+        exit(1);
+    }
+}
+
+######################################################################
+# Print usage summary from the header
+######################################################################
+sub usage {
+    open(FILE,"$0") or die "Can't open $0: $!\n";
+    while(<FILE>) {
+	last if (m/^\#\s+USAGE:/);
+    }
+    while(<FILE>) {
+	last if (m/^\#\#\#\#\#\#\#/);
+	s/^\#//;
+	print;
+    }
+    close(FILE);
+}
