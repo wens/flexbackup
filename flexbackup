@@ -241,7 +241,10 @@ exit(0);
 ######################################################################
 sub backup_routine {
 
-# FIXME better on exit if error.... (clean log, etc)
+    # FIXME better on exit if error....
+    # (clean the log, finish the fs loop, etc)
+    # Find any die/exit from wahtever this calls past logfile open,
+    # and perculate it up...
 
     my @files;
     my $label;
@@ -549,6 +552,9 @@ sub backup {
     my $remote;
     my $tapehost;
     my $indexkey;
+    my $catchexit;
+    my $exitscript = "$cfg::tmpdir/collectexit.$PROCESS_ID.sh";
+    my $result = "$cfg::tmpdir/exitstatus.$PROCESS_ID";
 
     &line();
 
@@ -671,31 +677,46 @@ sub backup {
 	@cmds = &backup_zip($label, $localdir, $title, $level, $remote);
     }
 
-
-
-    # Use pipeline exitcode hook if /bin/sh can't report pipeline status
-    my $s = "$cfg::tmpdir/collectexit.$PROCESS_ID.sh";
-    my $r = "$cfg::tmpdir/pipeexitstatus.$PROCESS_ID";
-    if ($main::shelltype{'localhost'} =~ m/^(unknown|bash1|ksh)$/) {
-	unshift(@cmds, "rm -f $r; echo '#!/bin/sh' > $s; echo '\"\$@\"'>> $s; echo '[ \$? = 0 ] || echo \$? >> $r' >> $s; chmod u+x $s");
-	push(@cmds, "[ ! -e $r ]");
-	push(@cmds, "rm -f $s $r");
-
+    # Strip multiple spaces
+    foreach my $cmd (@cmds) {
+	$cmd =~ s/\s+/ /g;
     }
 
+   # Use pipeline exitcode hook if /bin/sh can't report pipeline status
+    if ($main::shelltype{'localhost'} =~ m/^(unknown|bash1|ksh)$/) {
+
+	$catchexit = 1;
+
+	unlink($result);
+	open(SCR, "> $exitscript") || die;
+	print SCR '#!/bin/sh' . "\n";
+	print SCR '"$@"' . "\n";;
+	print SCR '[ $? = 0 ] || echo $@ >> ' . $result . "\n";
+	close(SCR);
+	chmod(0755, $exitscript);
+
+	push(@cmds, "[ ! -e $result ]");
+    }
+
+    # Replace piped commands with exit status collector if we need to
     foreach my $cmd (@cmds) {
+	if (defined($catchexit)) {
 
-	# Strip multiple spaces
-	$cmd =~ s/\s+/ /g;
+	    # Save ssh commands temporarily so we don't replace pipes inside them
+	    my $saveremote;
+	    if ($cmd =~ s/($cfg::remoteshell .* \'.*\')/XXXflexbackupXXX/) {
+		$saveremote = $1;
+	    }
 
-	# FIXME don't do this for remote stuff in the ssh...
-        # FIXME make the script with perl since its local
-        # FIXME unlink it with perl since its local
-	# Replace piped commands with exit status collector if we need to
-	if ($main::shelltype{'localhost'} =~ m/^(unknown|bash1|ksh)$/) {
-	    $cmd =~ s:[^\|]\| :\| $s :g;
+	    # Replace piped commands with catch-script
+	    # Put on the front of the pipe as well
+	    if ($cmd =~ s: \| : \| $exitscript :g) {
+		$cmd = "$exitscript $cmd";
+	    }
+
+	    # Put any ssh stuff back
+	    $cmd =~ s:XXXflexbackupXXX:$saveremote:;
 	}
-
     }
 
     # Format commands for nice printing
@@ -724,25 +745,37 @@ sub backup {
 		print LOG $_;
 	    }
 	    close(CMD);
+
 	    if ($CHILD_ERROR) {
 		&log('');
 		&log("ERROR from backup, exiting");
 
-		# FIXME if using exit trick, cat the error file
-		&log("offending command: $cmd");
+		# If using exit trick, cat the result file; otherwise use normal output
+		if (defined($catchexit)) {
+		    my $out = `cat $result`;
+		    &log("offending command(s):\n$out");
+		} else {
+		    &log("offending command(s):\n$cmd");
+		}
 
 		# Put ERROR in the index if tapedevice, or nuke index if file
 		if (defined($indexkey)) {
 		    if (defined($main::use_file)) {
 			delete $main::index{$indexkey};
 		    } else {
-			$main::index{$indexkey} = "[ERROR during write, may not be valid] " . $main::index{$indexkey};
+			$main::index{$indexkey} = "**ERROR during write, valid?** " . $main::index{$indexkey};
 		    }
 		}
 		# If file, rm botched file regardless of index
 		if (defined($main::use_file)) {
 		    unlink($main::device);
 		}
+
+		if(defined($catchexit)) {
+		    unlink($result);
+		    unlink($exitscript);
+		}
+
 		exit(1);
 	    }
 	    close(LOG);
@@ -779,6 +812,11 @@ sub backup {
 
     # Show where we are on the tape
     &mt('generic-query');
+
+    if (defined($catchexit)) {
+	unlink($result);
+	unlink($exitscript);
+    }
 
 }
 
@@ -3887,15 +3925,12 @@ sub check_shell {
     my $host = shift(@_);
     my $pipecmd;
 
+    $pipecmd = 'set x = 1 && test $x && echo csh:yes; echo tcsh:$tcsh; echo bash:$BASH_VERSION; echo zsh:$ZSH_VERSION; echo ksh:$KSH_VERSION';
+
     if ($host eq 'localhost') {
 	print "| Checking /bin/sh on this machine... ";
     } else {
 	print "| Checking shell on $host... ";
-    }
-
-    $pipecmd = 'set x = 1 && test $x && echo csh:yes; echo tcsh:$tcsh; echo bash:$BASH_VERSION; echo zsh:$ZSH_VERSION; echo ksh:$KSH_VERSION';
-    if ($host eq 'localhost') {
-    } else {
 	$pipecmd = "$main::remoteshell $host '" . $pipecmd . "'";
     }
 
