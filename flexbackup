@@ -29,7 +29,7 @@
 #                                    with the files in your current directory
 #  flexbackup -restore             : as above, but interactive restore
 #                                    (dump type only for now)
-#  flexbackup [operation] -num <n> : read file number n from tape
+#  flexbackup [operation] -num <n> : read file number n
 #  flexbackup [operation] <file>   : if archiving to files rather than a device,
 #                                    list/extract/compare/restore options take
 #                                    a filename argument
@@ -45,6 +45,7 @@
 # MISC:
 #  flexbackup -newtape             : erase & create new index key (but no backup)
 #  flexbackup -rmfile <file>       : if backups to disk, rm specific file & index info
+#  flexbackup -rmfile all          : if backups to disk, rm all files & index for dir
 #  flexbackup [opt] -c <file>      : use <file> instead of /etc/flexbackup.conf
 #                                    for configuration
 #  flexbackup [opt] -type <x>      : override $type from config file
@@ -199,7 +200,7 @@ if (defined($main::opt{'restore'})) {
 } elsif (defined($main::opt{'rmindex'})) {
 
     &line();
-    &rmindex();
+    &rmindex($main::opt{'rmindex'}, $main::opt{'f'});
 
 } elsif (defined($main::opt{'newtape'})) {
 
@@ -739,7 +740,7 @@ sub backup_dump {
     my $remote = shift(@_);
     my $cmd = '';
     my @cmds;
-    my $stamp = "$cfg::tmpdir/refdate.$$";
+    my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
     my $date_flag;
 
 
@@ -808,9 +809,9 @@ sub backup_afio {
     my $remote = shift(@_);
     my $cmd = '';
     my @cmds;
-    my $stamp = "$cfg::tmpdir/refdate.$$";
-    my $tmplabel = "$cfg::tmpdir/label.$$";
-    my $tmpnocompress = "$cfg::tmpdir/nocompress.$$";
+    my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
+    my $tmplabel = "$cfg::tmpdir/label.$PROCESS_ID";
+    my $tmpnocompress = "$cfg::tmpdir/nocompress.$PROCESS_ID";
     my $remove;
     my $no_compress = '';
 
@@ -887,7 +888,7 @@ sub backup_cpio {
     my $remote = shift(@_);
     my $cmd = '';
     my @cmds;
-    my $stamp = "$cfg::tmpdir/refdate.$$";
+    my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
     my $remove;
 
     if (defined($remote) and ($level != 0)) {
@@ -953,7 +954,7 @@ sub backup_tar {
     my $remote = shift(@_);
     my $cmd = '';
     my @cmds;
-    my $stamp = "$cfg::tmpdir/refdate.$$";
+    my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
 
     if (defined($remote) and ($level != 0)) {
 	$_ = &get_last_date($label, $level, 'numeric');
@@ -1017,7 +1018,7 @@ sub backup_star {
     my $remote = shift(@_);
     my $cmd = '';
     my @cmds;
-    my $stamp = "$cfg::tmpdir/refdate.$$";
+    my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
 
     if (defined($remote) and ($level != 0)) {
 	$_ = &get_last_date($label, $level, 'numeric');
@@ -1083,7 +1084,7 @@ sub backup_pax {
     my $remote = shift(@_);
     my $cmd = '';
     my @cmds;
-    my $stamp = "$cfg::tmpdir/refdate.$$";
+    my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
     my $remove;
 
     if (defined($remote) and ($level != 0)) {
@@ -1150,8 +1151,8 @@ sub backup_zip {
     my $remote = shift(@_);
     my $cmd = '';
     my @cmds;
-    my $stamp = "$cfg::tmpdir/refdate.$$";
-    my $tmpzip = "$cfg::tmpdir/tmp$$.zip";
+    my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
+    my $tmpzip = "$cfg::tmpdir/archive.$PROCESS_ID.zip";
     my $remove;
 
     if (defined($remote) and ($level != 0)) {
@@ -1274,7 +1275,7 @@ sub list_routine {
 	$cmd .= "$main::pax_verb_flag ";
 
     } elsif ($cfg::type eq 'zip') {
-	my $tmpfile = "$cfg::tmpdir/zip.$$";
+	my $tmpfile = "$cfg::tmpdir/zip.$PROCESS_ID";
 	$cmd .= "$main::path{cat} > $tmpfile ; ";
 	$cmd .= "$main::path{unzip} -l ";
 	$cmd .= "$main::zip_verb_flag ";
@@ -1293,7 +1294,7 @@ sub list_routine {
 sub extract_routine {
 
     my $restore_files = '';
-    my $newlist = "$cfg::tmpdir/extract.$$";
+    my $newlist = "$cfg::tmpdir/extract.$PROCESS_ID";
     my $cmd;
 
     $main::log = "flexbackup.extract." . &current_time('numeric') . ".log";
@@ -1398,7 +1399,7 @@ sub extract_routine {
 	}
 
    } elsif ($cfg::type eq 'zip') {
-	my $tmpfile = "$cfg::tmpdir/zip.$$";
+	my $tmpfile = "$cfg::tmpdir/zip.$PROCESS_ID";
 	$cmd .= "$main::path{cat} > $tmpfile ; ";
 	$cmd .= "$main::path{unzip} ";
 	$cmd .= "$tmpfile ";
@@ -1807,21 +1808,6 @@ sub mt {
 	# mt flavors for erase
 	# (some mt's have no "erase", just rewind before starting...)
 	if ($operation eq 'generic-erase') {
-
-
-	    # If using files, an mt erase (from -newtape) rm's all files in the dir
-	    # FIXME this is a dumb spot for it.  Do I really even want this behavior?
-	    #if (defined($main::use_file)) {
-	    #    opendir(DIR,$cfg::device) or die ("Can't open dir $cfg::device: $OS_ERROR");
-	    #    foreach(readdir(DIR)) {
-	    #        next if (m:^\.\.?$:);
-	    #        next if (m%^$cfg::keyfile$%);
-	    #        &log("| Erasing old archive $_");
-	    #        unlink("$cfg::device/$_") or die ("Can't rm $cfg::device/$_: $OS_ERROR");
-	    #    }
-	    #    closedir(DIR);
-	    #
-	    #}
 
 	    if ($cfg::erase_rewind_only eq "true") {
 		$operation = 'rewind';
@@ -2916,7 +2902,7 @@ sub checkinpath {
 	} elsif (($cfg::path{$file} =~ m:^\s*sudo\s+(\S+):) or
 		 ($cfg::path{$file} =~ m:^\s*sudo\s+-u\s+\S+\s+(\S+):)) {
 
-	    &checkinpath{'sudo'};
+	    &checkinpath('sudo');
 
 	    # some sort of sudo...
 	    my $prog = $1;
@@ -3377,14 +3363,14 @@ sub get_tape_key {
 	    chomp($key);
 	    if ($key !~ m/^\d+$/) {
 		if (!defined($quiet)) {
-		    &log("| ERROR: This tape doesn't have an index! (use -erase?)");
+		    &log("| ERROR: This tape doesn't have an index! (use -erase or -newtape?)");
 		}
 		$main::nextfile = 0;
 		return('');
 	    }
 	} else {
 	    if (!defined($quiet)) {
-		&log("| ERROR: This tape doesn't have an index! (use -erase?)");
+		&log("| ERROR: This tape doesn't have an index! (use -erase or -newtape?)");
 	    }
 	    $main::nextfile = 0;
 	    return('');
@@ -3530,24 +3516,27 @@ sub toc_routine {
 ######################################################################
 sub rmindex {
 
+    my $key = shift(@_);
+    my $file = shift(@_);
     my $tape;
     my $filenum;
+
     return if $cfg::indexes eq "false";
 
-    if ($main::opt{'rmindex'} =~ m/^\d+$/) {
+    if ($key =~ m/^\d+$/) {
 
 	# This section deletes a whole index record, or maybe just
 	# individual file records
 	foreach (sort keys %main::index) {
 	    ($tape,$filenum) = split(/\|/,$_);
-	    if (defined($main::opt{'f'})) {
 
+	    if (defined($file)) {
 		# One file entry
-		if (($tape eq $main::opt{'rmindex'})
+		if (($tape eq $key)
 		    and
 		    (defined($main::use_file) or ($filenum != 0))
 		    and
-		    ($filenum eq $main::opt{'f'})) {
+		    ($filenum eq $file)) {
 		    &log("| Deleting record for tape $tape file $filenum");
 		    if (defined($main::opt{'n'})) {
 			&log("| (debug) delete \$main::index{$tape|$filenum}");
@@ -3559,7 +3548,7 @@ sub rmindex {
 	    } else {
 
 		# Whole tape/dir entry
-		if ($tape eq $main::opt{'rmindex'}) {
+		if ($tape eq $key) {
 		    &log("| Deleting record for tape $tape file $filenum");
 		    if (defined($main::opt{'n'})) {
 			&log("| (debug) delete \$main::index{$tape|$filenum}");
@@ -3573,7 +3562,7 @@ sub rmindex {
 	&line();
 	return;
 
-    } elsif ($main::opt{'rmindex'} eq "all") {
+    } elsif ($key eq "all") {
 
 	&log("| Removing all in database!!!");
 	&log("| Hit CTRL-C to abort within 5 seconds..");
@@ -3584,7 +3573,7 @@ sub rmindex {
 	}
 
     } else {
-	die("Invalid key or key|fileno spec $main::opt{rmindex}");
+	die("Invalid key or key|fileno spec $key");
     }
 
 
@@ -3603,33 +3592,37 @@ sub rmfile {
 
     my $file = "$cfg::device/$main::opt{'rmfile'}";
 
-    if (-e $file) {
+    $key = &get_tape_key('quiet');
 
-	$key = &get_tape_key('quiet');
+    if ($main::opt{'rmfile'} eq 'all') {
+
+	# Nuke all files in this dir
+	opendir(DIR,$cfg::device) or die ("Can't open dir $cfg::device: $OS_ERROR");
+	foreach(readdir(DIR)) {
+	    next if (m:^\.\.?$:);
+	    next if (m%^$cfg::keyfile$%);
+	    &log("| Erasing archive $_");
+	    unlink("$cfg::device/$_") or die ("Can't rm $cfg::device/$_: $OS_ERROR");
+	}
+	closedir(DIR);
+
+	# Nuke db entry for this key
+	if ($key ne '') {
+	    &rmindex($key);
+	}
+
+    } elsif (-e $file) {
 
 	&log("| Deleting file $file");
 	unlink($file) or die ("Can't rm $file: $OS_ERROR");
-
 	if ($key ne '') {
-	    foreach (sort keys %main::index) {
-		($tape,$filenum) = split(/\|/,$_);
-
-		if (($tape eq $key) and ($filenum eq $main::opt{'rmfile'})) {
-		    &log("| Deleting record for $file");
-		    if (defined($main::opt{'n'})) {
-			&log("| (debug) delete \$main::index{$tape|$filenum}");
-		    } else {
-			delete $main::index{"$tape|$filenum"};
-		    }
-		}
-	    }
+	    &rmindex($key, $main::opt{'rmfile'});
 	}
 
     } else {
 	die ("Error: $file doesn't exist");
     }
 
-    &line();
 }
 
 ######################################################################
@@ -3748,7 +3741,7 @@ sub test_shared_mem_for_buffer {
     my $buffer_prog = shift(@_);
     my $mem = shift(@_) . 'm';
     my $host = shift(@_);
-    my $tmp_name = "$cfg::tmpdir/testbuff$$.txt";
+    my $tmp_name = "$cfg::tmpdir/testbuff.$PROCESS_ID.txt";
     my $retval = 0;
     my $out;
 
