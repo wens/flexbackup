@@ -1,4 +1,5 @@
 Makefile
-flesbackup.lsm.template
+flexbackup.lsm.template
+sizelsm.perl
 tar.exclude
 CVS

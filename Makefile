@@ -40,7 +40,7 @@ lsm: tag
 	tar -C /tmp -z -c -v -X tar.exclude -f $(SITE)/flexbackup-$(VER).tar.gz flexbackup-$(VER)
 	cd /tmp; echo yes | cvs release -d flexbackup-$(VER)
 	./sizelsm.perl $(SITE) $(VER)
-	cvs commmit -m "" flexbackup.lsm
+	cvs commit -m "" flexbackup.lsm
 
 version:
 	test -n "$(VER)"
