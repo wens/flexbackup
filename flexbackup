@@ -2208,6 +2208,16 @@ sub mt {
 	}
     }
 
+    # We want 1-filemark behavior always
+    # Set if currently doing blocksize command
+    foreach my $operation (@operations) {
+        if ($operation =~ m/generic-blocksize/) {
+            if ($main::uname =~ /FreeBSD/) {
+                push(@operations,'seteotmodel 1');
+            }
+        }
+    }
+
     foreach my $operation (@operations) {
 
 	# mt flavors for block number
