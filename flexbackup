@@ -985,6 +985,12 @@ sub backup {
     &log("| Backup end:   $t");
     if (($error == 0) and !defined($::debug)) {
 	system("$::path{touch} -t \"$::stamp_at_start\" \"$cfg::stampdir/$cfg::sprefix$label.$level\"");
+        if ($cfg::type eq 'filelist') {
+            &line();
+            &log("| NOTE: Timestamp file $cfg::stampdir/$cfg::sprefix$label.$level");
+            &log("|       was updated as part of this \"filelist\" operation.");
+            &log("|       Delete it if you want the previous backup state maintained.");
+        }
     }
 
     &line();
@@ -1837,9 +1843,13 @@ sub backup_filelist {
     }
 
     if (defined $::use_pipe) {
-	&log("| NOTE: Writing list of files that would have been backed up to stdout");
+	&log("| NOTE: Writing list of files that would have been backed up");
+        &log("|       to stdout");
+        &line();
     } else {
-	&log("| NOTE: Writing list of files that would have been backed up to current directory");
+	&log("| NOTE: Writing list of files that would have been backed up");
+        &log("|       to current directory");
+        &line();
     }
 
     $cmd = "cd \"$dir\" && ";

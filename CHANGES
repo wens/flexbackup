@@ -7,8 +7,11 @@ In CVS but not released
 Changes:
 
 Bug fixes/cleanup:
- - "copy" type doesn't use -0 flag to cpio (not available everywhere)
- - fix spurious warning if you had a null prune set somehow
+ - The "copy" type doesn't use -0 flag to cpio (not available everywhere)
+ - Fix spurious warning if you had a null prune set somehow
+ - Print note that filelist type updates the timestamp (many times one
+   will want it to for testing, but just so people know to delete it
+   otherwise)
 
 ----------------------------------------------------------------------
 Version 1.2.1 (20031010)
