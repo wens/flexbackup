@@ -14,6 +14,7 @@ Currently in progress:
  - How to spec dirs with spaces for sets/dir/prune?
  - Fix so -toc when using a dir rm's the index entry if file does not
    exist (before listing)
+ - try prunes using regex
 
 Cleanup/fix:
  - Better cleanup after error in backup
@@ -31,12 +32,12 @@ Cleanup/fix:
  - Fix afio w/null (FreeBSD printf can't spit out null char)
 
 Misc:
- - add faq on max size
- - add faq on -erase -newtape taking forever / erase_rewind_only
+ - Add faq on max size
+ - Add faq on -erase -newtape taking forever / erase_rewind_only
      could be mt erase, could be dd index hang (-test-tape-drive)
- - add faq on extract filelist
+ - Add faq on extract filelist
      also .z at end if afio
- - sample setup conf/cron
+ - Sample setup conf/cron
  - Update README/faq/spec/lsm for new items changes since 1.0.2
      set/dir
      pruning
@@ -125,9 +126,6 @@ Features to add:
 
  - Encryption with gnupg?
 
- - Gnome driver/configurator utility
-      a separate program that just manipulates flexbackup
-
  - "rsync" type for when using on-disk?
 
  - Make file-based backups able to use split for smaller archives?
@@ -144,6 +142,9 @@ Features to add:
    probably.
 
  - Destdir option for compare /extract
+
+ - Umask spec for on-disk archives/logs/stamps.  check tmpfiles too.
+
 
 -------------------------------------------------------------
 

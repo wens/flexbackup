@@ -42,8 +42,8 @@
 #  flexbackup -toc <key>           : list table of contents for specific key
 #  flexbackup -rmindex all         : force db delete of all index info
 #  flexbackup -rmindex <key>       : force db delete of specified tape/dir index
-#  flexbackup -rmindex <key>:<x>   : force db delete of specified tape:filenumber
-#                                    or dir:filename
+#  flexbackup -rmindex <key>:<x>   : force db delete of specified tape:file
+#
 # TESTING/DEBUG:
 #  flexbackup -test-tape-drive     : tries writing/reading files to make sure you
 #                                    have tape driver & parameters set up right
@@ -4187,7 +4187,7 @@ sub rmindex {
 		    and
 		    ($filenum eq $file)) {
 		    &log("| Deleting record for $tape file $filenum");
-                    $found++;
+		    $found++;
 		    if (defined($main::opt{'n'})) {
 			&log("(debug) delete \$main::index{$tape|$filenum}");
 		    } else {
@@ -4200,7 +4200,7 @@ sub rmindex {
 		# Whole tape/dir entry
 		if ($tape eq $key) {
 		    &log("| Deleting record for $tape file $filenum");
-                    $found++;
+		    $found++;
 		    if (defined($main::opt{'n'})) {
 			&log("(debug) delete \$main::index{$tape|$filenum}");
 		    } else {
@@ -4210,9 +4210,9 @@ sub rmindex {
 	    }
 	}
 
-        if ($found eq 0) {
-            &log("| Record for $arg not found");
-        }
+	if ($found eq 0) {
+	    &log("| Record for $arg not found");
+	}
 
 	&line();
 	return;
