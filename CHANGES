@@ -1,4 +1,4 @@
-Version 0.9.4
+Version 0.9.4 (19990924)
 
 New features:
  - bzip2 option for afio and tar archives, as well as log files
