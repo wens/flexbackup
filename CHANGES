@@ -14,6 +14,8 @@ Changes:
   - A "no blocking at all" option. Set $blksize=0 in the config file.
   - Added support for "zip" as valid archive compression type
   - Added support for "zip" as valid log compression type
+  - "-device <dev> to override config file (tired of "-d device=/path/to/dir"
+      during testing...)
   - "-rmfile all"' when using files will rm all files/db entries for that dir
 
 Bug Fixes:

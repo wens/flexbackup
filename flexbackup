@@ -50,6 +50,7 @@
 #                                    for configuration
 #  flexbackup [opt] -type <x>      : override $type from config file
 #  flexbackup [opt] -compress <x>  : override $compress from config file
+#  flexbackup [opt] -device <dev>  : override $device from config file
 #  flexbackup [opt] -d 'var=val'   : override config file setting of $var
 #  flexbackup -fs all -noreten     : don't retension for level 0 "all" backups
 #  flexbackup -fs all -noerase     : don't rewind/erase for level 0 "all" backups
@@ -129,6 +130,7 @@ if (! &main::GetOptions(\%main::opt,
 			"rmfile:s",
 			"type=s",
 			"compress=s",
+			"device=s",
 			"erase!",
 			"rewind!",
 			"reten!",
@@ -1940,6 +1942,11 @@ sub optioncheck {
     # Compress flag on commandline
     if (defined($main::opt{'compress'})) {
 	$cfg::compress = $main::opt{'compress'};
+    }
+
+    # Device flag on commandline
+    if (defined($main::opt{'device'})) {
+	$cfg::device = $main::opt{'device'};
     }
 
     # First check if things are defined in the config file
