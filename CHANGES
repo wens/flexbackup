@@ -28,8 +28,8 @@ Changes beyond stable release:
     New config variables to tweak behavior:
       $pkgdelta_archive_list $pkgdelta_archive_unowned $pkgdelta_archive_changed
 
-  - Added 'mbuffer' program as alternative to 'buffer'
-    http://www.rcs.ei.tum.de/~maierkom/privat/software/mbuffer/
+  - Added 'bfr' program as alternative to 'buffer'
+    Added 'mbuffer' program as alternative to 'buffer'
 
   - Added 'filelist' type that doesn't back up anything, but prints/saves
     the list of files that would have been archived.  Good for debugging

@@ -10,28 +10,19 @@ Currently in progress:
      could be mt erase, could be dd index hang (-test-tape-drive)
  - add faq on extract filelist
      also .z at end if afio
-
  - FIXMEs in code
-
- - mbuffer testing w/ device (need mt_blksize not to be 0?)
- - try 2+ gig as well
- - mbuffer testing w/ remote
- - mbuffer testing w/ end of media
-
- - Test -test-tape-drive mod
-
+ - try 2+ gig w/ bfr, mbuffer
+ - bfr,mbuffer testing w/ remote
  - Check old release for use_file + -erase.  nukes db entry for keyfile
    (devel too as well)
    check -newtape
  - Make "-erase" for use_file wipe files+index+key?
    check -newtape
-
  - Finish up -set / -dir
      test with tapes
      how to spec dirs with spaces?
-
  - Exclude paths, not just expressions?  per-fs?
- - add way to extact just one file using flag
+ - destdir option for compare /extract
 
 Cleanup/fix:
  - Better cleanup after error in backup
@@ -49,7 +40,6 @@ Cleanup/fix:
  - Try to refactor backup all/single, each fs, >1 tapes, etc.  Duplicated
      logic in some spots..
  - Fix afio w/null (FreeBSD printf can't spit out null char)
- - Delete deprecated sections
 
 Misc:
  - Update README/faq/spec/lsm for new items changes since 1.0.2
@@ -61,7 +51,6 @@ Misc:
      onefile
      -files -> -flist
  - Create mbuffer rpm. Add link/rpm for mbuffer
- - Do bfr again, maybe was blocking problem?
  - Make a manual page (AND other enchanced documentation, more than a README)
    someone made a good start or two:
      http://www.law.utulsa.edu:8080/users/bchapman/linuxnotes/flexbackup
@@ -80,7 +69,10 @@ Features to add:
       Found "multivol" program.
       Ack.  still not workable.  need edits to multivol...
 
-      mbuffer can do this?
+      mbuffer can do this?  Bah.  Does not cooperate with nullpadding.
+      won't work over remote, needs temrminal attached.
+
+      I might just give up on this
 
  - Make package delta work with BSD ports or debian pkgs
 

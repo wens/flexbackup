@@ -27,7 +27,7 @@ Software needed:
        dump/restore, afio, GNU tar, star, pax, cpio, zip
    o mt (if using tapes)
    o gzip, bzip2, or compress (optional)
-   o buffer (optional) [needs patches for 2+GB file support]
+   o buffer, mbuffer, or bfr (optional)
 
 See the INSTALL file for installation instructions.
 
