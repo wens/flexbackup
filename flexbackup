@@ -2170,13 +2170,15 @@ sub optioncheck {
     }
 
     # Set mt type
-    if ($main::ftape == 1) {
-	$main::path{'mt'} = &checkinpath('ftmt');
-    } else {
-	$main::path{'mt'} = &checkinpath('mt');
-    }
-    if (defined($main::remotetapehost)) {
-	push(@main::remoteprogs,$main::path{'mt'});
+    if (defined($main::tapedevice)) {
+	if ($main::ftape == 1) {
+	    $main::path{'mt'} = &checkinpath('ftmt');
+	} else {
+	    $main::path{'mt'} = &checkinpath('mt');
+	}
+	if (defined($main::remotetapehost)) {
+	    push(@main::remoteprogs,$main::path{'mt'});
+	}
     }
 
     # Exclude regexp for find
@@ -3376,7 +3378,7 @@ sub new_tape_key {
 	    # Make sure keyfile entry is there
 	    if (!defined($main::index{"$key|$cfg::keyfile"})) {
 		my $label = "<index keyfile, dir=$cfg::device>";
-		if (defined($main::debug)) {
+		if (defined($main::opt{'n'})) {
 		    &log("(debug) \$main::index{$key|$cfg::keyfile} = $label");
 		} else {
 		    $main::index{"$key|$cfg::keyfile"} = $label;
