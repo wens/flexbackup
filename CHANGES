@@ -5,10 +5,10 @@ Changes:
 
   - Added packaging system delta capability (RPM only for now).
 
-    If you give "-delta rpm", after the level/timestamp checks, we further
-    cut down the backup file list by only archiving files that are either
-    (a) not owned by a package, or (b) owned by a package but modified from
-    the distributed version.
+    If you give "-pkgdelta rpm", after the level/timestamp checks, we
+    further cut down the backup file list by only archiving files that are
+    either (a) not owned by a package, or (b) owned by a package but
+    modified from the distributed version.
 
   - Added 'filelist' type that doesn't back up anything, but prints/saves
     the list of files that would have been done.  Good for debugging
