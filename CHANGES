@@ -6,6 +6,7 @@ Bug fixes:
  - If using files, "-fs all", and and multiple array entries for $filesystems,
    index was getting hosed up.
  - newtape/erase when using dirs was deleting keyfile entry from index db
+ - remove bogus OS_ERROR string from failed tie
 
 ----------------------------------------------------------------------
 Version 1.0.2 (20030219)

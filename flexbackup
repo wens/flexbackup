@@ -2638,7 +2638,7 @@ sub optioncheck {
     # Index database
     if ($cfg::indexes eq "true") {
 	tie(%main::index,"AnyDBM_File",$cfg::index,O_CREAT|O_RDWR,0640) or
-	    push(@main::errors,"Can't tie DB $cfg::index: $OS_ERROR");
+	    push(@main::errors,"Can't tie DB $cfg::index");
     }
 
     # Levels
