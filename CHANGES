@@ -27,12 +27,13 @@ Changes:
 
 
 Bug Fixes:
-  - doh - can't use -cnewer since touching a reference file with touch -d
+  - doh - can't use find -cnewer & a reference file with touch -d together
       since the change time is still "now".  I remembered the suggestion but
       the long lapse in devel time made me forget to see if it worked.
       REMOVED cnewer mistake.
   - default config uses /var/lib rather than /var/state (FHS spec on this
       went away long ago)
+  - don't pad blocks when archiving to files on disk
   - was using numeric sort when listing alphanumeric files
   - "-num" invalid when using files
   - newer cpio didn't like sparse in --create mode

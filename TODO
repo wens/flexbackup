@@ -4,12 +4,15 @@ $Name$
 Flexbackup to-do list
 Some of these might not happen, but figured I should jot them down
 
+Move CVS to sf.net
 
 test everything again since it's been so long since I used it
 
-
 Fix so if backup errors out we know it (errors lost right now)
-Big command chain is the problem -need to trap errors.
+Big command chain is the problem - need to trap errors.
+
+
+OLD LIST:
 
 alternate paths to commands
   modify checkinpath

@@ -13,7 +13,6 @@ BuildArch: noarch
 Requires: mt-st
 Requires: gzip
 Requires: bzip2
-Requires: ncompress
 Requires: fileutils
 Requires: findutils
 
