@@ -564,7 +564,7 @@ sub backup {
     &line();
 
 
-    if ($localdir =~ s/^(.+):(.+)$/$2/) {
+    if ($localdir =~ s/^(.+)://) {
 	$remote = $1;
 	chomp($tapehost = `hostname`);
 	if (($tapehost eq $remote)
@@ -722,7 +722,7 @@ sub backup {
 		# well.  Can't do this globally because the "cd <dir> &&"
 		# at the front makes the cd happen in a subshell. If
 		# its not "cd <something>, do it.
-		if ($cmd !~ m:^\s*cd\s+\S+\s*(;|&&):) {
+		if ($cmd !~ m:^\s*cd\s+\"[^\"]+\"\s*(;|&&):) {
 		    $cmd = "$exitscript $cmd";
 		}
 
@@ -1642,9 +1642,9 @@ sub get_label {
     my $host = '';
     my $label;
 
-    if ($path =~ m/(\S+):(\S+)/) {
+    if ($path =~ s/(\S+)://) {
 	$host = $1 . "-";
-	$label = $2;
+	$label = $path;
     } else {
 	$label = $path;
     }
@@ -3146,7 +3146,7 @@ sub append_writer_cmd {
 
     if (!defined($main::remotetapehost)) {
 
-	$cmd .= $main::write_cmd . $main::device;
+	$cmd .= $main::write_cmd . '"' . $main::device . '"' ;
 
     } else {
 
@@ -3203,7 +3203,7 @@ sub setup_before_read {
 	&line();
     }
 
-    $cmd = $main::read_cmd . $main::device;
+    $cmd = $main::read_cmd . '"' . $main::device . '"';
 
     if (defined($main::remotetapehost)) {
 	$cmd = &maybe_remote_cmd($cmd, $main::remotetapehost);
@@ -3233,9 +3233,9 @@ sub nuke_trailing_slash {
     my $host;
     my $path;
 
-    if ($spec =~ m/(\S+:)(\S+)/) {
+    if ($spec =~ s/(\S+:)//) {
 	$host = $1;
-	$path = $2;
+	$path = $spec;
     } else {
 	$host = '';
 	$path = $spec;
