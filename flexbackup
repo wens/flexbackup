@@ -731,7 +731,7 @@ sub backup {
 	} else {
 	    $h = 'localhost';
 	}
-	if (!defined(main::opt{'n'})) {
+	if (!defined($main::debug)) {
 	    open(LIST,"$write") || die;
 	    foreach my $pkg (sort keys %{$main::package_list{$h}}) {
 		print LIST "$pkg\n";
