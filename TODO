@@ -1,0 +1,19 @@
+Flexbackup todo list as of version $Name$
+
+ - use /var/lib/flexbackup
+ - blksize for tar
+ - cpio (see news saved msg)
+ - Finish incremental support for non-dump types
+ - Package up nicely
+ - RPM spec file & LSM file
+ - Web page
+ - Announce
+     freshmmeat & linux-tape
+     submit to metalab & redhat-contrib
+ - Finish list, restore, compare, etc for non-dump types
+ - Restore of remote volumes
+ - Add disk-file based method rather than device
+ - Suport multiple tapes for "all"
+ - GUI Driver/Configurator utility
+      gtk-perl
+ - cd-rom burning for full backups

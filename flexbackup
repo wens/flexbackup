@@ -1,0 +1,595 @@
+#!/usr/bin/perl -w
+######################################################################
+#
+# Edwin Huffstutler, <edwinh@computer.org>
+# $Id$
+# $Name$
+#
+#  >>>> See the README file <<<<
+#
+# USAGE:
+#
+#  flexbackup -help                : this message
+#
+#  flexbackup -dump all            : dump all filesystems, level 0
+#  flexbackup -dump <x>            : dump filesystem <x>, level 0
+#  flexbackup -dump all -level <n> : dump all filesystems, level n
+#  flexbackup -dump <x> -level <n> : dump filesystem <x>, level n
+#
+#  flexbackup -list                : list files in archive at current
+#                                    tape position
+#
+#  flexbackup -restore             : restore from current tape position
+#                                    into your current working directory
+#
+#  flexbackup -compare             : compare archive at current tape position
+#                                    with the files in your current directory
+#
+#  flexbackup -toc                 : list tape table of contents
+#                                    with Linux ftape only
+#
+#  flexbackup [options] -c <file>  : use <file> instead of /etc/flexbackup.conf
+#                                    for configuration
+#
+#  flexbackup [optiions] -type <x> : override $backuptype form config file
+#
+######################################################################
+
+use Getopt::Long;
+use English;
+
+use vars qw($filesystems $tar_verbose $tar_compress $afio_verbose $afio_compress);
+
+# No output buffering
+$OUTPUT_AUTOFLUSH = 1;
+
+%opt = ();
+if (! &GetOptions(\%opt,
+		  "help",
+		  "c=s",
+		  "level=i",
+		  "dump=s",
+                  "restore",
+                  "list",
+                  "compare",
+                  "toc",
+                  "type=s"
+		  )) {
+    &usage();
+    exit(0);
+}
+
+# Give usage message
+if (defined($opt{'help'})) {
+    &usage();
+    exit(0);
+}
+
+
+# Get/read config file
+&readconfigfile();
+
+# Sanity check things
+&optioncheck();
+
+# Get date string
+chomp($date=`date +%Y%m%d`);
+
+# Set blocksize if not default
+if ($blksize != 10) {
+    $_ = $blksize * 1024;
+    system("$mt -f $device setblk $_");
+    if ($?) {
+	die("Error from $mt setblk, exiting...\n");
+    }
+}
+
+
+if (defined($opt{'restore'})) {
+
+    &restoreroutine();
+
+} elsif (defined($opt{'compare'})) {
+
+    &compareroutine();
+
+} elsif (defined($opt{'list'})) {
+
+    &listroutine();
+
+} elsif (defined($opt{'dump'})) {
+
+    &dumproutine();
+
+} elsif (defined($opt{'toc'})) {
+
+    if ($ftape eq 'true') {
+	system("$mt -f $device rewind");
+	exec("vtblc -p -f $rawdevice");
+	die('Failed exec of vtblc');
+    } else {
+	die("-toc only implemented for ftape under Linux");
+    }
+
+} else {
+
+    print "Nothing to do!\n";
+
+}
+
+
+######################################################################
+# Dump
+######################################################################
+sub dumproutine {
+
+    # Get dump level...
+    if (defined($opt{'level'})) {
+        $level = $opt{'level'};
+    } else {
+        $level = 0;
+    }
+
+    # Die if no fs specified
+    if (!defined($opt{'dump'})) {
+        &usage();
+        exit(0);
+    }
+
+    # Figure out log file name
+    $tag = $opt{'dump'};
+    if ($opt{'dump'} ne 'all') {
+        $tag =~ s:^/::;
+        $tag =~ s:/:-:g;
+        if ($tag eq '') {
+            $tag = 'root';
+        } elsif ($tag =~ m/^(.+):-$/) {
+            $tag = "$1:root";
+        }
+        if (! -d "$opt{'dump'}" && ($opt{'dump'} !~ m/^.+:.+/)) {
+            print "Can't dump $opt{'dump'}, no such directory\n";
+            exit(1);
+        }
+    }
+
+    # Empty log file
+    $log = "$logdir/$prefix" . $tag . "." . $level . "." . $date;
+    if (! open(LOG,">$log")) {
+        die "Can't write to $log: $!\n";
+    }
+    close(LOG);
+
+
+    # Remove old incremental log files
+    # ("old" = any higher-numbered logs for this "tag")
+    opendir(DIR,"$logdir") or die("Can't open logdir: $!\n");
+    @files = readdir(DIR);
+    foreach (@files) {
+        next if (! m/^$prefix$tag\.([0-9])\.([0-9]+)$/);
+        if ($1 > $level) {
+            print "Removing old level $1 log of $opt{'dump'} ($date)\n";
+            unlink("$logdir/$_") or warn("Can't remove $_: $!\n");
+        }
+    }
+    close(DIR);
+
+
+    ##########################
+    #
+    # Main dump routine
+    #
+    ##########################
+    &log('$Name$ $Id$ ');
+    &log("Doing level $level backup of $opt{dump} using $backuptype");
+
+    if ($opt{'dump'} eq 'all') {
+
+        # All filesystems
+        if ($level eq "0") {
+            # Level zero - rewind and erase a new tape
+            &log('Retensioning tape...');
+            &mt('retension');
+            &log('Erasing tape...');
+            &mt('erase');
+            $nextfile = 0;
+
+        } else {
+
+            # Incremental dump - list what's on it, then go to end of tape
+            $nextfile = &contents();
+            &log('Making sure tape is at end of data...');
+            &mt('endofdata');
+        }
+
+        # Iterate over the filesystems and back 'em up
+        foreach (split(/\s+/,$filesystems)) {
+            &backup($backuptype,$_,$nextfile);
+            $tag{$nextfile} = "$backuptype $_ ($level)";
+            $nextfile++;
+        }
+
+        # Onlt ftape has the toc capability
+        if ($ftape eq 'true') {
+            &line();
+            &log('Updating table of contents...');
+            &mt('rewind');
+            foreach (keys %tag) {
+                &tag($_,$tag{$_});
+            }
+        }
+
+    } else {
+
+        # Just one filesystem.  list what's on the tape first
+        $nextfile = &contents();
+        &log('Making sure tape is at end of data...');
+        &mt('endofdata');
+        &backup($backuptype,$opt{'dump'},$nextfile);
+        &line();
+        &log('Updating table of contents...');
+        &mt('rewind');
+        if ($ftape eq 'true') {
+            &tag($nextfile,"$backuptype $opt{fs} ($level)");
+        }
+    }
+
+    # Print out new contents
+    &contents();
+
+    exit(0);
+}
+
+######################################################################
+# Rewind & print TOC using vtblc
+# returns an integer that is the next file number
+######################################################################
+sub contents {
+    my($output,$filenumber);
+
+    if ($ftape eq "true") {
+        &mt('rewind');
+        &log('');
+        $output=`vtblc -p -f $rawdevice 2>&1`;
+        &log($output);
+        &log('');
+        $filenumber = -1;
+        foreach (split("\n",$output)) {
+            # Nr  Id          Label
+            #-------------------------------
+            #  0 VTBL "/var (level 9)
+            next if m/^\s+Nr\s+/;
+            next if m/^----------/;
+            if (m/^\s+(\d+)\s+\S+\s+\"/) {
+                $filenumber = $1;
+            }
+        }
+
+    } else {
+
+        $filenumber = 0;
+    }
+
+    $filenumber++;
+    return($filenumber);
+}
+
+######################################################################
+# Modify a table of contents entry
+######################################################################
+sub tag {
+    my($filenum,$title) = @_;
+    system("vtblc -f $rawdevice -# $filenum -m date -m label=\'$title\'");
+}
+
+######################################################################
+# Backup a filesystem
+######################################################################
+sub backup {
+
+    my($type,$dir,$filenum) = @_;
+    my($string,$host,$tapehost);
+
+    if ($type eq 'dump') {
+	$string = &backup_dump($dir);
+    } elsif ($type eq 'afio') {
+	$string = &backup_afio($dir);
+    } elsif ($type eq 'cpio') {
+	$string = &backup_cpio($dir);
+    } elsif ($type eq 'tar') {
+	$string = &backup_tar($dir);
+    } else {
+	die;
+    }
+
+    &line();
+    &log("Running \"$string\"");
+
+    if (($level eq "0") or ($ftape eq "true")) {
+        &log("Backup will be file number $filenum");
+    }
+
+    &line();
+    system("$string 2>&1 | tee -a $log");
+    if ($?) {
+	&log("Error from $type backup, exiting....\n");
+	exit(1);
+    }
+
+    &line();
+
+    my $stamp = $dir;
+    $stamp =~ s:^/::;
+    $stamp =~ s:/:-:g;
+    if ($stamp eq '') {
+        $stamp = 'root';
+    } elsif ($stamp =~ m/^(.+):-$/) {
+        $stamp = "$1:root";
+    }
+
+    &log("Timestamp $stampdir/$stamp.$level.$date");
+    system("touch $stampdir/$stamp.$level.$date");
+
+    &line();
+    &mt('query');
+}
+
+
+######################################################################
+# Return command to backup a filesystem using dump
+######################################################################
+sub backup_dump {
+    my($dir) = @_;
+    my($string,$host,$tapehost);
+
+    if ($dir =~ s/^(.+):(.+)$/$2/) {
+	$host = $1;
+	chomp($tapehost = `hostname`);
+	$string  = "$remoteshell $host \"";
+        $string .= "rdump $level" . "uBbf $length $blksize $tapehost:$device $dir\"";
+    } else {
+	$string  = "dump $level" . "uBbf $length $blksize $device $dir";
+    }
+    return($string);
+}
+
+
+######################################################################
+# Return command to backup a filesystem using compressed afio
+######################################################################
+sub backup_afio {
+    my($dir) = @_;
+    my($verb,$comp,$string,$host,$tapehost);
+
+    if ($level ne "0") { die "$backuptype not working for incremental yet"; }
+
+    if ($afio_verbose eq "true") {
+        $verb = "-v";
+    } else {
+        $verb = "";
+    }
+
+    if ($afio_compress eq "true") {
+        $comp = "-Z";
+    } else {
+        $comp = "";
+    }
+
+    if ($dir =~ s/^(.+):(.+)$/$2/) {
+	$host = $1;
+	chomp($tapehost = `hostname`);
+	$string  = "$remoteshell $host -n \"";
+	$string .= "cd $dir; find . -xdev -print | ";
+        $string .= "afio -o $comp $verb -b $blksize" . "k -c $buffer -B $tapehost:$device\"";
+    } else {
+	$string  = "cd $dir ; find . -xdev -print | ";
+	$string .= "afio -o $comp $verb -b $blksize" . "k -c $buffer -B $device";
+    }
+    return($string);
+}
+
+
+######################################################################
+# Return command to backup a filesystem using tar
+######################################################################
+sub backup_tar {
+    my($dir) = @_;
+    my($string,$host,$tapehost);
+
+    if ($level ne "0") { die "$backuptype not working for incremental yet"; }
+
+    if ($tar_verbose eq "true") {
+        $verb = "-v";
+    } else {
+        $verb = "";
+    }
+
+    if ($tar_compress eq "true") {
+        $comp = "-z --block-compress";
+    } else {
+        $comp = "";
+    }
+
+    if ($dir =~ s/^(.+):(.+)$/$2/) {
+	$host = $1;
+	chomp($tapehost = `hostname`);
+	$string  = "$remoteshell $host \"";
+	$string .= "cd $dir; ";
+        $string .= "tar $comp $verb -c --one-file-system --totals -f $tapehost:$device .\"";
+    } else {
+	$string  = "cd $dir; ";
+	$string .= "tar $comp $verb -c --one-file-system --totals -f $device .";
+    }
+    return($string);
+}
+
+######################################################################
+# Return command to backup a filesystem using tar
+######################################################################
+sub backup_cpio {
+
+    die("cpio not done yet\n")
+
+}
+
+######################################################################
+# Echo message to screen and log
+######################################################################
+sub log {
+    my($msg) = @_;
+    print "$msg\n";
+    open(LOG,">>$log");
+    print LOG "$msg\n";
+    close(LOG);
+}
+
+######################################################################
+# Echo a line to both screen and log
+######################################################################
+sub line {
+    print "----------------------------------------\n";
+    open(LOG,">>$log");
+    print LOG "----------------------------------------\n";
+    close(LOG);
+}
+
+######################################################################
+# Do a tape operation
+######################################################################
+sub mt {
+    my($operation) = @_;
+
+    if ($operation eq 'query') {
+        if ($ftape eq 'true') {
+            $operation = 'getsize';
+        } else {
+            $operation = 'status';
+        }
+    }
+
+    if ($operation eq 'endofdata') {
+        if ($ftape eq 'true') {
+            $operation = 'eom';
+        } else {
+            $operation = 'eod';
+        }
+    }
+
+    system("$mt -f $device $operation 2>&1 | tee -a $log");
+    if ($?) {
+	&log("Error from $mt $operation, exiting....\n");
+        exit(1);
+    }
+}
+
+######################################################################
+# Print usage summary from the header
+######################################################################
+sub usage {
+    open(FILE,"$0") or die "Can't open $0: $!\n";
+    while(<FILE>) {
+	last if (m/^\#\s+USAGE:/);
+    }
+    while(<FILE>) {
+	last if (m/^\#\#\#\#\#\#\#/);
+	s/^\#//;
+	print;
+    }
+    close(FILE);
+}
+
+######################################################################
+# Error checking
+######################################################################
+sub optioncheck {
+
+    # ftape support
+    if (defined($ftape)) {
+	if ($ftape eq 'true') {
+	    $mt = 'ftmt';
+	} elsif ($ftape eq 'false') {
+	    $mt = 'mt';
+	} else {
+	    die('$ftape must be defined as true or false');
+	}
+    } else {
+	die('$ftape must be defined as true or false');
+    }
+
+    # log/stamp files
+    if (defined($logdir)) {
+	if (! -d $logdir) {
+	    die("$logdir does not exist");
+	}
+    } else {
+	die('$logdir must be defined');
+    }
+    if ($backuptype ne 'dump') {
+	if (defined($stampdir)) {
+	    if (! -d $stampdir) {
+		mkdir("$stampdir",0755) or die("Can't mkdir $stampdir: $!");
+	    }
+	} else {
+	    die('$stampdir must be defined');
+	}
+    }
+
+    # archive type
+    if (defined($opt{'type'})) {
+        $backuptype = $opt{'type'};
+    }
+    if (defined($backuptype)) {
+	if ($backuptype eq 'afio') {
+	} elsif ($backuptype eq 'dump') {
+	} elsif ($backuptype eq 'tar') {
+	} elsif ($backuptype eq 'cpio') {
+	} else {
+	    die("backuptype must be defined as afio, dump, tar, or cpio\n");
+	}
+    } else {
+	die("backuptype must be defined as afio, dump, tar, or cpio\n");
+    }
+
+
+}
+
+######################################################################
+# Read configuration file
+######################################################################
+sub readconfigfile {
+    if (defined($opt{'c'})) {
+        $configfile = $opt{'c'};
+    } else {
+        $configfile = "/etc/flexbackup.conf";
+    }
+    if (! -r $configfile) {
+        die("config file $configfile: $!");
+    }
+    system("perl -c $configfile 2>&1");
+    if ($?) {
+        die("syntax error in config file $configfile");
+    }
+    require "$configfile";
+
+}
+
+######################################################################
+#
+######################################################################
+sub restoreroutine {
+
+    if ($backuptype eq 'dump') {
+	exec("restore -v -i -b $blksize -f $device");
+	die('Failed exec of restore');
+    }
+}
+
+######################################################################
+#
+######################################################################
+sub compareroutine {
+
+    if ($backuptype eq 'dump') {
+	exec("restore -C -b $blksize -f $device");
+	die('Failed exec of restore');
+    }
+}
