@@ -2325,7 +2325,7 @@ sub new_tape_key {
             &log("| Directory's existing key is $key");
 
             # Figure out the existing files
-            foreach (sort keys %main::index) {
+            foreach (sort bynumber keys %main::index) {
                 my ($tape,$filenum) = split(/\|/,$_);
                 if ($tape eq $key) {
                     $main::nextfile = $filenum;
@@ -2495,6 +2495,7 @@ sub toc_routine {
     # Print the toc of each tape in our list
     foreach $key (sort keys %keys) {
 
+        my %contents;
         my @contents = ();
         my $found = 0;
 
@@ -2502,7 +2503,8 @@ sub toc_routine {
             ($tape,$filenum) = split(/\|/,$file);
             if ($tape eq $key) {
                 $filenum = sprintf("%-04d",$filenum);
-                push(@contents,"$filenum $main::index{$file}");
+                push(@contents,$filenum);
+                $contents{$filenum} = $main::index{$file};
                 $found = 1;
             }
         }
@@ -2513,8 +2515,8 @@ sub toc_routine {
         } else {
             &log("File  Contents    (tape index $key)");
             &log("-----------------------------------------------");
-            foreach (@contents) {
-                &log("$_");
+            foreach (sort bynumber @contents) {
+                &log($_ . $contents{$_});
             }
         }
         &log('');
@@ -2546,4 +2548,11 @@ sub maybe_delete_old_index {
 
     }
 
+}
+
+######################################################################
+# Sort by number
+######################################################################
+sub bynumber {
+    $a <=> $b;
 }
