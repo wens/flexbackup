@@ -5,8 +5,6 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
- - Fix problem with sh exit collector & initial cd (can't be in subshell)
- - Fix sh exit collector to deal with && as well
  - Detect pipeline errors for remote shell = sh; use exit-code collecting
      trick to the local sh one I added
 
