@@ -16,6 +16,7 @@
 #  flexbackup -fs all -level <n>   : backup all (defined in config file), level n
 #  flexbackup -fs <x> -level <n>   : backup directory <x>, level n
 #    -level can be an integer, or full/differential/incremental
+#  flexbackup [...] -delta rpm     : only backup files not part of an RPM package
 #
 # READING ARCHIVES:
 #  flexbackup -list                : list files in archive at current
@@ -2691,7 +2692,6 @@ sub optioncheck {
 
     }
 
-
     # Filesystems
     if (defined($main::opt{'fs'})) {
 	if ($main::opt{'fs'} ne 'all') {
@@ -3051,6 +3051,16 @@ sub optioncheck {
 	    # fs might have a different level...
 	    undef $main::level;
 	    $main::incremental_all = 1;
+	}
+    }
+
+    # Delta option
+    if (defined($main::opt{'delta'})) {
+	if ($main::opt{'delta'} eq 'rpm') {
+	    $main::delta = 'rpm';
+	    $main::path{'rpm'} = &checkinpath('rpm');
+	} else {
+	    push(@main::errors,"$main::opt{delta} not a valid option for -delta");
 	}
     }
 
@@ -4210,15 +4220,76 @@ sub file_list_cmd {
 
     $cmd .= "$main::exclude_expr ";
 
-    if ($separator eq 'newline') {
+    if (defined($main::delta)) {
+	if (defined($remote)) {
+	    die("Can't do remote delta yet");
+	}
 	$cmd .= "-print ";
+	if ($main::delta eq 'rpm') {
+	    $cmd = &file_list_rpmdelta($dir, $cmd, $separator);
+	}
+
     } else {
-	$cmd .= "-print0 ";
+	if ($separator eq 'newline') {
+	    $cmd .= "-print ";
+	} else {
+	    $cmd .= "-print0 ";
+	}
     }
 
     return($cmd);
 
 }
+
+#############################################################################
+# Takes normal find date-based command string from above.
+# *Additionally* filters the list so we ONLY will backup any files
+# that are not part of an rpm package OR are changed from the
+# distributed version.
+#############################################################################
+sub file_list_rpmdelta {
+
+    my $dir = shift(@_);
+    my $findcmd = shift(@_);
+    my @files;
+    my $to_backup_list = "$cfg::tmpdir/tobackup.$$";
+    my @files_to_backup;
+
+    &log("| Listing to-be-archived files in $dir...");
+
+    open(LIST,"cd \"$dir\"; $findcmd |") || die;
+    while(<LIST>) {
+	chomp;
+	push(@files, $_);
+    }
+    close(LIST);
+
+    # FIXME changed files (need to do rpm -Va and save)
+    # FIXME list all files first, then check against hash, don't
+    # rpm -qf each one
+
+    &log("| Subtracting files not owned by an RPM package...");
+
+    foreach my $file (@files) {
+	system("$main::path{rpm} -qf \"$dir/$file\" > /dev/null 2>&1");
+	if ($CHILD_ERROR) {
+	    push(@files_to_backup, $file);
+	}
+    }
+
+    open(LIST,"> $to_backup_list") || die;
+    foreach my $file (@files_to_backup) {
+	# FIXME separator
+	print LIST "$file\n";
+    }
+    close(LIST);
+
+    &line();
+
+    # FIXME remove temp file
+    return("$main::path{cat} $to_backup_list");
+}
+
 
 #############################################################################
 # Actually test to see if we can run buffer. In situations where SysV shared
@@ -4441,11 +4512,16 @@ sub test_tape_drive () {
     my $tmp2 = "$cfg::tmpdir/test2.$PROCESS_ID";
     my $fail = 0;
 
-    &log("| Testing will the current tape!");
-    &log("| Hit CTRL-C to abort within 5 seconds...");
-    sleep(5);
-
     &mt("generic-blocksize $main::mt_blksize");
+
+    &log("| Testing will *erase* the tape currently in the drive!");
+    &log("| Hit CTRL-C to abort within 10 seconds...");
+    &line();
+    sleep(10);
+
+    &log("| If for some reason this command does not finish within a few minutes,");
+    &log("| Hit CTRL-C, and adjust \$blksize, \$pad_blocks, or \$mt_var_blksize.");
+    &line();
 
     &newtape();
     &line();
@@ -4491,7 +4567,7 @@ sub test_tape_drive () {
 	# Buffer both sides if remote
 	$cmd .= $main::buffer_cmd;
     }
-    # if pad blocks was true e have nulls at the end (won't be in this script otherwise)
+    # if pad blocks was true we have nulls at the end (won't be in this script otherwise)
     $cmd .= " | $main::path{tr} -d '\\0' > $tmp1";
     system($cmd);
     if ($CHILD_ERROR) {
