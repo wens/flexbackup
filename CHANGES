@@ -2,12 +2,22 @@ $Id$
 $Name$
 
 Changes:
+
+  - Added packaging system delta capability (RPM only for now).
+
+    If you give "-delta rpm", after the level/timestamp checks, we further
+    cut down the backup file list by only archiving files that are either
+    (a) not owned by a package, or (b) owned by a package but modified from
+    the distributed version.
+
   - Added 'filelist' type that doesn't back up anything, but prints/saves
     the list of files that would have been done.  Good for debugging
     timestamps, levels, and file exclusion.
+
   - Added '-test-tape-drive' switch that just makes sure blocks, filemarks,
     and padding work as expected and we can read,write,compare.  If people
     can't get that running, then the problem is somewhere else...
+
   - Added support for lha, shar, and ar archives just to be stupid
 
 Cleanup:

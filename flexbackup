@@ -337,7 +337,7 @@ sub backup_routine {
 	&populate_packaged_files('localhost');
 	&populate_changed_files('localhost');
 	$main::pkg_delta_filelist = "$cfg::tmpdir/pkgdelta.$PROCESS_ID";
-        &line();
+	&line();
     }
 
     ##########################
@@ -640,8 +640,13 @@ sub backup {
     chomp($host = `hostname`);
     $title = $cfg::type . "+" . $cfg::compress;
     $title =~ s/\+false//;
-    $title = "level $level $dir $main::date_at_start $title from $host";
-    $title_without_type = "level $level $dir $main::date_at_start from $host";
+    if (!defined($main::delta)) {
+	$title = "level $level $dir $main::date_at_start $title from $host";
+	$title_without_type = "level $level $dir $main::date_at_start from $host";
+    } else {
+	$title = "level $level+$main::delta $dir $main::date_at_start $title from $host";
+	$title_without_type = "level $level+$main::delta $dir $main::date_at_start from $host";
+    }
 
     # Modify table of contents
     if (($tape_key ne '')
@@ -696,7 +701,7 @@ sub backup {
 
     # Nuke any tmp files used in the above routines
     if ($remove ne '') {
-        push(@cmds, &maybe_remote_cmd("$main::path{rm} -f $remove", $remote));
+	push(@cmds, &maybe_remote_cmd("$main::path{rm} -f $remove", $remote));
     }
 
     # Nuke tmp file list if we did local package delta
@@ -4252,11 +4257,7 @@ sub file_list_cmd {
 	    chomp(my $file = $_);
 	    $file =~  s:^\./::g;
 
-            next if ($file eq '');
-
-            if (defined($main::changed{'localhost'}{"$dir/$file"})) {
-                "X changed $file\n";
-            }
+	    next if ($file eq '.');
 
 	    if (!defined($main::packaged{'localhost'}{"$dir/$file"})
 		or

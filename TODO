@@ -37,13 +37,10 @@ Misc:
 
 Features to add:
 
- - Some switch that in addition to level timestamp checks, filters via rpm,
-     and just backs up any file not in a package OR changed from a
-     package. and backs up the rpm list.  Once that works make it work for
-     debian packages, BSD ports, etc if possible.
-
-     Will do this post 1.0
-
+ - Make package delta save the RPM list
+ - Make package delta work for remote
+ - Make package delta work with BSD ports or debian pkgs
+ 
  - Have an mt op. override in the config (tell = status for debugging, platform
      specific junk).  just act like path stuff does now.
 
