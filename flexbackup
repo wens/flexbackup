@@ -238,7 +238,7 @@ if (defined($main::opt{'restore'})) {
 
 }
 
-if (($main::mode !~ m/^(list|extract|restore|compare)$/) and
+if (($main::mode !~ m/^(list|extract|restore|compare|test-tape-drive)$/) and
     ($cfg::indexes eq "true")) {
     untie(%main::index);
 }
@@ -2990,36 +2990,16 @@ sub optioncheck {
     } # type-specific
 
 
-    # Paths: tmp, log/stamp files, open index
-    $main::path{$cfg::comp_log} = &checkinpath($cfg::comp_log) if ($cfg::comp_log ne "false");
-
+    # Tmp dir
     $cfg::tmpdir = &nuke_trailing_slash($cfg::tmpdir);
-    $cfg::logdir = &nuke_trailing_slash($cfg::logdir);
-    $cfg::stampdir = &nuke_trailing_slash($cfg::stampdir);
-
     if ($cfg::tmpdir !~ m:^/:) {
 	push(@main::errors,"\$tmpdir must be absolute path: $cfg::tmpdir");
-    }
-    if ($cfg::logdir !~ m:^/:) {
-	push(@main::errors,"\$logdir must be absolute path: $cfg::logdir");
-    }
-    if ($cfg::stampdir !~ m:^/:) {
-	push(@main::errors,"\$stampdir must be absolute path: $cfg::stampdir");
     }
     if (! -d $cfg::tmpdir) {
 	push(@main::errors,"\$tmpdir $cfg::tmpdir is not a directory");
     }
-    if (! -d $cfg::logdir) {
-	mkdir("$cfg::logdir",0755) or push(@main::errors,"Can't mkdir $cfg::logdir: $OS_ERROR");
-    }
-    if (! -w $cfg::logdir) {
-	push(@main::errors,"Can't write to $cfg::logdir: $OS_ERROR");
-    }
-    if (! -d $cfg::stampdir) {
-	mkdir("$cfg::stampdir",0755) or push(@main::errors,"Can't mkdir $cfg::stampdir: $OS_ERROR");
-    }
-    if (! -w $cfg::stampdir) {
-	push(@main::errors,"Can't write to $cfg::stampdir: $OS_ERROR");
+    if (! -w $cfg::tmpdir) {
+	push(@main::errors,"\$tmpdir $cfg::tmpdir is not writable");
     }
 
     # Levels
@@ -3125,8 +3105,33 @@ sub optioncheck {
 	push(@main::errors,"Nothing to do (see -help)");
     }
 
+    # Check log/stamp dirs (only if we are in a 'write' mode)
+    if ($main::mode !~ m/^(list|extract|restore|compare|toc|test-tape-drive)$/) {
+	$main::path{$cfg::comp_log} = &checkinpath($cfg::comp_log) if ($cfg::comp_log ne "false");
+	$cfg::logdir = &nuke_trailing_slash($cfg::logdir);
+	$cfg::stampdir = &nuke_trailing_slash($cfg::stampdir);
+	if ($cfg::logdir !~ m:^/:) {
+	    push(@main::errors,"\$logdir must be absolute path: $cfg::logdir");
+	}
+	if ($cfg::stampdir !~ m:^/:) {
+	    push(@main::errors,"\$stampdir must be absolute path: $cfg::stampdir");
+	}
+	if (! -d $cfg::logdir) {
+	    mkdir("$cfg::logdir",0755) or push(@main::errors,"Can't mkdir $cfg::logdir: $OS_ERROR");
+	}
+	if (! -w $cfg::logdir) {
+	    push(@main::errors,"Can't write to $cfg::logdir: $OS_ERROR");
+	}
+	if (! -d $cfg::stampdir) {
+	    mkdir("$cfg::stampdir",0755) or push(@main::errors,"Can't mkdir $cfg::stampdir: $OS_ERROR");
+	}
+	if (! -w $cfg::stampdir) {
+	    push(@main::errors,"Can't write to $cfg::stampdir: $OS_ERROR");
+	}
+    }
+
     # Index database
-    if (($main::mode !~ m/^(list|extract|restore|compare)$/) and
+    if (($main::mode !~ m/^(list|extract|restore|compare|test-tape-drive)$/) and
 	($cfg::indexes eq "true")) {
 	tie(%main::index,"AnyDBM_File",$cfg::index,O_CREAT|O_RDWR,0640) or
 	    push(@main::errors,"Can't tie DB $cfg::index: $OS_ERROR");
@@ -4504,7 +4509,7 @@ sub test_bufferprog {
 			push(@main::errors, "  --> " . $out);
 		    }
 
-		    if (($cfg:buffer eq 'buffer') and ($retval == 255)) {
+		    if (($cfg::buffer eq 'buffer') and ($retval == 255)) {
 			push(@main::errors, "  You don't have enough shared memory to run '$cfg::buffer' on $host, or");
 			push(@main::errors, "  have exceeded buffering limits. Try lowering the amount specified in");
 			push(@main::errors, "  \$buffer_megs in your flexbackup.conf file, or reconfigure your");

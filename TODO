@@ -5,9 +5,6 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
- - Don't check for writeable stampdir for non-backup
- - Don't check for writeable logdir for non-backup
-
  - Fix stdout/err flow when listing (maybe just "buffer" problem?)
 
  - Better cleanup after error in backup
