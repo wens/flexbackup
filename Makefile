@@ -4,7 +4,7 @@
 #
 
 CVSVER := $(shell echo v$(VER) | sed -e 's/\./_/g')
-SITE := ../flexbackup-web
+SITE := ../web
 RPM  := /net/rpm
 DATE := $(shell date)
 CVS := cvs -d :ext:edwinh@cvs.sourceforge.net:/cvsroot/flexbackup
