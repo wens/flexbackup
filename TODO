@@ -11,9 +11,6 @@ Cleanup/fix:
     - Use dump combined flags (for older dumps that want abc not -a -b -c)
     - Not all finds have the -fstype flag (from $traverse_fs)
     - How to handle (use lowest common denominator flags?  sorta what's tried now)
-    - Explicitly say we use GNU tar...
- - Clean up usages of $_ so I don't mess something up by inserting lines
-     later
  - When level > 9 and using files, -toc sorts it wrong (cosmetic nit)
  - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
  - If comp_log is changed, we don't nuke old logs that normally would be
@@ -109,7 +106,6 @@ Features to add:
      for the 'find' for instance and make things more standardized. although
      keeping it simply built out of standard commandline utils is a big plus
      as well...
- - Just to be stupid: add shar, ar, lha for read/write. [ patch ready ]
  - Just to be stupid: add arj, cab, rar reading (I don't think unix
      utils for creating those exist).
  - Make remote machine path overrides possible, that supercede others?

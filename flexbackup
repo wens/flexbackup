@@ -296,30 +296,30 @@ sub backup_routine {
     if (!defined($main::incremental_all)) {
 	opendir(DIR,"$cfg::logdir") or die("Can't open cfg::logdir: $OS_ERROR");
 	@files = readdir(DIR);
-	foreach (reverse sort @files) {
+	foreach my $lf (reverse sort @files) {
 
 	    # Skip our own log
-	    next if (m/^$logfile(\.gz|\.bz2|\.Z|\.zip)?$/);
+	    next if ($lf =~ m/^$logfile(\.gz|\.bz2|\.Z|\.zip)?$/);
 
 	    # Find normal old logs
-	    if (m/^$cfg::prefix$label\.(\d+)(\.(\d+))?(\.gz|\.bz2|\.Z|\.zip)?$/) {
+	    if ($lf =~ m/^$cfg::prefix$label\.(\d+)(\.(\d+))?(\.gz|\.bz2|\.Z|\.zip)?$/) {
 		if ($1 >= $main::level) {
 		    # Might be from $staticlogs=true or false
 		    if (defined($3)) {
-			$oldlogs{"$cfg::logdir/$_"} = $1 . "|" . $3;
+			$oldlogs{"$cfg::logdir/$lf"} = $1 . "|" . $3;
 		    } else {
-			$oldlogs{"$cfg::logdir/$_"} = $1;
+			$oldlogs{"$cfg::logdir/$lf"} = $1;
 		    }
 		}
 	    }
 
 	    # If this is a level 0, we can nuke incremental logs
-	    if (($main::level == 0) and (m/^$cfg::prefix$label\.(incremental)(\.(\d+))?(\.gz|\.bz2|\.Z|\.zip)?$/)) {
+	    if (($main::level == 0) and ($lf =~ m/^$cfg::prefix$label\.(incremental)(\.(\d+))?(\.gz|\.bz2|\.Z|\.zip)?$/)) {
 		# Might be from $staticlogs=true or false
 		if (defined($3)) {
-		    $oldlogs{"$cfg::logdir/$_"} = $1 . "|" . $3;
+		    $oldlogs{"$cfg::logdir/$lf"} = $1 . "|" . $3;
 		} else {
-		    $oldlogs{"$cfg::logdir/$_"} = $1;
+		    $oldlogs{"$cfg::logdir/$lf"} = $1;
 		}
 	    }
 	}
@@ -602,7 +602,11 @@ sub backup {
 	    $filename = $level . "." . $main::date . "." . $cfg::type;
 	}
 
-	if ($cfg::type =~ m/^(tar|dump|cpio|star|pax)$/) {
+	if ($cfg::type eq 'ar') {
+	    $filename =~ s/ar$/a/;
+	}
+
+	if ($cfg::type =~ m/^(tar|dump|cpio|star|pax|ar|shar)$/) {
 	    if ($cfg::compress eq "gzip") {
 		$filename .= ".gz";
 	    } elsif ($cfg::compress eq "bzip2") {
@@ -680,6 +684,12 @@ sub backup {
 	@cmds = &backup_pax($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'zip') {
 	@cmds = &backup_zip($label, $localdir, $title, $level, $remote);
+    } elsif ($cfg::type eq 'ar') {
+	@cmds = &backup_ar($label, $localdir, $title, $level, $remote);
+    } elsif ($cfg::type eq 'shar') {
+	@cmds = &backup_shar($label, $localdir, $title, $level, $remote);
+    } elsif ($cfg::type eq 'lha') {
+	@cmds = &backup_lha($label, $localdir, $title, $level, $remote);
     }
 
     # Strip multiple spaces
@@ -804,18 +814,18 @@ sub backup {
     &line();
 
     # Actually remove the old stamp files now that we are done
-    foreach (sort keys %oldstamps) {
-	print "| Removing out of date level $oldstamps{$_} timestamp for $dir\n";
+    foreach my $ts (sort keys %oldstamps) {
+	print "| Removing out of date level $oldstamps{$ts} timestamp for $dir\n";
 	if (!defined($main::opt{'n'})) {
-	    unlink("$_") or warn("Can't remove $_: $OS_ERROR\n");
+	    unlink("$ts") or warn("Can't remove $ts: $OS_ERROR\n");
 	}
     }
 
     # Create timestamp file, but use date from before the backup started
     # so next time we will catch files that might have been touched during the run
-    $_ = &current_time('ctime');
+    my $t = &current_time('ctime');
     &log("| Backup start: $main::date_at_start");
-    &log("| Backup end:   $_");
+    &log("| Backup end:   $t");
     if (!defined($main::opt{'n'})) {
 	system("$main::path{touch} -t \"$main::stamp_at_start\" \"$cfg::stampdir/$cfg::sprefix$label.$level\"");
     }
@@ -868,11 +878,11 @@ sub backup_dump {
 
     # With this one we don't have to put a stampfile on the remote system
     # since we only need the date string
-    $_ = &get_last_date($label, $level, 'ctime');
+    my $time = &get_last_date($label, $level, 'ctime');
     if ($level == 0) {
 	$date_flag = "";
     } else {
-	$date_flag = "-T \"$_\" ";
+	$date_flag = "-T \"$time\" ";
     }
 
     $cmd = '';
@@ -924,8 +934,8 @@ sub backup_afio {
     my $no_compress = '';
 
     if (defined($remote) and ($level != 0)) {
-	$_ = &get_last_date($label, $level, 'numeric');
-	$cmd = "$main::path{touch} -t \"$_\" $stamp";
+	my $time = &get_last_date($label, $level, 'numeric');
+	$cmd = "$main::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
     } else {
 	$stamp = &get_last_date($label, $level, 'filename');
@@ -1001,8 +1011,8 @@ sub backup_cpio {
     my $remove;
 
     if (defined($remote) and ($level != 0)) {
-	$_ = &get_last_date($label, $level, 'numeric');
-	$cmd = "$main::path{touch} -t \"$_\" $stamp";
+	my $time = &get_last_date($label, $level, 'numeric');
+	$cmd = "$main::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
     } else {
 	$stamp = &get_last_date($label, $level, 'filename');
@@ -1065,8 +1075,8 @@ sub backup_tar {
     my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
 
     if (defined($remote) and ($level != 0)) {
-	$_ = &get_last_date($label, $level, 'numeric');
-	$cmd = "$main::path{touch} -t \"$_\" $stamp";
+	my $time = &get_last_date($label, $level, 'numeric');
+	$cmd = "$main::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
     } else {
 	$stamp = &get_last_date($label, $level, 'filename');
@@ -1129,8 +1139,8 @@ sub backup_star {
     my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
 
     if (defined($remote) and ($level != 0)) {
-	$_ = &get_last_date($label, $level, 'numeric');
-	$cmd = "$main::path{touch} -t \"$_\" $stamp";
+	my $time = &get_last_date($label, $level, 'numeric');
+	$cmd = "$main::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
     } else {
 	$stamp = &get_last_date($label, $level, 'filename');
@@ -1196,8 +1206,8 @@ sub backup_pax {
     my $remove;
 
     if (defined($remote) and ($level != 0)) {
-	$_ = &get_last_date($label, $level, 'numeric');
-	$cmd = "$main::path{touch} -t \"$_\" $stamp";
+	my $time = &get_last_date($label, $level, 'numeric');
+	$cmd = "$main::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
     } else {
 	$stamp = &get_last_date($label, $level, 'filename');
@@ -1263,8 +1273,8 @@ sub backup_zip {
     my $remove;
 
     if (defined($remote) and ($level != 0)) {
-	$_ = &get_last_date($label, $level, 'numeric');
-	$cmd = "$main::path{touch} -t \"$_\" $stamp";
+	my $time = &get_last_date($label, $level, 'numeric');
+	$cmd = "$main::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
     } else {
 	$stamp = &get_last_date($label, $level, 'filename');
@@ -1305,6 +1315,198 @@ sub backup_zip {
     push(@cmds, $cmd);
 
     $remove = "$tmpzip \"$dir/$title\"";
+    if (defined($remote) and ($level != 0)) {
+	$remove .= " $stamp";
+    }
+
+    $cmd = "$main::path{rm} -f $remove";
+    push(@cmds, &maybe_remote_cmd($cmd, $remote));
+
+    return(@cmds);
+
+}
+
+######################################################################
+# Return command to backup a directory using ar
+######################################################################
+sub backup_ar {
+
+    my $label = shift(@_);
+    my $dir = shift(@_);
+    my $title = shift(@_);
+    my $level = shift(@_);
+    my $remote = shift(@_);
+    my $cmd = '';
+    my @cmds;
+    my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
+    my $filelist = "$cfg::tmpdir/arlist.$PROCESS_ID";
+    my $tmpfile = "$cfg::tmpdir/ar.$PROCESS_ID";
+    my $remove;
+
+    &log("| NOTE: ar archives will not descend directories");
+
+    if (defined($remote) and ($level != 0)) {
+	my $time = &get_last_date($label, $level, 'numeric');
+	$cmd = "$main::path{touch} -t \"$time\" $stamp";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+    } else {
+	$stamp = &get_last_date($label, $level, 'filename');
+    }
+
+    # Kludge a title by replacing / with - in the title
+    # then touch a file in the dir we are going to back up.
+    $title =~ s%/%-%g;
+    $title =~ s% %_%g;
+    $cmd = "$main::path{touch} \"$dir/$title\"";
+    push(@cmds, &maybe_remote_cmd($cmd, $remote));
+
+    $cmd = "cd \"$dir\" && ";
+    $cmd .= &file_list_cmd( $dir, $stamp, 'newline', $level, $remote, '-maxdepth 1 ! -type d');
+    $cmd .= "> $filelist; ";
+
+    $cmd .= "$main::path{ar} rc";
+    $cmd .= "$main::ar_verb_flag ";
+    $cmd .= "$tmpfile ";
+    $cmd .= "`$main::path{cat} $filelist`";
+    $cmd .= "; $main::path{cat} $tmpfile $main::z";
+
+    # Buffer both sides if remote
+    if (defined($remote)) {
+	$cmd .= $main::buffer_cmd;
+    }
+
+    # Wrap all that together
+    $cmd = &maybe_remote_cmd($cmd, $remote);
+
+    # Append writer stuff
+    $cmd = &append_writer_cmd($cmd);
+
+    push(@cmds, $cmd);
+
+    $remove = "\"$dir/$title\" $filelist $tmpfile";
+    if (defined($remote) and ($level != 0)) {
+	$remove .= " $stamp";
+    }
+
+    $cmd = "$main::path{rm} -f $remove";
+    push(@cmds, &maybe_remote_cmd($cmd, $remote));
+
+    return(@cmds);
+
+}
+
+######################################################################
+# Return command to backup a directory using shar
+######################################################################
+sub backup_shar {
+
+    my $label = shift(@_);
+    my $dir = shift(@_);
+    my $title = shift(@_);
+    my $level = shift(@_);
+    my $remote = shift(@_);
+    my $cmd = '';
+    my @cmds;
+    my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
+    my $remove;
+
+    if (defined($remote) and ($level != 0)) {
+	my $time = &get_last_date($label, $level, 'numeric');
+	$cmd = "$main::path{touch} -t \"$time\" $stamp";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+    } else {
+	$stamp = &get_last_date($label, $level, 'filename');
+    }
+
+    $cmd = "cd \"$dir\" && ";
+    $cmd .= &file_list_cmd( $dir, $stamp, 'newline', $level, $remote, '! -type d');
+    $cmd .= " | ";
+
+    $cmd .= "$main::path{shar} ";
+    $cmd .= "$main::shar_verb_flag ";
+    $cmd .= "-n \"$title\" ";
+    $cmd .= "-S ";
+    $cmd .= "$main::z";
+
+    # Buffer both sides if remote
+    if (defined($remote)) {
+	$cmd .= $main::buffer_cmd;
+    }
+
+    # Wrap all that together
+    $cmd = &maybe_remote_cmd($cmd, $remote);
+
+    # Append writer stuff
+    $cmd = &append_writer_cmd($cmd);
+
+    push(@cmds, $cmd);
+
+    if (defined($remote) and ($level != 0)) {
+	$cmd = "$main::path{rm} -f $stamp";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+    }
+
+    return(@cmds);
+
+}
+
+
+######################################################################
+# Return command to backup a directory using lha
+######################################################################
+sub backup_lha {
+
+    my $label = shift(@_);
+    my $dir = shift(@_);
+    my $title = shift(@_);
+    my $level = shift(@_);
+    my $remote = shift(@_);
+    my $cmd = '';
+    my @cmds;
+    my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
+    my $filelist = "$cfg::tmpdir/lhalist.$PROCESS_ID";
+    my $tmpfile = "$cfg::tmpdir/lha.$PROCESS_ID";
+    my $remove;
+
+    if (defined($remote) and ($level != 0)) {
+	my $time = &get_last_date($label, $level, 'numeric');
+	$cmd = "$main::path{touch} -t \"$time\" $stamp";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+    } else {
+	$stamp = &get_last_date($label, $level, 'filename');
+    }
+
+    # Kludge a title by replacing / with - in the title
+    # then touch a file in the dir we are going to back up.
+    $title =~ s%/%-%g;
+    $title =~ s% %_%g;
+    $cmd = "echo \"$title\" > \"$dir/$title\"";
+    push(@cmds, &maybe_remote_cmd($cmd, $remote));
+
+    $cmd = "cd \"$dir\" && ";
+    $cmd .= &file_list_cmd( $dir, $stamp, 'newline', $level, $remote);
+    $cmd .= "> $filelist; ";
+
+    $cmd .= "$main::path{lha} a";
+    $cmd .= "$main::lha_verb_flag ";
+    $cmd .= "$tmpfile ";
+    $cmd .= "`$main::path{cat} $filelist`";
+    $cmd .= "; $main::path{cat} $tmpfile $main::z";
+
+    # Buffer both sides if remote
+    if (defined($remote)) {
+	$cmd .= $main::buffer_cmd;
+    }
+
+    # Wrap all that together
+    $cmd = &maybe_remote_cmd($cmd, $remote);
+
+    # Append writer stuff
+    $cmd = &append_writer_cmd($cmd);
+
+    push(@cmds, $cmd);
+
+    $remove = "\"$dir/$title\" $filelist $tmpfile";
     if (defined($remote) and ($level != 0)) {
 	$remove .= " $stamp";
     }
@@ -1388,6 +1590,35 @@ sub list_routine {
 	$cmd .= "$tmpfile ; ";
 	$cmd .= "$main::path{rm} -f $tmpfile";
 
+    } elsif ($cfg::type eq 'ar') {
+	my $tmpfile = "$cfg::tmpdir/ar.$PROCESS_ID";
+	$cmd .= "$main::path{cat} > $tmpfile; ";
+	$cmd .= "$main::path{ar} t";
+	$cmd .= "$main::ar_verb_flag ";
+	$cmd .= "$tmpfile; ";
+	$cmd .= "$main::path{rm} -f $tmpfile";
+
+    } elsif ($cfg::type eq 'shar') {
+
+	$cmd .= "perl -pe 'last if (! m/^#/)'";
+
+    } elsif ($cfg::type eq 'lha') {
+	my $tmpfile = "$cfg::tmpdir/lha.$PROCESS_ID";
+	$cmd .= "$main::path{cat} > $tmpfile ; ";
+	$cmd .= "$main::path{lha} l";
+	$cmd .= "$main::lha_verb_flag ";
+	$cmd .= "$tmpfile ; ";
+	$cmd .= "$main::path{rm} -f $tmpfile";
+
+    } elsif ($cfg::type eq 'arj') {
+	$cmd .= "$main::path{unarj} ";
+
+    } elsif ($cfg::type eq 'rar') {
+	$cmd .= "$main::path{unrar} ";
+
+    } elsif ($cfg::type eq 'cab') {
+	$cmd .= "$main::path{cabextract} ";
+
     }
 
     &run_or_echo_then_query($cmd);
@@ -1422,10 +1653,13 @@ sub extract_routine {
 	    chomp;
 	    $_ =~ s%^/%%;
 	    $_ =~ s%^\./%%;
-	    # tar needs this to extract the file list since its stored that way
-	    if ($cfg::type eq 'tar') {
+
+	    # Some types need the leading ./ to extract the file list,
+	    # since its stored that way
+	    if ($cfg::type =~ m/^(tar|lha)$/) {
 		$_ = './' . $_;
 	    }
+
 	    print NEWLIST "$_\n";
 	    $restore_files .= " $_";
 	}
@@ -1514,6 +1748,46 @@ sub extract_routine {
 	}
 	$cmd .= "; ";
 	$cmd .= "$main::path{rm} -f $tmpfile";
+
+    } elsif ($cfg::type eq 'ar') {
+	my $tmpfile = "$cfg::tmpdir/ar.$PROCESS_ID";
+	$cmd .= "$main::path{cat} > $tmpfile; ";
+	$cmd .= "$main::path{ar} xo";
+	$cmd .= "$main::ar_verb_flag ";
+	$cmd .= "$tmpfile ";
+	if (defined($main::opt{'files'})) {
+	    $cmd .= "$restore_files";
+	}
+	$cmd .= "; ";
+	$cmd .= "$main::path{rm} -f $tmpfile";
+
+    } elsif ($cfg::type eq 'shar') {
+	$cmd .= "sh ";
+	if (defined($main::opt{'files'})) {
+	    &log("| NOTE: \"-files\" is ignored for shar");
+	}
+
+    } elsif ($cfg::type eq 'lha') {
+	my $tmpfile = "$cfg::tmpdir/lha.$PROCESS_ID";
+	$cmd .= "$main::path{cat} > $tmpfile ; ";
+	$cmd .= "$main::path{lha} x";
+	$cmd .= "$main::lha_verb_flag ";
+	$cmd .= "$tmpfile ";
+	if (defined($main::opt{'files'})) {
+	    $cmd .= "$restore_files ";
+	}
+	$cmd .= "; ";
+	$cmd .= "$main::path{rm} -f $tmpfile";
+
+    } elsif ($cfg::type eq 'arj') {
+	$cmd .= "$main::path{unarj} ";
+
+    } elsif ($cfg::type eq 'rar') {
+	$cmd .= "$main::path{unrar} ";
+
+    } elsif ($cfg::type eq 'cab') {
+	$cmd .= "$main::path{cabextract} ";
+
     }
 
     &run_or_echo_then_query($cmd);
@@ -1575,12 +1849,8 @@ sub compare_routine {
 	$cmd .= "-B ";
 	$cmd .= "file=-";
 
-    } elsif ($cfg::type eq 'pax') {
-	die("pax not capable of comparing files");
-
-    } elsif ($cfg::type eq 'zip') {
-	die("zip not capable of comparing files");
-
+    } else {
+	die("$cfg::type not capable of comparing files");
     }
 
     &run_or_echo_then_query($cmd);
@@ -1609,24 +1879,8 @@ sub restore_routine {
 	$cmd .= "$main::dump_blk_flag ";
 	$cmd .= "-f -";
 
-    } elsif ($cfg::type eq 'afio') {
+    } else {
 	die("Interactive restore for $cfg::type not implemented");
-
-    } elsif ($cfg::type eq 'cpio') {
-	die("Interactive restore for $cfg::type not implemented");
-
-    } elsif ($cfg::type eq 'tar') {
-	die("Interactive restore for $cfg::type not implemented");
-
-    } elsif ($cfg::type eq 'star') {
-	die("Interactive restore for $cfg::type not implemented");
-
-    } elsif ($cfg::type eq 'zip') {
-	die("Interactive restore for $cfg::type not implemented");
-
-    } elsif ($cfg::type eq 'pax') {
-	die("Interactive restore for $cfg::type not implemented");
-
     }
 
     &run_or_echo_then_query($cmd);
@@ -1846,18 +2100,17 @@ sub readconfigfile {
 sub mt {
 
     my (@operations) = (@_);
-    my $operation;
 
     # Set hardware compression when we do the blocksize
     if ($cfg::compress eq "hardware") {
-	foreach (@operations) {
-	    if ($_ =~ m/generic-blocksize/) {
+	foreach my $operation (@operations) {
+	    if ($operation =~ m/generic-blocksize/) {
 		push(@operations,'datcompression 2');
 	    }
 	}
     }
 
-    foreach $operation (@operations) {
+    foreach my $operation (@operations) {
 
 	# mt flavors for block number
 	if ($operation eq 'generic-query') {
@@ -2053,7 +2306,7 @@ sub optioncheck {
 
     # First check if things are defined in the config file
     # Checks exist, true/false, or one of options
-    &check(\$cfg::type,'type','dump afio cpio tar star pax zip');
+    &check(\$cfg::type,'type','dump afio cpio tar star pax zip ar shar lha');
     &check(\$cfg::compress,'compress','gzip bzip2 compress zip false hardware');
     &check(\$cfg::compr_level,'compr_level','exist');
     &check(\$cfg::verbose,'verbose');
@@ -2417,6 +2670,9 @@ sub optioncheck {
 	$main::star_verb_flag = "-v";
 	$main::pax_verb_flag = "-v";
 	$main::zip_verb_flag = "-v";
+	$main::ar_verb_flag = "v";
+	$main::shar_verb_flag = "";
+	$main::lha_verb_flag = "";
     } else {
 	$main::dump_verb_flag = "";
 	$main::afio_verb_flag = "";
@@ -2425,6 +2681,9 @@ sub optioncheck {
 	$main::star_verb_flag = "";
 	$main::pax_verb_flag = "";
 	$main::zip_verb_flag = "-q";
+	$main::ar_verb_flag = "";
+	$main::shar_verb_flag = "-q";
+	$main::lha_verb_flag = "q";
     }
 
     # Sparse flag
@@ -2609,7 +2868,31 @@ sub optioncheck {
 	    $main::zip_noz_flag = " -n " . join(":",@_);
 	}
 
+    } elsif ($cfg::type eq 'ar') {
+
+	$main::path{'ar'} = &checkinpath('ar');
+	push(@main::remoteprogs, $main::path{'ar'});
+
+    } elsif ($cfg::type eq 'shar') {
+
+	$main::path{'shar'} = &checkinpath('shar');
+	push(@main::remoteprogs, $main::path{'shar'});
+
+    } elsif ($cfg::type eq 'lha') {
+
+	$main::path{'lha'} = &checkinpath('lha');
+	push(@main::remoteprogs, $main::path{'lha'});
+
+	if ($cfg::compress =~ /^(gzip|bzip2|compress|zip)$/) {
+	    warn("Using type \"lha\" with compress=$cfg::compress makes no sense");
+	    warn("Setting compression to false");
+	    $main::unz = "";
+	    $main::z = "";
+	    $cfg::compress = "false";
+	}
+
     } # type-specific
+
 
     # Paths: tmp, log/stamp files, open index
     $main::path{$cfg::comp_log} = &checkinpath($cfg::comp_log) if ($cfg::comp_log ne "false");
@@ -2722,10 +3005,10 @@ sub optioncheck {
     my (@modelist) = qw(fs list extract compare restore toc newtape rmindex rmfile);
     my @modes;
     my $modecount = 0;
-    foreach (@modelist) {
-	if (defined($main::opt{$_})) {
+    foreach my $mode (@modelist) {
+	if (defined($main::opt{$mode})) {
 	    $modecount++;
-	    push(@modes,$_);
+	    push(@modes,$mode);
 	}
     }
     if ($modecount > 1) {
@@ -2857,9 +3140,9 @@ sub maybe_get_filename {
 
     # grab filename from option argument
     # optionscheck already guarantees only one is set
-    foreach (@modes) {
-	if (defined($main::opt{$_})) {
-	    $arg = $main::opt{$_};
+    foreach my $mode (@modes) {
+	if (defined($main::opt{$mode})) {
+	    $arg = $main::opt{$mode};
 	}
     }
 
@@ -2902,9 +3185,10 @@ sub maybe_get_filename {
 
     # Try and guess file types and commpression scheme
     # might as well since we are reading from a file in this case
-    if ($file =~ m/\.(dump|cpio|tar|star|pax)\.(gz|bz2|Z|zip)$/) {
+    if ($file =~ m/\.(dump|cpio|tar|star|pax|a|shar)\.(gz|bz2|Z|zip)$/) {
 	$cfg::type = $1;
 	$cfg::compress = $2;
+	$cfg::type =~ s/^a$/ar/;
 	$cfg::compress =~ s/gz/gzip/;
 	$cfg::compress =~ s/bz2/bzip2/;
 	$cfg::compress =~ s/Z/compress/;
@@ -2920,8 +3204,9 @@ sub maybe_get_filename {
 	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
 	&optioncheck();                  # redo to set a few variables over
 
-    } elsif ($file =~ m/\.(dump|afio|cpio|tar|star|pax|zip)$/) {
+    } elsif ($file =~ m/\.(dump|afio|cpio|tar|star|pax|zip|a|shar|lha)$/) {
 	$cfg::type = $1;
+	$cfg::type =~ s/^a$/ar/;
 	$cfg::compress = "false";
 	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
 	&optioncheck();                  # redo to set a few variables over
@@ -2948,6 +3233,37 @@ sub maybe_get_filename {
 	$cfg::type = "cpio";
 	$cfg::compress = "false";
 	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
+	&optioncheck();                  # redo to set a few variables over
+
+    } elsif ($file =~ m/\.jar$/i) {
+	$cfg::type = "zip";
+	$cfg::compress = "false";
+	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
+	&optioncheck();                  # redo to set a few variables over
+
+    } elsif ($file =~ m/\.lzh$/i) {
+	$cfg::type = "lha";
+	$cfg::compress = "false";
+	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
+	&optioncheck();                  # redo to set a few variables over
+
+    } elsif ($file =~ m/\.arj$/i) {
+	$cfg::type = "arj";
+	$cfg::compress = "false";
+	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
+	&optioncheck();                  # redo to set a few variables over
+
+    } elsif ($file =~ m/\.rar$/i) {
+	$cfg::type = "rar";
+	$cfg::compress = "false";
+	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
+	&optioncheck();                  # redo to set a few variables over
+
+    } elsif ($file =~ m/\.cab$/i) {
+	$cfg::type = "cab";
+	$cfg::compress = "false";
+	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
+	&optioncheck();                  # redo to set a few variables over
 
     }
 
@@ -3396,18 +3712,18 @@ sub new_tape_key {
     $main::nextfile = 1;
 
     if (defined($main::use_file)) {
-	$_ = "<index keyfile, dir=$cfg::device>";
+	my $label = "<index keyfile, dir=$cfg::device>";
 	if (defined($main::opt{'n'})) {
-	    &log("| (debug) \$main::index{$key|$cfg::keyfile} = $_");
+	    &log("| (debug) \$main::index{$key|$cfg::keyfile} = $label");
 	} else {
-	    $main::index{"$key|$cfg::keyfile"} = $_;
+	    $main::index{"$key|$cfg::keyfile"} = $label;
 	}
     } else {
-	$_ = "<tape index key>";
+	my $label = "<tape index key>";
 	if (defined($main::opt{'n'})) {
-	    &log("| (debug) \$main::index{$key|0} = $_");
+	    &log("| (debug) \$main::index{$key|0} = $label");
 	} else {
-	    $main::index{"$key|0"} = $_;
+	    $main::index{"$key|0"} = $label;
 	}
     }
 
@@ -3691,11 +4007,11 @@ sub rmfile {
 
 	# Nuke all files in this dir
 	opendir(DIR,$cfg::device) or die ("Can't open dir $cfg::device: $OS_ERROR");
-	foreach(readdir(DIR)) {
-	    next if (m:^\.\.?$:);
-	    next if (m%^$cfg::keyfile$%);
-	    &log("| Erasing archive $_");
-	    unlink("$cfg::device/$_") or die ("Can't rm $cfg::device/$_: $OS_ERROR");
+	foreach my $f (readdir(DIR)) {
+	    next if ($f =~ m:^\.\.?$:);
+	    next if ($f =~ m%^$cfg::keyfile$%);
+	    &log("| Erasing archive $f");
+	    unlink("$cfg::device/$f") or die ("Can't rm $cfg::device/$f: $OS_ERROR");
 	}
 	closedir(DIR);
 
@@ -3780,6 +4096,7 @@ sub file_list_cmd {
     my $separator = shift(@_);
     my $level = shift(@_);
     my $remote = shift(@_);
+    my $otherarg = shift(@_);
 
     if (!defined($separator) or ($separator !~ m/^(null|newline)$/)) {
 	$separator = 'null';
@@ -3788,6 +4105,10 @@ sub file_list_cmd {
     my $cmd = '';
     $cmd .= "$main::path{find} . $main::mountpoint_flag ";
     $cmd .= "-depth ";
+
+    if (defined($otherarg)) {
+	$cmd .= $otherarg . " ";
+    }
 
     if ($level != 0) {
 
