@@ -793,7 +793,7 @@ sub backup_tar {
 
     $cmd .= "cd $dir ; ";
     $cmd .= "find . -xdev ";
-    $cmd .= "-not -type d ";
+    $cmd .= "! -type d ";
     $cmd .= "-newer $tmpstamp ";
     $cmd .= "-print | ";
     $cmd .= "sed -e \"s%^\./%%\" ";
