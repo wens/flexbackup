@@ -910,7 +910,7 @@ sub backup {
 	    if ($CHILD_ERROR) {
 		&log('');
 
-		if (defined($::opt{'ignore-errors')) {
+		if (defined($::opt{'ignore-errors'})) {
 		    &log("returned ERROR from backup; will continue anyway");
 		} else {
 
@@ -947,7 +947,7 @@ sub backup {
 		    unlink($exitscript);
 		}
 
-		if (!defined($::opt{'ignore-errors')) {
+		if (!defined($::opt{'ignore-errors'})) {
 		    exit(1);
 		}
 	    }
