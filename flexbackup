@@ -460,15 +460,20 @@ sub backup_routine {
     }
 
     # Remove old log files now that we are done
+    my $rmlogs = 0;
     foreach (sort keys %oldlogs) {
+	$rmlogs++;
 	my ($lev,$d) = split(/\|/,$oldlogs{$_});
 	if (defined($d)) {
-	    print "| Removing old level $lev log of $main::opt{fs} (dated $d)\n";
+	    &log("| Removing old level $lev log of $main::opt{fs} (dated $d)");
 	} else{
-	    print "| Removing old level $lev log of $main::opt{fs}\n";
+	    &log("| Removing old level $lev log of $main::opt{fs}");
 	}
-	unlink("$_") or warn("Can't remove $_: $OS_ERROR\n");
+	if (!defined($main::opt{'n'})) {
+	    unlink("$_") or warn("Can't remove $_: $OS_ERROR\n");
+	}
     }
+    &line('log') if ($rmlogs > 0);
 
     # Compress log file
     if ($cfg::comp_log ne 'false') {
@@ -482,23 +487,22 @@ sub backup_routine {
 	    $logext = ".Z";
 	    $comp_cmd = "$main::path{compress} -f $main::log";
 	}
-	&line("logonly");
-	print "| Compressing log ($logfile" . "$logext)\n";
+	undef $main::log;
+	&log("| Compressing log ($logfile" . "$logext)", 'screen');
 	system("$comp_cmd");
 	if ($CHILD_ERROR) {
 	    warn("Error compressing log file\n");
 	}
-	undef $main::log;
     }
 
     # Symlink the "latest" log file for this level
     unlink("$cfg::logdir/$symlink" . $logext);
     if ($cfg::staticlogs eq 'false') {
-	&log("| Linking $symlink" . "$logext -> $logfile" . $logext);
+	&log("| Linking $symlink" . "$logext -> $logfile" . $logext, 'screen');
 	symlink("$logfile" . $logext,"$cfg::logdir/$symlink" . $logext);
     }
 
-    &line();
+    &line('screen');
 
     &toc_routine($tape_key);
 
@@ -676,7 +680,9 @@ sub backup {
     # Actually remove the old stamp files now that we are done
     foreach (sort keys %oldstamps) {
 	print "| Removing out of date level $oldstamps{$_} timestamp for $dir\n";
-	unlink("$_") or warn("Can't remove $_: $OS_ERROR\n");
+	if (!defined($main::opt{'n'})) {
+	    unlink("$_") or warn("Can't remove $_: $OS_ERROR\n");
+	}
     }
 
     # Create timestamp file, but use date from before the backup started
@@ -794,7 +800,7 @@ sub backup_afio {
 	$no_compress = "-E $tmpnocompress";
     }
 
-    $cmd = "$main::path{'printf'} \"\\nVolume Label:\\n$title\\n\\n\" > $tmplabel";
+    $cmd = "$main::path{'printf'} \"Volume Label:\\n$title\\n\\n\" > $tmplabel";
     push(@cmds, &maybe_remote_cmd($cmd));
 
     $cmd = '';
@@ -1284,14 +1290,32 @@ sub get_last_date {
 
 ######################################################################
 # Echo message to screen and log
+# optionally just one or the other
 ######################################################################
 sub log {
 
     my $msg = shift(@_);
+    my $only = shift(@_);
+    my $do_screen = 1;
+    my $do_log = 1;
 
-    print "$msg\n";
-    if (defined($main::log)) {
-	open(LOG,">>$main::log");
+    if (!defined($only)) {
+	$do_screen = 1;
+	$do_log = 1;
+    } elsif ($only eq 'screen') {
+	$do_screen = 1;
+	$do_log = 0;
+    } elsif ($only eq 'log') {
+	$do_screen = 0;
+	$do_log = 1;
+    }
+
+    if ($do_screen == 1) {
+	print "$msg\n";
+    }
+
+    if (($do_log == 1) and defined($main::log)) {
+	open(LOG,">>$main::log") || warn("can't open logfile");
 	print LOG "$msg\n";
 	close(LOG);
     }
@@ -1300,17 +1324,38 @@ sub log {
 
 ######################################################################
 # Echo a line to both screen and log
+# optionally just one or the other
 ######################################################################
 sub line {
 
-    my $logonly = shift(@_);
+    my $only = shift(@_);
+    my $do_screen = 1;
+    my $do_log = 1;
 
-    if (!defined($logonly)) {
-	print "|------------------------------------------------\n";
+    my $length = 60;
+
+    if (!defined($only)) {
+	$do_screen = 1;
+	$do_log = 1;
+    } elsif ($only eq 'screen') {
+	$do_screen = 1;
+	$do_log = 0;
+    } elsif ($only eq 'log') {
+	$do_screen = 0;
+	$do_log = 1;
     }
-    if (defined($main::log)) {
-	open(LOG,">>$main::log");
-	print LOG "|------------------------------------------------\n";
+
+    if ($do_screen == 1) {
+	print '|';
+	print '-' x $length;
+	print "\n";
+    }
+
+    if (($do_log == 1) and defined($main::log)) {
+	open(LOG,">>$main::log") || warn("can't open logfile");
+	print LOG '|';
+	print LOG '-' x $length;
+	print LOG "\n";
 	close(LOG);
     }
 
@@ -2058,6 +2103,7 @@ sub optioncheck {
     # Test
     if (defined($main::opt{'n'})) {
 	&log('(debug) no backup or mt commands will be executed');
+	&log('(debug) no old stamps or old log files will be removed');
     }
 
     # Check extract list
@@ -2592,7 +2638,12 @@ sub split_and_echo {
 	}
 
 	# What a mess we went through above, just to print it...
-	&log(" $line" . $_);
+	if (!defined($main::opt{'n'})) {
+	    &log("| $line" . $_);
+	} else {
+	    # This make it easier to cut-n-paste for debugging commands manually
+	    &log("$line" . $_);
+	}
 
 	# Indent next line(s) by one space
 	$line = " ";
@@ -2820,12 +2871,13 @@ sub toc_routine {
     foreach $desired (sort bynumber keys %desired_keys) {
 
 	my $found = 0;
+	my $length = 45;
 
 	foreach $tape (sort bynumber keys %tape_files) {
 	    if ($tape eq $desired) {
 		$found = 1;
 		&log("File  Contents    (tape index $tape)");
-		&log("-----------------------------------------------");
+		&log("-" x $length);
 		foreach $file (sort bynumber keys %{$tape_files{$tape}}) {
 		    $_ = sprintf("%-04s",$file);
 		    &log($_ . " " . $tape_files{$tape}{$file});
@@ -2837,7 +2889,7 @@ sub toc_routine {
 	    if ($dir eq $desired) {
 		$found = 1;
 		&log("File  Contents    (tape index $dir)");
-		&log("-----------------------------------------------");
+		&log("-" x $length);
 		foreach $file (sort keys %{$disk_files{$dir}}) {
 		    $_ = sprintf("%-04s",$file);
 		    &log($_ . " " . $disk_files{$dir}{$file});
@@ -2851,99 +2903,6 @@ sub toc_routine {
 
 	&log('');
 
-    }
-
-}
-
-######################################################################
-# Print table of contents
-# Can give a specific key as argument
-# Or uses command flag (specific key, current tape/dir, or "all")
-######################################################################
-sub old_toc_routine {
-
-    my $arg = shift(@_);
-    my $key;
-    my %keys;
-    my $file;
-    my $tape;
-    my $filenum;
-    return if $cfg::indexes eq "false";
-
-    if (defined($arg)) {
-
-	return if ($arg eq '');
-	$keys{$arg} = 1;
-
-    } elsif ($main::opt{'toc'} =~ m/^\d+$/) {
-
-	&log("| Listing specific index");
-
-	# Print toc for a specific tape
-	$keys{"$main::opt{toc}"} = 1;
-
-    } elsif ($main::opt{'toc'} eq '') {
-
-	# Print toc for current tape/device
-	&mt('rewind');
-	$_ = &get_tape_key();
-	&mt('rewind');
-	if ($_ ne '') {
-	    $keys{$_} = 1;
-	}
-	&line();
-
-    } elsif ($main::opt{'toc'} eq "all") {
-
-	&log("| Listing all in database");
-
-	# Print everything we know about
-	foreach $file (sort keys %main::index) {
-	    ($tape,$filenum) = split(/\|/,$file);
-	    $keys{$tape} = 1;
-	}
-	&line();
-
-    } else {
-	die("Invalid key spec $main::opt{toc}");
-    }
-
-
-    # Print the toc of each tape in our list
-    foreach $key (sort keys %keys) {
-
-	my %contents;
-	my @contents = ();
-	my $found = 0;
-	my @tmpitems;
-
-	if (defined($main::use_file)) {
-	    @tmpitems = sort keys %main::index;
-	} else {
-	    @tmpitems = sort bynumber keys %main::index;
-	}
-
-	foreach $file (@tmpitems) {
-	    ($tape,$filenum) = split(/\|/,$file);
-	    if ($tape eq $key) {
-		$filenum = sprintf("%-04s",$filenum);
-		push(@contents,$filenum);
-		$contents{$filenum} = $main::index{$file};
-		$found = 1;
-	    }
-	}
-
-	&log('');
-	if ($found == 0) {
-	    &log("Key $key not found in index");
-	} else {
-	    &log("File  Contents    (tape index $key)");
-	    &log("-----------------------------------------------");
-	    foreach (sort @contents) {
-		&log($_ . " " . $contents{$_});
-	    }
-	}
-	&log('');
     }
 
 }
