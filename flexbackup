@@ -2566,7 +2566,7 @@ sub optioncheck {
 	    # quotes and there is _no way_ for csh do deal with $ in that
 	    # situation.  This took a LONG time to figure out.
 	    if ($expr =~ m/^(.+)\$$/) {
-		$expr = '"' . $1 . '"' . '$';
+		$expr = '"' . $1 . '"' . '$';  #' (comment to fool emacs 20.7
 	    } else {
 		$expr = '"' . $expr . '"';
 	    }
@@ -3145,6 +3145,16 @@ sub optioncheck {
 	if ($main::opt{'pkgdelta'} eq 'rpm') {
 	    $main::pkgdelta = 'rpm';
 	    $main::path{'rpm'} = &checkinpath('rpm');
+	}
+	elsif ($main::opt{'pkgdelta'} eq 'freebsd') {
+	    #
+	    # JR: FIX ME FIX ME FIXME
+	    # pkg_info doesn't have the '-g' flag before 4.3-RELEASE so we need to look
+	    # at the uname value and complain if pkgdelta is used on a FreeBSD box with a
+	    # release before that.
+	    #
+	    $main::pkgdelta = 'freebsd';
+	    $main::path{'pkg_info'} = &checkinpath('pkg_info');
 	} else {
 	    push(@main::errors,"$main::opt{pkgdelta} not a valid option for -pkgdelta");
 	}
@@ -4538,6 +4548,29 @@ sub list_packages {
 	    close(LIST);
 	}
     }
+    elsif ($main::pkgdelta eq 'freebsd') {
+
+	my $cmd = "$main::path{pkg_info}";
+
+	if ($host ne 'localhost') {
+	    &log("| Listing all FreeBSD packages on host $host...");
+	    $cmd = &maybe_remote_cmd($cmd, $host);
+	} else {
+	    &log("| Listing all FreeBSD packages...");
+	}
+	if (defined($main::debug)) {
+	    &log("(debug) $cmd");
+	} else {
+	    my (@junk, $pkg);
+	    open(LIST,"$cmd |") || die;
+	    while(<LIST>) {
+		($pkg, @junk) = split (/\s+/, $_);
+		$main::package_list{$host}{$pkg} = 1;
+	    }
+	    close(LIST);
+	}
+
+    }
 }
 
 ######################################################################
@@ -4571,6 +4604,29 @@ sub find_packaged_files {
 	    close(LIST);
 	}
     }
+    elsif ($main::pkgdelta eq 'freebsd') {
+
+	my $cmd = "$main::path{pkg_info} -q -a -L";
+
+	if ($host ne 'localhost') {
+	    &log("| Finding all files owned by FreeBSD packages on host $host...");
+	    $cmd = &maybe_remote_cmd($cmd, $host);
+	} else {
+	    &log("| Finding all files owned by FreeBSD packages...");
+	}
+	if (defined($main::debug)) {
+	    &log("(debug) $cmd");
+	} else {
+	    open(LIST,"$cmd |") || die;
+	    while(<LIST>) {
+		if (m:^(/.*)$:) {
+		    $main::packaged{$host}{$1} = 1;
+		}
+	    }
+	    close(LIST);
+	}
+    }
+
 }
 
 
@@ -4609,6 +4665,30 @@ sub find_changed_files {
 	    close(LIST);
 	}
     }
+    elsif ($main::pkgdelta eq 'freebsd') {
+
+	my $cmd = "$main::path{pkg_info} -g -a -q";
+
+	if ($host ne 'localhost') {
+	    &log("| Finding changed package files on host $host...");
+	    $cmd = &maybe_remote_cmd($cmd, $host);
+	} else {
+	    &log("| Finding changed package files...");
+	}
+	&log("| May take quite a while, please be patient");
+	if (defined($main::debug)) {
+	    &log("(debug) $cmd");
+	} else {
+	    open(LIST,"$cmd |") || die;
+	    while(<LIST>) {
+		if (/^(\S+)\s+fails.*MD5.*checksum$/) {
+		    $main::changed{$host}{$1} = 1;
+		}
+	    }
+	    close(LIST);
+	}
+    }
+
 }
 
 #############################################################################
