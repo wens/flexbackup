@@ -1,24 +1,39 @@
 $Id$
 $Name$
 
+Version 0.9.6 (19991001)
+
 New Features:
+ - flag in configuration file for mt variable block size
+ - buffing is optional
+ - can now have more than one exclude expression defined
+ - do buffering on archive read if enabled
+ - add "-extract -files <file>" to extract a list of files from an archive
+     (will need this later for interactive restore shell)
  - minimal Makefile that lets you set config path, bin path, etc. for install
- - use $verbose to set restore -v for list/extract
  - can use "compress" now in addition to gzip/bzip2
- - flag in configuration file afio compression cache size
+ - added zip type
+ - var in configuration file for afio compression cache size
+ - flag in configuration file for tar atime preserve
+ - flag in configuration file for tar record number printing
  - flag in configuration file for sparse file handling
+ - add -compress flag to override config file setting
 
 Bug fixes/cleanup:
- - added --atime-preserve to tar switches
+ - GPL clause in program itself not readme
+ - redid remote commands to use only 1-way rsh/ssh
+     archive command building done differently now as a result
+ - redid command echo wrapping
  - dates back to string format (easier to read), use numeric only on BSD
      will work with pre-4.0 fileutils that have touch -t bug
  - make better afio control file handling for volume labels
- - use --read-full-blocks for tar
+ - use -B (--read-full-blocks/--read-full-records) for tar
+ - use $verbose to set restore -v for list/extract
  - log files and archives to disk use same filename pattern now
  - do obsolete timestamp removal at end of job not beginning
  - forgot to remove tar_verbose and cpio_verbose from conf file
  - debug shows real mt command
- - clean up flag handling some more, use long flags to make things readable
+ - clean up flag handling some more, use long flags
  - sleep at end of backup not done if file or debug
  - if -noerase, move to eod before starting
 
