@@ -3,12 +3,6 @@ Flexbackup todo list as of version $Name$
 Some of these might not happen, but I write them down anyway
 
  - FreeBSD checks out ok (hi john)
- - list sites to get software on web page
- - announce
-     freshmeat, linux-tape, comp.os.linux.announce
-     submit to metalab & redhat-contrib
-
-
  - resurrect my old drive and test ftape stuff again
  - config option for dump to use timestamps or /etc/dumpdates
  - what if you try to do incrementals and no level 0 exists?

@@ -15,15 +15,15 @@ Features:
    o Easy to configure (at least I think so)
    o Uses dump, afio, tar, or cpio with the flick of a switch
    o Backup, extract, compare, list modes
-   o Full (0) and 1-9 levels of incremental backup
+   o Full (0) and 1-9 levels of incremental backup (ala "dump")
    o Filesystem-oriented (won't traverse devices)
    o Does remote filesystems (over rsh/ssh; no special service)
-   o Works with IDE/SCSI tapes on Linux/FreeBSD
+   o Works with IDE/SCSI tapes
      or Linux ftape (allows table of contents support)
    o Nice log files
 
 Software needed:
-   o perl
+   o perl, gzip
    o mt (or ftmt if using ftape)
    o one or more of
        dump/restore afio tar cpio
@@ -44,6 +44,7 @@ packages were any combination of:
    o Nonstandard archiving formats
    o Overkill for a small network of 2 or 3 machines
    o Too simplistic, or hard-coded assumptions
+   o No scripts helped drive "dump/restore"
    o Didn't have features I wanted
 
 ----------------------------------------------------------------------
@@ -92,8 +93,9 @@ Notes:
  the log directory for that filesystem.
 
  I suggest using either the "dump" or "afio" types.  Dump would be
- perfect if it did compression... afio is a good bet if you want
- compression - one error will not corrupt your entire archive like
+ perfect if it did compression and could exclude file patterns, but it
+ isn't designed that way... afio is a good bet if you want
+ compression one error will not corrupt your entire archive like
  with a compressed tar scheme.
 
 ----------------------------------------------------------------------
