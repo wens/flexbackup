@@ -4,7 +4,7 @@
 #
 
 CVSVER := $(shell echo v$(VER) | sed -e 's/\./_/g')
-SITE := $(HOME)/public_html/flexbackup
+SITE := ./www
 RPM  := /usr/src/redhat
 DATE := $(shell date)
 

@@ -3,7 +3,7 @@ edit CHANGES,TODO,README
 change verison header in CHANGES
 make all VER=x.x.x
 edit index.html
-sync up web pages
+sitecopy to update web pages
 upload to sunsite
 upload to redhat
 freshmeat notice

@@ -28,6 +28,7 @@
 #  flexbackup [operation] file     : if archiving to files rather than a device,
 #                                    list/extract/compare/restore options take
 #                                    a filename argument
+#  flexbackup [operation] -num <n> : read file number n from tape
 #  flexbackup -toc                 : list this tape's table of contents
 #  flexbackup -toc all             : list all known table of contents
 #  flexbackup -toc <key>           : list table of contents for tape key
@@ -96,6 +97,7 @@ if (! &main::GetOptions(\%main::opt,
                         "restore:s",
                         "list:s",
                         "compare:s",
+                        "num:i",
                         "toc:s",
                         "delete",
                         "dfile=i",
@@ -486,9 +488,17 @@ sub backup {
         if (defined($main::use_file)) {
             @_ = split(/\//,$main::device);
             $_ = pop(@_);
-            $main::index{"$tape_key|$main::nextfile"} = "$notagtitle ($_)";
+            if (defined($main::opt{'n'})) {
+                &log("| (debug) \$main::index{$tape_key|$main::nextfile} = $notagtitle ($_)");
+            } else {
+                $main::index{"$tape_key|$main::nextfile"} = "$notagtitle ($_)";
+            }
         } else {
-            $main::index{"$tape_key|$main::nextfile"} = $title;
+            if (defined($main::opt{'n'})) {
+                &log("| (debug) \$main::index{$tape_key|$main::nextfile} = $title");
+            } else {
+                $main::index{"$tape_key|$main::nextfile"} = $title;
+            }
         }
         &log("| File number $main::nextfile, index key $tape_key");
     }
@@ -630,7 +640,7 @@ sub backup_afio {
         $no_compress = "-E $tmpnocompress";
     }
 
-    $cmd .= "printf \"\\n\nVolume Label:\\n$title\\n\\n\" > $tmplabel ; ";
+    $cmd .= "printf \"\\nVolume Label:\\n$title\\n\\n\" > $tmplabel ; ";
 
     $cmd .= "cd $dir ; ";
     $cmd .= "(echo //--$tmplabel flexbackup.volume_header_info && ";
@@ -1321,10 +1331,11 @@ sub mt {
         }
 
         # mt flavors for erase
-        # (some mt's have no "erase", just skip, we rewind before
-        # starting a backup...)
+        # (some mt's have no "erase", just rewind before starting...)
         if ($operation eq 'generic-erase') {
-            if ($main::uname =~ /Linux/) {
+            if ($cfg::erase_rewind_only eq "true") {
+                next;
+            } elsif ($main::uname =~ /Linux/) {
                 $operation = 'erase';
             } elsif ($main::uname =~ /BSD/) {
                 $operation = 'erase';
@@ -1447,6 +1458,7 @@ sub optioncheck {
     &check(\$cfg::nocompress_types,'nocompress_types','exist');
     &check(\$cfg::remoteshell,'remoteshell','ssh ssh2 ssh1 rsh');
     &check(\$cfg::erase_tape_all_level_zero,'erase_tape_all_level_zero');
+    &check(\$cfg::erase_rewind_only,'erase_rewind_only');
     &check(\$cfg::logdir,'logdir','exist');
     &check(\$cfg::tmpdir,'tmpdir','exist');
     &check(\$cfg::comp_log,'comp_log','gzip bzip2 compress false');
@@ -2013,6 +2025,7 @@ sub maybe_get_filename {
     my $file;
     my $ftype;
 
+    # grab filename from option argument
     # optionscheck already guarantees only one is set
     foreach (@modes) {
         if (defined($main::opt{$_})) {
@@ -2036,7 +2049,10 @@ sub maybe_get_filename {
 
     } else {
         if (defined($main::use_file)) {
-            die("Error: file \"$arg\" or \"$cfg::device/$arg\" not found");
+            print STDERR "Error: file \"$arg\" or \"$cfg::device/$arg\" not found\n";
+            print STDERR "When extracting from a backup file, you must specify file name.\n";
+            print STDERR "(like \"-list file.tar.bz2\")\n";
+            die();
         } else {
             die("Error: file \"$arg\" not found");
         }
@@ -2050,7 +2066,6 @@ sub maybe_get_filename {
         $cfg::compress =~ s/gz/gzip/;
         $cfg::compress =~ s/bz2/bzip2/;
         $cfg::compress =~ s/Z/compress/;
-        &line();
         &log("| Auto-set to type=$cfg::type compress=$cfg::compress");
         &optioncheck(); # redo to set a few variables over
 
@@ -2060,35 +2075,30 @@ sub maybe_get_filename {
         $cfg::compress =~ s/gz/gzip/;
         $cfg::compress =~ s/bz2/bzip2/;
         $cfg::compress =~ s/Z/compress/;
-        &line();
         &log("| Auto-set to type=$cfg::type compress=$cfg::compress");
         &optioncheck(); # redo to set a few variables over
 
     } elsif ($file =~ m/\.(afio|dump|cpio|tar|zip)$/) {
         $cfg::type = $1;
         $cfg::compress = "false";
-        &line();
         &log("| Auto-set to type=$cfg::type compress=$cfg::compress");
         &optioncheck(); # redo to set a few variables over
 
     } elsif ($file =~ m/\.tgz$/) {
         $cfg::type = "tar";
         $cfg::compress = "gzip";
-        &line();
         &log("| Auto-set to type=$cfg::type compress=$cfg::compress");
         &optioncheck(); # redo to set a few variables over
 
     } elsif ($file =~ m/\.taz$/) {
         $cfg::type = "tar";
         $cfg::compress = "compress";
-        &line();
         &log("| Auto-set to type=$cfg::type compress=$cfg::compress");
         &optioncheck(); # redo to set a few variables over
 
     } elsif ($file =~ m/\.rpm$/) {
         $cfg::type = "cpio";
         $cfg::compress = "false";
-        &line();
         &log("| Auto-set to type=$cfg::type compress=$cfg::compress");
 
     }
@@ -2212,6 +2222,8 @@ sub setup_before_read {
 
     my $cmd;
 
+    &line();
+
     $main::device = &maybe_get_filename();
 
     &mt("generic-blocksize $main::mt_blksize");
@@ -2220,6 +2232,17 @@ sub setup_before_read {
     if ($main::do_reten == 1) {
         &log('| Retensioning tape...');
         &mt('retension');
+    }
+
+    if (defined($main::opt{'num'})) {
+        &log("| Positioning tape at file number $main::opt{num}");
+        &mt("rewind","fsf $main::opt{num}");
+    } else {
+        if ($main::use_file == 1) {
+            &log("| Reading from on-disk file $main::device");
+        } else {
+            &log("| Reading from current tape position");
+        }
     }
 
     &line();
@@ -2270,6 +2293,7 @@ sub nuke_trailing_slash {
 ######################################################################
 sub print_afio_volume_header {
     # for now just echo our stdin
+    print "\n";
     while(<STDIN>) {
         print;
     }
@@ -2395,6 +2419,7 @@ sub new_tape_key {
     my $key;
     my $dev = $main::device;
     my $old;
+    my $string;
 
     return('') if $cfg::indexes eq "false";
 
@@ -2424,17 +2449,27 @@ sub new_tape_key {
     }
 
     &log("| Creating index key $key");
+    $string = "printf \'$key\\nThis is a flexbackup index key\\n\' | ";
+    $string .=  "dd $main::dd_blk_flag $main::dd_pad_flag of=$dev";
 
-    open(DEV,"| dd $main::dd_blk_flag $main::dd_pad_flag of=$dev 2> /dev/null") or die("Can't dd to $dev: $OS_ERROR");
-    print DEV "$key\nThis is a flexbackup index key\n";
-    close(DEV);
+    if (defined($main::opt{'n'})) {
+        &log("| (debug) $string");
+    } else {
+        `$string 2> /dev/null`;
+    }
 
     $main::nextfile = 1;
 
     if (defined($main::use_file)) {
-        $main::index{"$key|0"} = "<tape index key, dir=$cfg::device>";
+        $_ = "<tape index key, dir=$cfg::device>";
     } else {
-        $main::index{"$key|0"} = "<tape index key>";
+        $_ = "<tape index key>";
+    }
+
+    if (defined($main::opt{'n'})) {
+        &log("| (debug) \$main::index{$key|0} = $_");
+    } else {
+        $main::index{"$key|0"} = $_;
     }
 
     return($key);
@@ -2449,6 +2484,7 @@ sub get_tape_key {
     my $quiet = shift(@_);
     my $key;
     my $dev = $main::device;
+    my $string;
 
     return('') if $cfg::indexes eq "false";
 
@@ -2465,9 +2501,15 @@ sub get_tape_key {
 
     } else {
 
-        open(KEY,"dd $main::dd_blk_flag $main::dd_pad_flag count=1 if=$main::device 2> /dev/null |") or die("Can't open tape device: $OS_ERROR");
-        $key = <KEY>;
-        close(KEY);
+        $string = "dd $main::dd_blk_flag $main::dd_pad_flag count=1 if=$main::device";
+        if (defined($main::opt{'n'})) {
+            &log("| (debug) $string");
+            $key = '';
+        } else {
+            $key = `$string 2> /dev/null`;
+            @_ = split(/\n/,$key);
+            $key = $_[0];
+        }
         if (defined($key)) {
             chomp($key);
             if ($key !~ m/^\d+\.\d\d$/) {
@@ -2547,12 +2589,20 @@ sub toc_routine {
                         and
                         ($filenum eq $main::opt{'dfile'})) {
                         &log("| Deleting record for tape $tape file $filenum");
-                        delete $main::index{"$tape|$filenum"};
+                        if (defined($main::opt{'n'})) {
+                            &log("| (debug) delete \$main::index{$tape|$filenum}");
+                        } else {
+                            delete $main::index{"$tape|$filenum"};
+                        }
                     }
                 } else {
                     if ($tape eq $main::opt{'toc'}) {
                         &log("| Deleting record for tape $tape file $filenum");
-                        delete $main::index{"$tape|$filenum"};
+                        if (defined($main::opt{'n'})) {
+                            &log("| (debug) delete \$main::index{$tape|$filenum}");
+                        } else {
+                            delete $main::index{"$tape|$filenum"};
+                        }
                     }
                 }
 
@@ -2643,7 +2693,11 @@ sub maybe_delete_old_index {
             ($tape,$filenum) = split(/\|/,$_);
             if ($tape eq $key) {
                 &log("| Deleting record for file $filenum");
-                delete $main::index{"$tape|$filenum"};
+                if (defined($main::opt{'n'})) {
+                    &log("| (debug) delete \$main::index{$tape|$filenum}");
+                } else {
+                    delete $main::index{"$tape|$filenum"};
+                }
             }
         }
 

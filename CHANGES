@@ -1,20 +1,30 @@
 $Id$
 $Name$
 
-Version 0.9.7.2 (19991025)
+Version 0.9.8 (19991102)
 
 New Features:
- - tried to add intelligence for various mt flavors on different Unix variants
  - add -newtape option to initialize index, but no backup
+ - add -num <n> option for reads that will position the tape at the
+      specified file number before reading
+ - added config file option for whether "erase" actually calls "mt erase"
+     or just rewinds - for some drives, mt erase takes hours...
+     (variable is $erase_rewind_only)
+ - tried to add intelligence for various mt flavors on different Unix variants
  - made block padding a config file option ($pad_blocks).  conv=sync was
-   causing problems on OSF1.
+     causing problems for Clemmit on OSF1.
 
 Bug fixes:
  - sort the toc output correctly
  - rewind after printing toc
  - fix bug where tape indexes always started at 10 after awhile
-   (similar sorting problem with setting $main::nextfile)
+     (similar sorting problem with setting $main::nextfile)
+
+Cleanup:
+ - web site moved
  - other minor cleanups to tape key handling
+ - "-n" bypasses index operations as well
+ - fix some messages/formatting
 
 ----------------------------------------------------------------------
 Version 0.9.7 (19991019)
