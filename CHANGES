@@ -4,18 +4,21 @@ $Name$
 ----------------------------------------------------------------------
 Version 1.1.7 (20030615)
 
-  - added "copy" type that just mirrors the files into a directory tree
+  - Added "copy" type that just mirrors the files into a directory tree
     if archiving to disk
 
-  - initial support of "-pkgdelta" with FreeBSD packages
-  - on FreeBSD, use mt to set 1-filemark behavior globally
-  - ignore sockets
+  - Use "find -prune" for subtree pruning.  When this happens, we have to
+    turn off "-depth" switch, as with GNU find 4.1.7 they don't work
+    together. Need to check into...
+  - Initial support of "-pkgdelta" with FreeBSD packages
+  - On FreeBSD, use mt to set 1-filemark behavior globally
+  - Globally ignore sockets
 
 Bugfixes/cleanup:
-  - use --ignore-failed-read for tar
-  - remote tape drive device didn't create index key correctly
-  - typo in star flags
-  - tweak quiet flags
+  - Use --ignore-failed-read for tar
+  - Remote tape drive device didn't create index key correctly
+  - Typo in star flags
+  - Wweak quiet flags
 
 ----------------------------------------------------------------------
 Version 1.1.6 (20030313)

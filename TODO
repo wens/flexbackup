@@ -6,10 +6,10 @@ Some of these might not happen
 
 Cleanup/fix:
 
- - Use -prune for subtree exclusion
  - If on-disk backups, and yous use -rmfile all, the index for the keyfile
- - gets removed.
+   gets removed.
 
+ - Look into find -prune and -depth w/ gnu findutils problem
  - Better cleanup after error in backup
  - Clean up more $main:: vars, split into types or refactor code
  - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)

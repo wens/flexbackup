@@ -5,7 +5,7 @@
 # $Id$
 # $Name$
 #
-#         >>>> Also see the README file & FAQ <<<<
+#      >>>> Also see the config file, README file, & FAQ <<<<
 #
 # USAGE:
 #  flexbackup -help                : this message
@@ -4084,7 +4084,7 @@ sub new_tape_key {
 
     &log("| Creating index key $key");
     $string = "$main::path{printf} \'$key\\nThis is a flexbackup index key\\n\' ";
-    $string .= &append_writer_cmd($string);
+    $string = &append_writer_cmd($string);
     if (defined($main::debug)) {
 	&log("(debug) $string");
     } else {
@@ -4563,10 +4563,13 @@ sub file_list_cmd {
 	$cmd .= '-regex "\./\(';
 	$cmd .= join('\|', keys %{$main::prune{$prunekey}});
 	$cmd .= '\)/.*" -prune -o ';
+    } else {
+	# Can't use find -depth with the -prune w/ gnu findutils 4.1.7
+	# It wasn't really required anyway...
+	$cmd .= "-depth ";
     }
 
     $cmd .= "$main::mountpoint_flag ";
-    $cmd .= "-depth ";
     $cmd .= "! -type s ";
 
     if (defined($otherarg)) {
@@ -4601,6 +4604,7 @@ sub file_list_cmd {
 	} else {
 	    $cmd .= "-print0 ";
 	}
+
     } else {
 
 	# Use the normal level & timestamp mechanism to get a list of files
