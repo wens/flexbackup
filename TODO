@@ -5,14 +5,14 @@ Flexbackup to-do list
 Some of these might not happen, but figured I should jot them down
 
 Cleanup/fix:
- - go back trough old unread mail archive for obvious bugs etc
  - clean up all the $main:: vars, split into types
  - make path overrides also search $PATH (say if we just changed the name
      tar == gtar put still want to do normal path-seach)
  - bash PIPESTATUS trick fails if remote filesystem and shell there!=bash
      and shell local==bash. bah.
  - check buffer avail mem thing from John
- - revisit -cnewer problem
+ - revisit -cnewer problem.  Make sure it works with touch -t/-d of
+   timestamp refs (ctime isn't set backward like the mtime)
 
 Misc:
  - make a manual page (or other enchanced doc)! too many options now :)
@@ -26,8 +26,6 @@ Features to add:
  - static filenames when using disk (same fs, same level overwrite)?
       Michael Matsumura <michael@limit.org> [ depends on behavior of
       multiple same-level, see below ]
- - remote tape drive (rmt) support
-     Caleb Crome <caleb@crome.org>
 
  - Several suggestions of this type, need to sort out:
   o first verify behavior of dump using dumpdates
@@ -44,6 +42,8 @@ Features to add:
      (how is this different from now?)
    - maybe simple alias full = 0, incremental = 9
 
+ - remote tape drive (rmt) support
+     Caleb Crome <caleb@crome.org>
  - make remote machine path overrides possible, that supercede others
  - check for existence of remote executables
  - make -extract -files for afio/cpio/zip recurse dirs
