@@ -2608,6 +2608,9 @@ sub optioncheck {
     if (!defined($main::opt{'rmindex'}) and defined($main::opt{'f'})) {
 	    push(@main::errors,"-f only goes with -rmindex");
     }
+    if (defined($main::opt{'rmindex'}) and ($main::opt{'rmindex'} eq '')) {
+	    push(@main::errors,"-rmindex requires a key value or 'all'");
+    }
 
     # Mode
     my (@modelist) = qw(fs list extract compare restore toc newtape rmindex rmfile);
@@ -3626,7 +3629,7 @@ sub maybe_delete_old_index {
 
     $key = &get_tape_key('quiet');
     if ($key ne '') {
-        &rmindex($key);
+	&rmindex($key);
     }
 
 }

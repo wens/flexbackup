@@ -7,6 +7,7 @@ Bug Fixes:
   - Fix PIPESTATUS trick to not require extra 'seq' utility, just a while loop
   - Using "-toc" gave uninitialized var warning, obvious problem, fixed.
       Eradicated some other spots of code that used $_ too.
+  - "-rmindex" yells if you don't give an argument
 
 Cleanup:
   - Cosmetic - fix missing line in output if no remote and buffer=false
