@@ -711,11 +711,19 @@ sub backup {
 
 	    # Replace piped or anded commands with catch-script
 	    #   -Not if the command started a subshell ( .. )
-	    if ($cmd =~ s: (\||&&) ([^\(]): $1 $exitscript $2:g) {
-		# You would think we'd put on the front of the pipe as well.
-		# Can't do this because of "cd <dir> &&" at front makes
-		# the cd happen in a subshell.
-		#$cmd = "$exitscript $cmd";
+	    if ($cmd =~ s:\s+(\||&&)\s+([^\(]): $1 $exitscript $2:g) {
+
+		# You would think we'd put it on the front of the pipe as
+		# well.  Can't do this globally because the "cd <dir> &&"
+		# at the front makes the cd happen in a subshell. If
+		# its not "cd <something>, do it.
+		if ($cmd !~ m:^\s*cd\s+\S+\s*(;|&&):) {
+		    $cmd = "$exitscript $cmd";
+		}
+
+		# Take care of subshell
+		$cmd =~ s:\s+(\||&&)\s+(\()\s*: $1 \( $exitscript :g;
+
 	    }
 
 	    # Put any ssh stuff back
@@ -929,7 +937,7 @@ sub backup_afio {
     push(@cmds, &maybe_remote_cmd($cmd, $remote));
 
     $cmd = "cd $dir && ";
-    $cmd .= "(echo //--$tmplabel flexbackup.volume_header_info && ";
+    $cmd .= "($main::path{echo} //--$tmplabel flexbackup.volume_header_info && ";
     $cmd .= &file_list_cmd($dir, $stamp, 'null', $level, $remote);
     $cmd .= ") | ";
 
@@ -2463,6 +2471,8 @@ sub optioncheck {
 
 	$main::path{'afio'} = &checkinpath('afio');
 	push(@remoteprogs, $main::path{'afio'});
+	$main::path{'echo'} = &checkinpath('echo');
+	push(@remoteprogs, $main::path{'echo'});
 
 	&check(\$cfg::afio_nocompress_types,'afio_nocompress_types','exist');
 
