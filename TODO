@@ -5,8 +5,7 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
- - fix 'incremental' with fs=all.  non-trivial (see FIXME in code)
- - clean up all the $main:: vars, split into types
+ - clean up more $main:: vars, split into types or refactor
  - bash PIPESTATUS trick fails if remote filesystem and shell there!=bash
      and shell local==bash. bah.
  - check buffer avail mem thing from John
@@ -14,6 +13,7 @@ Cleanup/fix:
    timestamp refs (ctime isn't set backward by touch like the mtime)
  - when levels > 9 and using files, -toc sorts it wrong (cosmetic nit)
  - when levels > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
+ - fix double dash-line on last line of logfile (screen fine. cosmetic nit)
  - try to use dump combined flags (for older dumps that want abc not -a -b -c)
 
 Misc:
