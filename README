@@ -93,6 +93,9 @@ NOTES
  Backups rewind the tape when done.  Other operations leave it where
  it is.
 
+ If you split the "all" level 0 backup into multiple tapes,
+ tape numbers start at 0.
+
  Log files are of the format <prefix><fs>.<level>.<yyyymmdd>
  Lower-level backups will wipe out all higher-level log files in
  the log directory for that filesystem.
@@ -105,11 +108,9 @@ NOTES
  Remote: rsh or ssh is used for remote backups.  Backups of remote machines
  are to be run from the machine with the tape drive!
 
- I suggest using either the "dump" or "afio" types.  Dump would be
- perfect if it did compression and could exclude file patterns, but it
- isn't designed that way... if you want compression, afio is the best
- bet.  It compresses one file at a time.  An error will not corrupt
- your entire archive like with other types.
+ I suggest using "afio", especially if you want compression.  It
+ compresses one file at a time, so an error will not corrupt your
+ entire archive like with other types.
 
  When comparing "dump" archives, and if you only backed up a
  subdirectory of a filesystem, you will get errors for the "other"

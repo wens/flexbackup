@@ -2,80 +2,61 @@ Flexbackup to-do list as of version 0.9.4
 
 Some of these might not happen, but figured I should jot them down
 
- - does cpio even have verbose anymore?
- - clean up afio & buffer rpms, send to redhat
-
  - resurrect my old drive and test ftape stuff again
- - real volume name for tar
- - text exclude expression
 
- - assume compression type based on filenames if we can
-
- - fix tar doing things twice
-     revert back to non-find method
-     exclude list is a problem. use fine to /tmp list then --exlcude
-
- - make buffer automatically go to multiple of blocksize
-
-
-Features:
- - alarm sig for tape change
- - exclude regexp's
-     dump won't be able to do this
- - nocompress file extension list for afio
+Features to add:
  - arbitrary "list of files" extract
  - configurable path for programs (gtar=tar, etc)
      remote vs local too
  - support multiple tapes for a single archive
-     dump already does this? maybe afio
-     tar does, (-M); won't work for compressed
-     Would it screw up on remote?
+     dump already does this? afio has hooks too.
+     tar does, (-M); won't work for compressed?
+     Would the pipeline mechanism screw it all up?
      Need to test with an almost-full tape.
- - use a global "title" per backup
-     work in a volume label scheme
-     ideas from Scott Penrose?
+ - table of contents for a tape
+     ftape + vtblc has it (needs testing)
+     need table of contents for others
+     Scott Penrose had some ideas here...
  - interactive restore-like shell for types besides dump
      see notes below
- - log files for extract/compare/etc?
- - remote extract/compare/restore
-     possible at all?
-     just install s/w on client w/remote tape device. need config file option
  - Gnome driver/configurator utility
      I have a "picture" of what I want this to look like
      use glade + libglade perl bindings
      will be a seperate program that just manipulates flexbackup
+ - log files for extract/compare/etc?
+ - remote extract/compare/restore
+     possible at all?
+     just install s/w on client w/remote tape device. need config file option
  - cd-rom burning (or just .iso type?) for full backups?
 
 Cleanup/fix:
- - check that dump dir exists
+ - check to make 100% sure dump works over the pipe mechanism
+ - check that dir we are backing up exists
  - autodetect ftape and raw device to eliminate configuration
- - commands for backups become sequential rather than a huge
-     commandline.  Use subroutine to abstract away remote command.
-     Fix duplicated code in afio,cpio,tar
  - figure out dump length being multiple of blocksize problem
      manpage says one thing, behavior is another
  - figure out why I can't get dump -T to work
- - get restore to compare subdirectories of mountpoints correctly
-     the mountpoint is the top of the dump archive, even if you dump a
-     subdir
- - related problem to the above 2 bullets.  dump updates
+ - related problem to the above bullet.  dump updates
      /etc/dumpdates if you dump a subdir, so if you do another
      backup of a different dir of the same fs your timestamps are hosed
  - config file in just text?  Wondering if anyone is bothered by the
      perl syntax.
 
+
 -------------------
 
 Notes for cloning restore shell for afio/tar/cpio types)
+Use perl readline module
 
 1) do a listing
 2) parse & put into data structures
 3) mt bsf 1
 4) then give a shell w/ all commands from regular dump
 5) mark things for extraction
-6) extract that list
+6) reopen archive & extract that list
 
-Available commands are:
+Help from restore to jog my brain...
+
         ls [arg] - list directory
         cd arg - change directory
         pwd - print current directory

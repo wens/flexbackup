@@ -1,22 +1,28 @@
-Version
+Version 0.9.5
 
 New features:
-
- - buffering for all backup types!
-    now requires the "buffer" utility
-    if remote, buffers on both sides
-    remove seperate afio buffering
- - compression for all backup types!
-    somebody with a spiffy drive try the hardware option and let me
-    know if I got it right
- - if reading from a file, can now take rpm files (its cpio underneath)
-   for list and extract.  (I want this for when the interactive
-   restore shell is done...)
+ - buffering for all backup types
+    now requires the "buffer" utility, everything piped through it
+    if remote backup, buffers on both sides
+ - every backup type now has an embedded "title" (level,date,host,etc)
+     dump has had this info. by default
+     for afio we make a tiny control script
+     for tar we use -V for a volume label
+     for cpio we touch a filename wih the info before backing up
+ - config file regular expression for excluding files from backup
+    doesn't work for dump, of course
+ - config option for afio file size compression threshold
+ - config option for afio nocompress file extension list
+ - compression for all backup types
+ - if reading from a file,  auto-set compression & archive type
+     whee we can also list & extract rpm files :)
 
 Bug fixes/cleanup:
+ - nuke trailing slashes on given dirs
  - typo! mt defblksize, not mt defsetblk. also, that whole reoutine
      was just broken. fixed.
- - compress, compr_level, verbose, buffer are generic options
+ - tar was archiving things twice. "find . | tar -c -T -" gives double
+      result. revert back to non-find mode for tar, works fine
  - remote tar didn't quite work (needed full path for ssh/rsh)
  - remote broken if using filenames (and they were long)
  - error if remote host and this host are the same
@@ -24,6 +30,7 @@ Bug fixes/cleanup:
  - stderr output from new pipeline commands wasn't in  log file
  - fix dirs going on top of each other when  mult. dumps. + files
  - log file removal at end of job; undef logfile after compressing
+ - compress, compr_level, verbose, buffer are generic options
  - commands are an array; command build cleanup; mt takes multiple commands
 
 

@@ -1,4 +1,6 @@
 
+edit CHANGES,TODO,README
+make all VER=x.x.x
 edit index.html
 sync up web pages
 upload to sunsite
