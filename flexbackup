@@ -1021,8 +1021,9 @@ sub extract_routine {
 
     &run_or_echo_then_query($cmd);
 
-    unlink("$newlist") or die ("Can't remove $newlist: $OS_ERROR");
-
+    if (defined($main::opt{'files'})) {
+        unlink("$newlist") or die ("Can't remove $newlist: $OS_ERROR");
+    }
 }
 
 ######################################################################
