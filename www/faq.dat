@@ -1,121 +1,103 @@
-<c>
-General
-<q>
-What is the purpose of this program?
-<a>
-To build a Frequently-Asked-Question page in either HTML or text.
 
 <c>
-General
+Backup & Configuration
 <q>
-Who wrote it?
+Help me understand numeric dump levels
 <a>
-<a href="mailto:dyork@lodestar2.com">Dan York</a> wrote the initial program and released it. <a href="mailto:dave@superluminal.com">Dave Seidel</a> then modified it to include configuration classes and other substantial changes.  Dan integrated those changes with his... and released it.
+TODO, but  very needed FAQ.
+See <A HREF="http://docs.sun.com/db/doc/805-7228/6j6q7uf18?a=view">these sun docs</A> for an example.
+
+For those not used to dump-style numeric levels, the latest versions
+of flexbackup have added <TT>-full</TT>, <TT>-differential</TT>, 
+<TT>-incremental</TT> that get translated into appropriate dump-style level numbers.
 
 <c>
-General
+Backup & Configuration
 <q>
-Why was the program written?
+Backups seem to work ok, but I can't get extracting/listing to work.
 <a>
-Dan was updating the FAQ for the <a href="http://www.lpi.org/">Linux 
-Professional Insititute</a> and didn't want to manually update the page.  
-Simultaneously, he was trying to learn more about 
-<a href="http://www.python.org">python</a> and specifically about classes... 
-and he had a long airplane ride ahead of him... so he wrote the code. 
-Dave was looking to create a FAQ for his <a href="http://beast.gtk.org/">
-BEAST/BSE</a> web site <i>and</i> was looking to learn more about python, 
-so he took Dan's code and changed it almost beyond recognition!
+Usually a matter of tape positioning.  Use 'mt rewind; mt fsf
+&lt;n&gt;' to get to the right file number on the tape, or use the
+"-num" switch with "-list|extract|compare|restore" to have flexbackup
+do it for you.  If you are using flexbackup's indexes, remember that
+file number 0 is a header,
 
 <c>
-Data
+Backup & Configuration
 <q>
-Do I have to call the data file <code>faq.dat</code>?
+I can't get the $exclude_expr stuff to work!
 <a>
-That is the
-default file name used in all of the current configurations.  If you want to
-change the file name, you can modify the configurations in the actual source
-code or use the '-i' command line option.
+Use regular expressions, not wildcards (aka globs).  See a perl, sed,
+or grep reference, or "man 7 regex".  Simplistically, you probably
+mean to say ".*" instead of "*", and ".?" instead of "?".  Also,
+leave OFF the first part of a path that is the filesystem you
+are archiving;  the exclude epxressions only match sub-paths of
+the backup directory. Test to see if your expression matches what
+you want to exlude by:<PRE>
+    cd &lt;topdir&gt;
+    find . -regex "&lt;expression&gt;"</PRE>
 
 <c>
-Programming
+Backup & Configuration
 <q>
-Why python?
+I keep getting only one backup per tape when I do "-fs all"!
 <a>
-Why not?  It's easy and fun.... visit <a href="http://www.python.org/">www.python.org</a> for more information.
+Use the non-rewinding device.
 
-<c>Programming<q>Are there enhancements you would like to add?
-<a>Subsequent revisions have tackled most of the enhancements I was seeking to
-add. At the moment, the only real enhancements I would like to add are:
+<c>
+Backup & Configuration
+<q>
+How do I get remote backups over ssh to work without prompting for a passwrd?
+<a>
+...point to some ssh FAQ somewhere...
 
- <ul>
-  <li>moving to a pure XML format for the data file</li>
-  <li>if not moving to pure XML, at least modifying the data file format to be case-insensitive, i.e. allowing both
-      &lt;c&gt; and &lt;C&gt;</li>
-  <li>modifying the text mode output to insert a line break after a certain number 
-      of characters</li>
- </ul>
-<c>Programming<q>Can I modify this program?<a>Sure, go ahead.  It's licensed under the <a href="http://www.gnu.org/copyleft/gpl.html">GNU General Public License</a>.  I'd ask you just to send back modifications so that I can pass them along to others.
-<c>Programming<q>Does the program do any error-checking?
-<a>The program does basic error checking to see if the files exist and can 
-be written, and also does some very simplistic checking on the formatting for the 
-data file.
-<c>Data<q>What does the data file look like?
-<a>A plain text file.  Each entry consists of a category name, question, and answer 
-separated by XML-ish tags &lt;c&gt;, &lt;q&gt;, &lt;a&gt;.  HTML can be used in 
-both the question and answer sections of the line. The category, question and
-answer can still all be on a single line, or can be spread out over many other lines.
-You can see the 
-<a href="faq.dat">faq.dat</a> that generated this file here.
-<c>Data<q>If you say this is "XML-ish", are there end tags as there would be in XML?
-<a>No, there are <i>no</i> end tags in the data file format. You simply begin with
-&lt;c&gt; and the category field is considered to have ended when the program
-finds the &lt;q&gt; tag. The question field is ended by the &lt;a&gt; tag, and the
-answer section is ended by either the next &lt;c&gt; or the end of the file.
-<c>Data<q>Do I have to use &lt;c&gt;, &lt;q&gt;, and &lt;a&gt; as the tags in
-the data file?
-<a>Those are the default settings and there is no command-line way to change them.
-If you wish to use some other delimiters, you will need to change the makefaq.py code
-itself.  See the README file for more information.
-<c>Data<q>Is there a limit to the length of an answer?
-<a>No. It can be as long as you like.
-<c>General<q>Is there a web page for this program?<a>Yes, <a href="http://www.makefaq.org/">http://www.makefaq.org/</a>.
-<c>Data<q>Do all questions for a category have to be together in the data file?<a>No, the program will build the questions for each category as it reads the entire file. So the questions can be in any order.  You may find it best for your own sanity to group them together in the data file, but that's another issue.
-<c>Data<q>How many categories can I have?<a>As many as you like.
-<c>Data<q>Can I still use the old, single-line file format?
-<a>Yes, however you must use the '-r 1' command-line option to tell makefaq to
-"revert" to using the old data file format.
-<c>Data<q>If I am still using the old, single-line format, do I have to use the 
-pipe as the delimiter?
-<a>No, you can use another character as the delimiter in the data file. You
-simply have to use the '-d' command-line option to provide makefaq with the
-new character. Remember that you need to use '-r 1' to use the old format.
-<c>Data<q>Why '-r 1' and not just '-r'?
-<a>A future version of makefaq will use a pure XML format and at that time
-(but not now) using '-r 2' will let you use files in this current pseudo-XML
-format.
-<c>General<q>Why the jump from version number 0.5 to number 2.0?
-<a>I would like to move to a more typical release plan of major version numbers
-and minor point releases.  With the major change of the new data file format, this
-release definitely warrants a change in the major version number.  However, 
-releasing it as version <i>1.0</i> gives the impression that this is a brand-new
-program, i.e., the first release, when in fact the code is at this point quite mature.
-It was a mistake for me to start out the first releases as 0.<i>x</i>. As they really
-should have been the 1.<i>x</i> series, this jump to 2.0 is designed to correct
-that mistake.
-<c>General<q>I am writing my FAQ in a language other than English. Will makefaq 
-give me the data and time in the format appropriate for my language?
-<a>Yes. At this point, makefaq looks for the <b>LANG</b> environment variable 
-defined in your operating system. If it is there, makefaq uses the value of LANG
-for your <i>locale</i> and will use that to generate the appropriate time/date string.
-Note that in some instances, it will <i>also</i> automatically replace the text strings
-"FAQ Revised" and "Table of Contents" with the appropriate text strings. Currently,
-these strings are only defined for English, German, French and Brazilian
-Portugeuse. If you are in a 
-different locale, you will get the appropriate time/date string and the English
-text strings. Note that if makefaq cannot determine your locale, it will default
-to US English ('en_US').
-<c>General<q>What if I want to use a specific locale that is different from what my
-LANG environment variable is set to?
-<a>You can use the '-L' command-line option to specify a locale. See the README
-file for more details.
+<c>
+Backup & Configuration
+<q>
+How do I archive multiple filesytems to tape at once without rewinding
+in between, and without redefining "all" $filesystems
+in the configuration file?
+<a>
+Do this:<PRE>
+      flexbackup -fs /dir1 -norewind
+      flexbackup -fs /dir2 -norewind
+      flexbackup -fs /dir3 -norewind</PRE>
+
+<c>
+Recovery
+<q>
+The disk totally died.  How do I get flexbackups' archives off the
+tapes on a machine without the flexbackup script installed?
+<a>
+Something like this, if using compression with
+tar/cpio/dump:
+<PRE>dd if=/dev/tapedevice bs=10k | gzip -dc | tar xvf -</PRE>
+replace "tar xvf -" with "restore -i -f -" or whatever. Skip the gzip
+pipe if you aren't using compression.  afio is a bit more compex, but
+read the manpage...
+
+<c>
+Recovery
+<q>
+I don't have the index files! (disk died, different machine, etc)
+<a>
+This is OK, you can still extract/restore/etc. The index files are for
+human convenience only.  Just skip the first file on the tape, it's a
+simple "tag" text file.  The rest of the tape is your normal
+archives.
+
+<c>
+Implementation
+<q>
+Why keep the table of contents db on disk rather than on the tape?
+<a>
+...fill in later...
+
+<c>
+Implementation
+<q>
+This index stuff is a useless mess/I can't get it to work!
+<a>
+It isn't necessary. Set $indexes = 'false' in the config, and just
+use written labels on the tapes...
 
