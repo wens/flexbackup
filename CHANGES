@@ -23,7 +23,7 @@ Changes beyond stable release:
        $prune{'/'} = "tmp proc mnt";
        $prune{'host:/'} = "disk.?";
 
-  - Added packaging system delta capability (RPM only for now).
+  - Added packaging system delta capability.
 
     If you give "-pkgdelta rpm", after the level/timestamp checks, we
     further cut down the backup file list by only archiving files that are

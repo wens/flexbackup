@@ -20,7 +20,7 @@ Cleanup/fix:
 
 Misc:
  - put faq in devel/stable trees so I can have two versions
- - re-word faq re trying by hand. 
+ - re-word faq re trying by hand.
  - Add faq on max size
  - Add faq on -erase -newtape taking forever / erase_rewind_only
      could be mt erase, could be dd index hang (-test-tape-drive)
@@ -61,7 +61,7 @@ Features to add:
 
       I might just give up on this
 
- - Make package delta work with BSD ports or debian pkgs
+ - Make package delta work with debian pkgs
 
  - If we detect an error and are using tapes, do something intelligent
      to reposition tape, add another filemark, etc to get tape to known state
