@@ -193,7 +193,7 @@ chomp($main::uname = `uname -s`);
 # Check shells, buffer is runnable, remote progs...
 &test_before_run();
 
-# See about rewind/erse/reten flags
+# See about rewind/erase/reten flags
 &set_tape_operation_defaults();
 
 # Get current date string
@@ -271,8 +271,6 @@ sub backup_routine {
     my $comp_cmd;
     my $tape_key;
     my $logsuffix = '';
-
-
 
 
     # Get rid of trailing /

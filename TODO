@@ -43,6 +43,16 @@ Misc:
 
 Features to add:
 
+ - Better way to spec fs,
+     be able to have spaces in dirs in the conf file
+     better way for multiple tapes
+     sets?  split -fs into:
+            -all
+            -set <tag1>, -set <tag>
+            -dir /etc, -dir /home 
+     Maybe take out the multiple tape fs array parts if we can do mutivol?
+     Redo include/exclude paths, not just expressions?  per-fs?
+
  - Handle multi-volume backups (original idea w/ 'multibuf' never panned out)
 
       Found "multivol" program solution!  It also uses a slightly different
@@ -50,12 +60,6 @@ Features to add:
       the start of the tape.
 
       Ack.  still not workable.  need edits to multivol...
-
- - Better way to spec fs,
-     be able to have spaces in dirs in the conf file
-     better way for multiple tapes
-     Maybe take out the multiple tape fs array parts if we can do mutivol?
-     Redo include/exclude paths, not just expressions?  per-fs?
 
  - Make package delta work with BSD ports or debian pkgs
 
@@ -101,8 +105,6 @@ Features to add:
 
  - Extract options to not overwrite existing files
 
- - Arbitrary "groups" that act sort of like "all"
-
  - Store the index db on the tapes?
       But we don't know the size ahead of time unless hard-limited resperved size.
       Updating db at the beginning of the tape will add tape-travel overhead for every backup.
@@ -120,8 +122,6 @@ Features to add:
  - "rsync" type for when using on-disk?
 
  - Make file-based backups able to use split for smaller archives?
-
- - -wday option
 
 -------------------------------------------------------------
 
