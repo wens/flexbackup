@@ -38,6 +38,7 @@ Cleanup/fix:
 Misc:
  - Update README/faq/spec/lsm for new items changes since 1.0.2
      set/dir
+     pruning 
      pkgdelta
      filelist
      mt_blksize
