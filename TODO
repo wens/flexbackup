@@ -4,7 +4,6 @@ Some of these might not happen, but figured I should jot them down
 
  - test remote timestamps again
  - test FreeBSD again
- - recheck dump B length bug with new dump
 
 cut off 0.9.4 here
 

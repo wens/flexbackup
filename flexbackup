@@ -498,7 +498,7 @@ sub backup_dump {
 
     if ($cfg::dump_dumpdates eq "true") {
 
-        $cmd .= "dump -$global::level -u $cfg::dump_length -b $cfg::blksize";
+        $cmd .= "dump -$global::level -u $length -b $cfg::blksize";
 
     } else {
 
@@ -506,7 +506,7 @@ sub backup_dump {
         $_ = &get_last_date($label,$global::level);
         $cmd .= "touch -t $_ $tmpstamp && ";
 
-        $cmd .= "dump -$global::level -T $tmpstamp $cfg::dump_length -b $cfg::blksize";
+        $cmd .= "dump -$global::level -T $tmpstamp $length -b $cfg::blksize";
     }
 
     if ($remote) {
