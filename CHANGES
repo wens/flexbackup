@@ -4,9 +4,11 @@ $Name$
 Version 0.9.6 (199910??)
 
 New Features:
- - flag in configuration file for mt variable block size
  - buffing is optional
  - can now have more than one exclude expression defined
+ - use our own timestamps for "dump", with -T
+     config file variable to use /etc/dumpdates
+ - flag in configuration file for mt variable block size
  - do buffering on archive read if enabled
  - add "-extract -files <file>" to extract a list of files from an archive
      (will need this later for interactive restore shell)

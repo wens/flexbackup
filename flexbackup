@@ -621,22 +621,31 @@ sub backup_dump {
     my $dir = shift(@_);
     my $cmd = '';
     my $tmpstamp = "$cfg::tmpdir/refdate.$$";
-    my $len_flag = $cfg::dump_length;
+    my $date_flag;
 
-    $_ = &get_last_date($label);
-
-    $cmd .= "touch $main::touch_flag \"$_\" $tmpstamp ; ";
+    # With this one we don't have to put a stampfile on the remote system
+    # since we only need the date string
+    if ($main::level == 0) {
+        &get_last_date($label); # Just to print dates, don't need result
+        $date_flag = "";
+    } else {
+        $_ = &get_last_date($label);
+        $date_flag = "-T \"$_\" ";
+    }
 
     $cmd .= "dump -$main::level ";
     $cmd .= "$main::dump_blk_flag ";
-    $cmd .= "-u ";
+    if ($cfg::dump_use_dumpdates eq "true") {
+        $cmd .= "-u ";
+    } else {
+        $cmd .= $date_flag;
+    }
     $cmd .= "$main::dump_len_flag ";
     $cmd .= "-f - ";
     $cmd .= "$dir $main::z";
     if ($main::remote and ($cfg::buffer eq "true")) {
         $cmd .= "$main::buffer_cmd";
     }
-    $cmd .= " ; rm -f $tmpstamp";
 
     # Wrap all that together
     $cmd = &maybe_remote_cmd($cmd);
@@ -1156,10 +1165,10 @@ sub get_last_date {
     # or use the epoch for level 0
     if ($main::level == 0) {
         $numeric_val = '197001010000.00';
-        $string_val = "Thu Jan  1 00:00:00 MST 1970";
+        $string_val = "Thu Jan  1 00:00:00 1970";
 
     } elsif ($targetfile ne '') {
-        chomp($string_val = `date -r $targetfile`);
+        chomp($string_val = `date -r $targetfile '+%a %b %e %H:%M:%S %Y'`);
         chomp($numeric_val = `date -r $targetfile +%Y%m%d%H%M.%S`);
 
     } else {
@@ -1396,6 +1405,7 @@ sub optioncheck {
     &check(\$cfg::tar_echo_record_num,'tar_echo_record_num');
     &check(\$cfg::tar_atime_preserve,'tar_atime_preserve');
     &check(\$cfg::dump_length,'dump_length','exist');
+    &check(\$cfg::dump_use_dumpdates,'dump_use_dumpdates');
     &check(\$cfg::cpio_format,'cpio_format','bin odc newc crc tar ustar hpbin hpodc');
     &check(\$cfg::zip_nocompress_types,'zip_nocompress_types','exist');
     &check(\$cfg::ftape,'ftape');

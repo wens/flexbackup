@@ -8,7 +8,6 @@ Before next release:
  - get john's -regex fix...
  - auto-testing script for all archive types and compression
    during changes
- - try dump -T again
  - test incremntal tar
  - resurrect my old drive and test ftape stuff again
 
@@ -62,9 +61,6 @@ Cleanup/fix:
  - try restore -D for comparing subdirs w/ restore
  - check that dir we are backing up exists
  - autodetect ftape and raw device to eliminate configuration
- - dump updates /etc/dumpdates if you dump a subdir, so if you do another
-     backup of a different dir of the same fs your timestamps are
-     hosed solved if we get -T to work.
  - config file in just text?  Wondering if anyone is bothered by the
      perl syntax.
 
