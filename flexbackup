@@ -80,24 +80,14 @@ package main;
 # See if afio is calling us as a control script
 if ($ARGV[0] =~ /flexbackup.volume_header_info/) {
     &print_afio_volume_header();
-    exit(0);
-}
-
 # See if multibuf is calling us as a prompt script
-if ($ARGV[0] =~ /multibuf.prompt/) {
-    exit(1);
+} elsif ($ARGV[0] =~ /multibuf.prompt/) {
     &multibuf_prompt();
-}
-
 # See if multibuf is calling us as a prep script
-if ($ARGV[0] =~ /multibuf.prep/) {
-    exit(1);
+} elsif ($ARGV[0] =~ /multibuf.prep/) {
     &multibuf_prep();
-}
-
 # See if multibuf is calling us as a retry script
-if ($ARGV[0] =~ /multibuf.retry/) {
-    exit(1);
+} elsif ($ARGV[0] =~ /multibuf.retry/) {
     &multibuf_retry();
 }
 
@@ -2346,6 +2336,7 @@ sub print_afio_volume_header {
     while(<STDIN>) {
         print;
     }
+    exit(0);
 }
 
 ######################################################################
@@ -2759,4 +2750,18 @@ sub maybe_delete_old_index {
 ######################################################################
 sub bynumber {
     $a <=> $b;
+}
+
+######################################################################
+# Multibuf prompt routines below
+######################################################################
+sub multibuf_prompt {
+
+}
+
+sub multibuf_prep {
+    &mt('rewind');
+}
+
+sub multibuf_retry {
 }
