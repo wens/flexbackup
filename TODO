@@ -4,7 +4,12 @@ $Name$
 Flexbackup to-do list
 Some of these might not happen
 
-Currently:
+Currently in progress:
+ - add faq on max size
+ - add faq on -erase -newtape taking forever / erase_rewind_only
+     could be mt erase, could be dd index hang (-test-tape-drive)
+ - add faq on extract filelist
+
  - FIXMEs in code
 
  - mbuffer testing w/ device (need mt_blksize not to be 0?)
@@ -51,9 +56,6 @@ Misc:
      filelist
      mt_blksize
      example for -wday use
- - add faq on max size
- - add faq on -erase -newtape taking forever / erase_rewind_only
-     could be mt erase, could be dd index hang (-test-tape-drive)
  - Create mbuffer rpm. Add link/rpm for mbuffer
  - Do bfr again, maybe was blocking problem?
  - Make a manual page (AND other enchanced documentation, more than a README)
@@ -64,7 +66,7 @@ Misc:
      how about french?  http://sgmf.free.fr/flexbackup_doc.html
  - Try against torture-test list:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
- - Update mt manpages collection
+ - Update mt manpages collection I keep in cvs
  - Get someone to do .debs?
 
 

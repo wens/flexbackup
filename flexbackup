@@ -3680,7 +3680,7 @@ sub setup_before_read {
 	} elsif (defined($main::blockdevice)) {
 	    &log("| Reading from block device $main::device");
 	} else {
-	    &log("| Reading from current tape position");
+	    &log("| Reading from CURRENT TAPE POSITION");
 	}
     }
 
@@ -4662,7 +4662,7 @@ sub check_shell {
     $main::shelltype{$host} = 'unknown';
 
     if (defined($main::opt{'n'})) {
-	print "(debug) $pipecmd\n";
+	print "\n(debug) $pipecmd\n";
     }
 
     if (!(open(PIPE,"$pipecmd 2>&1 |"))) {
@@ -4890,7 +4890,7 @@ sub test_tape_drive {
     }
 
     unlink $tmp1;
-    unlink $tmp2;
+    #unlink $tmp2;
     unlink $tmp3;
 
     if ($fail != 0) {
