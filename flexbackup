@@ -2526,10 +2526,12 @@ sub optioncheck {
     }
 
     # Set mt type
-    if ($main::ftape == 1) {
-	$main::path{'mt'} = &checkinpath('ftmt');
-    } else {
-	$main::path{'mt'} = &checkinpath('mt');
+    if (defined($main::tapedevice)) {
+	if ($main::ftape == 1) {
+	    $main::path{'mt'} = &checkinpath('ftmt');
+	} else {
+	    $main::path{'mt'} = &checkinpath('mt');
+	}
     }
 
     # Exclude regexp for find
