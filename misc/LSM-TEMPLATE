@@ -1,0 +1,125 @@
+Linux Software Map Entry Template 
+_______________________________________________________________
+
+The LSM is a publically searchable directory of information about
+each of the software packages available via FTP for the Linux
+operating system. 
+_______________________________________________________________
+
+Empty Template
+
+Copy this to your text editor, fill it in, submit it (with your 
+software package) via ftp to:
+ftp://ibiblio.org/incoming/Linux
+
+
+Begin4
+Title: 
+Version: 
+Entered-date: 
+Description: 
+Keywords: 
+Author:
+Maintained-by: 
+Primary-site: 
+Alternate-site: 
+Original-site:
+Platforms: 
+Copying-policy: 
+End
+
+_______________________________________________________________
+
+Instructions
+
+Any new packages or updates to old entries should be entered in the
+template above and submittted with your upload to ibiblio.org 
+
+DO NOT RENAME FIELDS. DO NOT REMOVE THE BEGIN OR END MARKERS. There
+are no longer any limits on the fields lengths, but please try to be
+short.
+
+Complete as many fields as possible. Mandatory fields: Title,
+Version, Entered-date, Description, Primary-site.
+
+Do not remove the header "Begin4" and the footer "End". These lines
+are essential for archiving the in LSM project.
+_______________________________________________________________
+
+Title:		Full application name - see:
+		http://ibiblio.org/pub/Linux/NAMES
+
+Version:	Version number - see: http://ibiblio.org/pub/Linux/NAMES
+
+Entered-date:	Date of when the LSM entry was last modified.
+
+Description:	Begin with a one line description for the database
+		header.A short description of the package should follow.
+
+Keywords: 	A short list of carefully selected keywords that describe
+		the package.
+
+Author:		author@email.address (Author's Name)
+		Original author(s) of package. Email address first, followed by name in parenthesis
+		Multiple persons may be given, one per line.
+
+Maintained-by:	maintainer@email.address (Maintainer's Name).  Note this information 
+		is essential.  Submissions cannot be processed without maintainer information!
+
+Primary-site:	This should be the final location, not an "incoming" directory.
+		First line lists site and base directory
+		Next is the sizes and names of all files. The size can be left off.
+
+Alternate-site: One alternate site may be given. It should not be a site that mirrors the primary site. 
+
+Original-site:  The original package, if this is a port to Linux. 
+
+
+Platforms:	Note ususual software or hardware that is required. A floppy disk or a C compiler would
+		not be unusual. A Python interpreter or tape drive probably would be. If the requirements are
+		evident from the description, it need not be repeated here.
+
+Copying-policy:	 Also known as copyright information. 
+		Use "GPL" for GNU Public License, 
+		"BSD" for the Berkeley style of copyright, 
+		"Shareware" for shareware, and some other description for other styles of copyrights. 
+		If the use or copying requires payment, it must be indicated.
+		A fuller explanation of licensing theory exists at:
+		http://ibiblio.org/pub/Linux/LICENSES/theory.html 
+_______________________________________________________________
+
+Example:
+
+Begin4
+Title:		 Fungimol
+Version:	 0.2.2
+Entered-date:	 2000-05-18
+Description:	 Fungimol is an extensible system for designing atomic-
+scale objects. The intent is to eventually extend it to be a useful
+system for doing molecular nanotechnology design work. At the moment
+it's a PDB file viewer and Buckminsterfullerine editor. 
+Keywords:	 nanotechnology, hydrocarbon, fungimol, molecular dynamics,
+pdb, pdb viewer, graphics
+Author:		 tim@infoscreen.com (Tim Freeman), 
+		brenner@eos.ncsu.edu (Donald Brenner)
+Maintainer:	 tim@infoscreen.com (Tim Freeman)
+Primary-site:	 http://www.infoscreen.com/fungimol
+		2M fungimol-0.2.2-0.i386.rpm
+		180K brennermd-0.1.0-0.i386.rpm
+		1.1M fungimol-0.2.2-0.src.rpm
+		160K brennermd-0.1.0-0.src.rpm
+		1.1M fungimol-0.2.2.tgz
+		168K brennermd-0.1.0.tgz
+		1K fungimol.lsm
+Platforms:	Built with GNU C++ compiler that supports anonymous
+namespaces. g++ 2.95.2 definitely works, 2.7.0 might work, prior to
+2.7.0 probably won't work. Non-GNU
+C++ compiler might work too, but I haven't tried it. Also needs X
+windows, 16 bits-per-pixel or more TrueColor display.
+Copying-policy: Gnu Library General Public License (GLPL) 2.0
+End
+_______________________________________________________________
+
+last updated June 5, 2000
+
+
