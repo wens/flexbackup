@@ -4,7 +4,6 @@ $Name$
 Flexbackup to-do list
 Some of these might not happen, but figured I should jot them down
 
- - prettify list/extract/compare output
 
 Features to add:
  - interactive restore-like shell for types besides dump
@@ -39,6 +38,7 @@ Features to add:
 
 Cleanup/fix:
  - zip/unzip backend, use fifos rather than temp files
+ - prettify list/extract/compare output
  - indexes and using files can soemtimes mess up if the filenames
    clobber each other.  use full time?
  - when using files, maybe I want "erase" to clean out a dir?
