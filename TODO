@@ -4,9 +4,18 @@ $Name$
 Flexbackup to-do list
 Some of these might not happen, but figured I should jot them down
 
+fix restore logs to not stomp on each other
+
+multiple -fs flags
+
+use && rather than ;
+
+dont continue if indexes true and the tape doesn't have an index.
+
 alternate paths to commands
   modify checkinpath
   modify all places that use the commands
+
 
 when using files
   act like tapes!
@@ -14,10 +23,6 @@ when using files
   make index not have numbers, but filenames.
   make -num give ignored message
 
-finish & test multibuf support
-  how does multibuf interact with indexes???
-  makefile rpm etc.
-  compiles on other systems?
 
 Features to add:
  - differential mode (all since previous higher level)

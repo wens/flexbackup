@@ -1,11 +1,11 @@
 Summary: Flexible backup script
 Name: flexbackup
-%define version 0.9.8.1
+%define version 0.9.8.3
 Version: %{version}
 Release: 1
 Packager: Edwin Huffstutler <flexbackup@home.com>
-Source: http://members.home.com/flexbackup/tarball/flexbackup-%{version}.tar.gz
-Url: http://flexbackup.sourceforge.net
+Source: flexbackup-%{version}.tar.gz
+Url: http://flexbackup.org
 Copyright: GPL
 Group: Applications/Archiving
 BuildRoot: /var/tmp/flexbackup-root
@@ -46,7 +46,6 @@ mkdir -p $RPM_BUILD_ROOT/var/state/flexbackup
 mkdir -p $RPM_BUILD_ROOT/var/log/flexbackup
 install -m 0644 flexbackup.conf $RPM_BUILD_ROOT/etc/flexbackup.conf
 install -m 0755 fb.install $RPM_BUILD_ROOT/usr/bin/flexbackup
-install -m 0755 multibuf $RPM_BUILD_ROOT/usr/bin/multibuf
 
 
 %clean
