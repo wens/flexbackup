@@ -4974,6 +4974,7 @@ sub file_list_cmd {
 sub list_packages {
 
     my $host = shift (@_);
+    my $cnt = 0;
 
     if ($::pkgdelta eq 'rpm') {
 
@@ -4992,6 +4993,9 @@ sub list_packages {
 	    while(<LIST>) {
 		if (m:^(.*)$:) {
 		    $::package_list{$host}{$1} = 1;
+		    if (&POSIX::isatty($::msg)) {
+			print $::msg &spinner(++$cnt) . "\r";
+		    }
 		}
 	    }
 	    close(LIST);
@@ -5013,6 +5017,9 @@ sub list_packages {
 	    my (@junk, $pkg);
 	    open(LIST,"$cmd |") || die;
 	    while(<LIST>) {
+		if (&POSIX::isatty($::msg)) {
+		    print $::msg &spinner(++$cnt) . "\r";
+		}
 		($pkg, @junk) = split (/\s+/, $_);
 		$::package_list{$host}{$pkg} = 1;
 	    }
@@ -5029,6 +5036,7 @@ sub list_packages {
 sub find_packaged_files {
 
     my $host = shift (@_);
+    my $cnt = 0;
 
     return if ($cfg::pkgdelta_archive_unowned eq 'false');
 
@@ -5049,6 +5057,9 @@ sub find_packaged_files {
 	    while(<LIST>) {
 		if (m:^(/.*)$:) {
 		    $::packaged{$host}{$1} = 1;
+		    if (&POSIX::isatty($::msg)) {
+			print $::msg &spinner(++$cnt) . "\r";
+		    }
 		}
 	    }
 	    close(LIST);
@@ -5069,6 +5080,9 @@ sub find_packaged_files {
 	} else {
 	    open(LIST,"$cmd |") || die;
 	    while(<LIST>) {
+		if (&POSIX::isatty($::msg)) {
+		    print $::msg &spinner(++$cnt) . "\r";
+		}
 		if (m:^(/.*)$:) {
 		    $::packaged{$host}{$1} = 1;
 		}
@@ -5087,6 +5101,7 @@ sub find_packaged_files {
 sub find_changed_files {
 
     my $host = shift (@_);
+    my $cnt = 0;
 
     return if ($cfg::pkgdelta_archive_changed eq 'false');
 
@@ -5106,6 +5121,9 @@ sub find_changed_files {
 	} else {
 	    open(LIST,"$cmd |") || die;
 	    while(<LIST>) {
+		if (&POSIX::isatty($::msg)) {
+		    print $::msg &spinner(++$cnt) . "\r";
+		}
 		# ex: if size, md5sum, and timestamp changed on a config file
 		# S.5....T c /etc/ntp.conf
 		if (m:^([\.S][\.M][\.5][\.D][\.L][\.U][\.G][\.T]) [dgc ] (.*)$:) {
@@ -5131,6 +5149,9 @@ sub find_changed_files {
 	} else {
 	    open(LIST,"$cmd |") || die;
 	    while(<LIST>) {
+		if (&POSIX::isatty($::msg)) {
+		    print $::msg &spinner(++$cnt) . "\r";
+		}
 		if (/^(\S+)\s+fails.*MD5.*checksum$/) {
 		    $::changed{$host}{$1} = 1;
 		}
@@ -5595,4 +5616,18 @@ sub split_list {
     }
 
     return(@array);
+}
+
+
+######################################################################
+# To show activity....
+######################################################################
+sub spinner {
+
+    my $index = shift(@_);
+    my (@spinner) = ('|','/','-','\\','|','/','-','\\');
+
+    $index = $index % $#spinner;
+
+    return($spinner[$index]);
 }
