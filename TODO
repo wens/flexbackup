@@ -4,14 +4,22 @@ $Name$
 Flexbackup to-do list
 Some of these might not happen
 
-Cleanup/fix:
+Currently:
  - check for mt blksize = factor of blksize
- -n FIXMEs in code
+ - FIXMEs in code
+ - mbuffer testing w/ device
  - mbuffer testing w/ remote
  - mbuffer testing w/ end of media
- - test test tape drive mod
- - Better cleanup after error in backup
+ - test -test-tape-drive mod
+ - Finish up -set / -dir
+     yell if given set not defined
+     erase when using files acting funny
+     test with tapes too
+     how to spec dirs with spaces?
+ - exclude paths, not just expressions?  per-fs?
 
+Cleanup/fix:
+ - Better cleanup after error in backup
  - Use something besides script for second file in test-tape-drive
    (For problem with st0 <-> nst0, would never show up)
  - Clean up more $main:: vars, split into types or refactor code
@@ -30,6 +38,7 @@ Cleanup/fix:
 
 Misc:
  - Update README/faq/spec/lsm for new items changes since 1.0.2
+     set/dir
      pkgdelta
      filelist
      mt_blksize
@@ -49,16 +58,6 @@ Misc:
 
 
 Features to add:
- - Better way to spec fs,
-     be able to have spaces in dirs in the conf file
-     better way for multiple tapes
-     sets?  split -fs into:
-            -all
-            -set <tag1>, -set <tag>
-            -dir /etc, -dir /home 
-     Maybe take out the multiple tape fs array parts if we can do mutivol?
-     Redo include/exclude paths, not just expressions?  per-fs?
-
  - Handle multi-volume backups (original idea w/ 'multibuf' never panned out)
 
       Found "multivol" program.

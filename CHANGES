@@ -13,9 +13,7 @@ Changes:
     modified from the distributed version.
 
     New config variables to tweak behavior:
-      $pkgdelta_archive_list
-      $pkgdelta_archive_unowned
-      $pkgdelta_archive_changed
+      $pkgdelta_archive_list $pkgdelta_archive_unowned $pkgdelta_archive_changed
 
   - Added 'mbuffer' program as alternative to 'buffer'
     http://www.rcs.ei.tum.de/~maierkom/privat/software/mbuffer/
@@ -28,16 +26,16 @@ Changes:
     Set to 0 for variable blocksize (old "true" value), comment out or
     set to "$blksize * 1024" for old "false" value.
 
-  - Added support for lha, shar, and ar archives just to be stupid
-
   - If staticfiles or staticlogs true, don't timestamp list/extract/compare
     log
 
   - Added -wday option (helps with once-a-month, on a certain day of the
     week only cron setups)
 
-  - test-tape-drive now diffs 3 feils, one in the middle is different
+  - test-tape-drive now diffs 3 files, one in the middle is different
     (will catch people using rewind-on-close device)
+
+  - Added support for lha, shar, and ar archives just to be stupid
 
 Cleanup:
   - Don't check for writeable stampdir for non-backup
