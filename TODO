@@ -9,6 +9,7 @@ Currently in progress:
  - add faq on -erase -newtape taking forever / erase_rewind_only
      could be mt erase, could be dd index hang (-test-tape-drive)
  - add faq on extract filelist
+     also .z at end if afio
 
  - FIXMEs in code
 
@@ -30,6 +31,7 @@ Currently in progress:
      how to spec dirs with spaces?
 
  - Exclude paths, not just expressions?  per-fs?
+ - add way to extact just one file using flag
 
 Cleanup/fix:
  - Better cleanup after error in backup

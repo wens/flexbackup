@@ -24,7 +24,9 @@
 #  flexbackup -list                : list files in archive
 #  flexbackup -extract             : extract all files from archive into your
 #                                    current working directory
-#  flexbackup -extract -files <f>  : restore the files listed in file <f>
+#  flexbackup -extract -files <f>  : restore the files listed in text file <f>
+#                                    into your current working directory
+#  flexbackup -extract -onefile <f>: restore the single file specified by <f>
 #                                    into your current working directory
 #  flexbackup -compare             : compare archive with the files in your
 #                                    current directory
@@ -141,6 +143,7 @@ if (! &main::GetOptions(\%main::opt,
 			"incremental",
 			"level=s",
 			"list:s",
+			"onefile=s",
 			"n",
 			"newtape",
 			"num:i",
@@ -1756,7 +1759,6 @@ sub extract_routine {
 	    if ($cfg::type =~ m/^(tar|lha)$/) {
 		$_ = './' . $_;
 	    }
-
 	    print NEWLIST "$_\n";
 	    $restore_files .= " $_";
 	}
@@ -1765,18 +1767,32 @@ sub extract_routine {
 	&log("| Extracting files listed in $main::opt{files}");
     }
 
+    if (defined($main::opt{'onefile'})) {
+	open(NEWLIST,">$newlist") or die ("Can't open $newlist: $OS_ERROR");
+	$_ = $main::opt{'onefile'};
+	$_ =~ s%^/%%;
+	$_ =~ s%^\./%%;
+	# Some types need the leading ./ to extract the file list,
+	# since its stored that way
+	if ($cfg::type =~ m/^(tar|lha)$/) {
+	    $_ = './' . $_;
+	}
+	print NEWLIST "$_\n";
+	$restore_files .= " $_";
+	close(NEWLIST);
+	&log("| Extracting single file" . $restore_files);
+    }
+
     if ($cfg::type eq 'dump') {
 	$cmd .= "$main::path{restore} -x ";
 	$cmd .= "$main::dump_verb_flag ";
 	$cmd .= "$main::dump_blk_flag ";
 	$cmd .= "-f -";
-	if (defined($main::opt{'files'})) {
-	    $cmd .= "$restore_files";
-	}
+        $cmd .= $restore_files;
 
     } elsif ($cfg::type eq 'afio') {
 	$cmd .= "$main::path{afio} -i ";
-	if (defined($main::opt{'files'})) {
+	if ($restore_files ne '') {
 	    $cmd .= "-w $newlist ";
 	}
 	$cmd .= "-z ";
@@ -1791,7 +1807,7 @@ sub extract_routine {
 
     } elsif ($cfg::type eq 'cpio') {
 	$cmd .= "$main::path{cpio} -i ";
-	if (defined($main::opt{'files'})) {
+	if ($restore_files ne '') {
 	    $cmd .= "-E $newlist ";
 	}
 	$cmd .= "-m ";
@@ -1801,7 +1817,7 @@ sub extract_routine {
 
     } elsif ($cfg::type eq 'tar') {
 	$cmd .= "$main::path{tar} --extract ";
-	if (defined($main::opt{'files'})) {
+	if ($restore_files ne '') {
 	    $cmd .= "--files-from $newlist ";
 	}
 	$cmd .= "--totals ";
@@ -1816,7 +1832,7 @@ sub extract_routine {
 
     } elsif ($cfg::type eq 'star') {
 	$cmd .= "$main::path{star} -x ";
-	if (defined($main::opt{'files'})) {
+	if ($restore_files ne '') {
 	    $cmd .= "list=$newlist ";
 	}
 	$cmd .= "-p ";
@@ -1831,18 +1847,14 @@ sub extract_routine {
     } elsif ($cfg::type eq 'pax') {
 	$cmd .= "$main::path{pax} -r ";
 	$cmd .= "$main::pax_verb_flag ";
-	if (defined($main::opt{'files'})) {
-	    $cmd .= "$restore_files";
-	}
+        $cmd .= $restore_files;
 
    } elsif ($cfg::type eq 'zip') {
 	my $tmpfile = "$cfg::tmpdir/zip.$PROCESS_ID";
 	$cmd .= "$main::path{cat} > $tmpfile ; ";
 	$cmd .= "$main::path{unzip} ";
 	$cmd .= "$tmpfile ";
-	if (defined($main::opt{'files'})) {
-	    $cmd .= "$restore_files ";
-	}
+        $cmd .= $restore_files;
 	$cmd .= "; ";
 	$cmd .= "$main::path{rm} -f $tmpfile";
 
@@ -1852,16 +1864,14 @@ sub extract_routine {
 	$cmd .= "$main::path{ar} xo";
 	$cmd .= "$main::ar_verb_flag ";
 	$cmd .= "$tmpfile ";
-	if (defined($main::opt{'files'})) {
-	    $cmd .= "$restore_files";
-	}
+        $cmd .= $restore_files;
 	$cmd .= "; ";
 	$cmd .= "$main::path{rm} -f $tmpfile";
 
     } elsif ($cfg::type eq 'shar') {
 	$cmd .= "sh ";
-	if (defined($main::opt{'files'})) {
-	    &log("| NOTE: \"-files\" is ignored for shar");
+	if ($restore_files ne '') {
+	    &log("| NOTE: \"-files/-onefile\" ignored for shar");
 	}
 
     } elsif ($cfg::type eq 'filelist') {
@@ -1874,9 +1884,7 @@ sub extract_routine {
 	$cmd .= "$main::path{lha} x";
 	$cmd .= "$main::lha_verb_flag ";
 	$cmd .= "$tmpfile ";
-	if (defined($main::opt{'files'})) {
-	    $cmd .= "$restore_files ";
-	}
+        $cmd .= $restore_files;
 	$cmd .= "; ";
 	$cmd .= "$main::path{rm} -f $tmpfile";
 
@@ -3199,6 +3207,9 @@ sub optioncheck {
 	} else {
 	    push(@main::errors,"-files can only be used with -extract");
 	}
+    }
+    if (defined($main::opt{'onefile'}) and !defined($main::opt{'extract'})) {
+	push(@main::errors,"-onefile can only be used with -extract");
     }
 
     # Requirements for testing

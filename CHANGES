@@ -12,12 +12,12 @@ Changes beyond stable release:
       $set{'tag1'} = "/dir1 /dir2 ...";
       $set{'tag2'} = "/dir3 host:/dir4 ...";
 
-    Flags:	
+    Flags:
       "-dir <dir>" backs up one directory tree (old "-fs <dir>")
       "-set <tag>" backs up a named set.  Useful new feature.
       "-set all" acts like old "-fs all".  If using tapes & level 0, each
       set is a different tape (acts like the old numeric index to @filesystems)
-  
+
   - Added packaging system delta capability (RPM only for now).
 
     If you give "-pkgdelta rpm", after the level/timestamp checks, we
@@ -34,6 +34,9 @@ Changes beyond stable release:
   - Added 'filelist' type that doesn't back up anything, but prints/saves
     the list of files that would have been archived.  Good for debugging
     timestamps, levels, and file exclusion.
+
+  - Added "-extract -onefile <file>" option; if you are extracting a single
+    file just spec it on the command line, no list file needed
 
   - Changed boolean mt_var_blksize into mt_blocksize integer (in bytes).
     Set to 0 for variable blocksize (old "true" value), comment out or
