@@ -1,6 +1,6 @@
 Summary: Flexible backup script
 Name: flexbackup
-%define version 0.9.5
+%define version 0.9.5.1
 Version: %{version}
 Release: 1
 Packager: Edwin Huffstutler <edwinh+flexbackup@computer.org>
