@@ -1,7 +1,7 @@
 Begin3
 Title:          flexbackup
-Version:        $Name$
-Entered-date:   $Date$
+Version:        0.9.2
+Entered-date:   Mon Sep 20 05:17:29 MST 1999
 Description:
 Flexible backup script.
 Features:
