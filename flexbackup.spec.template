@@ -3,7 +3,7 @@ Name: flexbackup
 %define version
 Version: %{version}
 Release: 1
-Packager: Edwin Huffstutler <edwinh@computer.org>
+Packager: Edwin Huffstutler <edwinh+flexbackup@edwinh.org>
 Source: flexbackup-%{version}.tar.gz
 Url: http://flexbackup.sourceforge.net
 Copyright: GPL
@@ -20,7 +20,7 @@ Flexible backup script.
 
 Features:
    o Easy to configure
-   o Uses dump, afio, tar, or cpio with the flick of a switch
+   o Uses dump, afio, tar, zip, star, pax, or cpio with the flick of a switch
    o Backup, extract, compare, list modes
    o Compression and buffering for all backup types
    o Full (0) and numbered levels of incremental backup
@@ -58,13 +58,13 @@ rm -rf $RPM_BUILD_ROOT
 %config /etc/flexbackup.conf
 
 %changelog
-* Sun Jan 12 2003 Edwin Huffstutler <edwinh@computer.org>
+* Sun Jan 12 2003 Edwin Huffstutler <edwinh+flexbackup@edwinh.org>
 - updated
 
-* Sat Sep 25 1999 Edwin Huffstutler <edwinh@computer.org>
+* Sat Sep 25 1999 Edwin Huffstutler <edwinh+flexbackup@edwinh.org>
 - add more requires, update description, email address.
 - really goes in /usr/bin since it needs perl anyway --
   if you only have your root fs, run restore or tar by hand :)
 
-* Sat Sep 18 1999 Edwin Huffstutler <edwinh@computer.org>
+* Sat Sep 18 1999 Edwin Huffstutler <edwinh+flexbackup@edwinh.org>
 - initial rpm package

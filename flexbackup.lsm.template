@@ -6,7 +6,7 @@ Description:
 Flexible backup script.
 Features:
    o Easy to configure
-   o Uses dump, afio, tar, cpio
+   o Uses dump, afio, tar, cpio, star, zip, or pax
    o Compression and buffering for all backup types
    o Handles multivolume backups
    o Backup, extract, compare, list modes
