@@ -3812,6 +3812,12 @@ sub maybe_get_filename {
 	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
 	&optioncheck();                  # redo to set a few variables over
 
+    } elsif ($file =~ m/\.deb$/) {
+	$cfg::type = "ar";
+	$cfg::compress = "false";
+	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
+	&optioncheck();                  # redo to set a few variables over
+
     } elsif ($file =~ m/\.jar$/i) {
 	$cfg::type = "zip";
 	$cfg::compress = "false";
@@ -5219,7 +5225,7 @@ sub check_remote_progs {
     my $string = join ('; ',@progs);
     foreach my $host (keys %$remotehost_ref) {
 	print $::msg "| Checking for required programs on host $host... ";
-	my $cmd = "$::remoteshell $host sh -c '$string'";
+	my $cmd = "$::remoteshell $host \"sh -c '$string'\"";
 	if (defined($::debug)) {
 	    print $::msg "\n(debug) $cmd\n";
 	    next;
