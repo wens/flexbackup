@@ -2559,18 +2559,6 @@ sub optioncheck {
 	$main::mountpoint_flag = "-xdev";
     }
 
-    # mt block size (in bytes not k)
-    if (!defined($cfg::mt_blksize)) {
-	$cfg::mt_blksize = $cfg::blksize * 1024;
-	$main::mt_blksize = $cfg::mt_blksize;
-    }
-    if ($cfg::mt_blksize !~ m/^\d+$/) {
-	push(@main::errors,"\$mt_blksize must be set to an integer");
-    } else {
-	# FIXME warn if not a factor of $cfg::blksize
-	$main::mt_blksize = $cfg::mt_blksize;
-    }
-
     # Block size
     &check(\$cfg::blksize,'blksize','exist');
     if ($cfg::blksize !~ m/^\d+$/) {
@@ -2607,6 +2595,23 @@ sub optioncheck {
 	$main::tar_blk_flag =  "";
 	$main::star_blk_flag =  "";
 	$main::pax_blk_flag = "";
+    }
+
+    # mt block size (in bytes not k)
+    if (!defined($cfg::mt_blksize)) {
+	$cfg::mt_blksize = $cfg::blksize * 1024;
+	$main::mt_blksize = $cfg::mt_blksize;
+    }
+    if ($cfg::mt_blksize !~ m/^\d+$/) {
+	push(@main::errors,"\$mt_blksize must be set to an integer");
+    } else {
+	if ($cfg::mt_blksize != 0) {
+	    my $tmp = $cfg::blksize * 1024;
+	    if ($tmp%$cfg::mt_blksize != 0) {
+		push(@main::errors,"\$mt_blksize ($cfg::mt_blksize) should be a factor of \$blksize ($tmp)");
+	    }
+	}
+	$main::mt_blksize = $cfg::mt_blksize;
     }
 
     # Generic compression (afio archives will do their own flags)
