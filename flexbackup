@@ -173,8 +173,12 @@ print "\n";
 # Set OS type
 chomp($main::uname = `uname -s`);
 
-# Sanity check
+# Sanity check commandline flags and config file options
 &optioncheck();
+&line('screen');
+
+# Check shells, buffer is runnable, remote progs...
+&test_before_run();
 
 # See about rewind/erse/reten flags
 &set_tape_operation_defaults();
@@ -2031,8 +2035,6 @@ sub optioncheck {
     my $realdev;
     my $buffer_blk_flag;
     my $buffer_pad_flag;
-    my %remotehosts;
-    my @remoteprogs;
 
     # Archive type on commandline
     if (defined($main::opt{'type'})) {
@@ -2123,7 +2125,7 @@ sub optioncheck {
     $main::path{'dd'} = &checkinpath('dd');
     $main::path{'printf'} = &checkinpath('printf');
 
-    push(@remoteprogs,($main::path{'touch'},$main::path{'rm'},$main::path{'find'},$main::path{'printf'}));
+    push(@main::remoteprogs,($main::path{'touch'},$main::path{'rm'},$main::path{'find'},$main::path{'printf'}));
 
     # Chase links
     $realdev = $cfg::device;
@@ -2159,7 +2161,7 @@ sub optioncheck {
     } elsif ($cfg::device =~ m%(\S+):(/dev/.*)%) {
 
 	$main::remotetapehost = $1;
-	$remotehosts{$1} = 1;
+	$main::remotehosts{$1} = 1;
 	$cfg::device = $2;
 	$main::tapedevice = 1;
 
@@ -2180,7 +2182,7 @@ sub optioncheck {
 	$main::path{'mt'} = &checkinpath('mt');
     }
     if (defined($main::remotetapehost)) {
-	push(@remoteprogs,$main::path{'mt'});
+	push(@main::remoteprogs,$main::path{'mt'});
     }
 
     # Exclude regexp for find
@@ -2285,7 +2287,7 @@ sub optioncheck {
     # Generic compression (afio archives will do their own flags)
     if ($cfg::compress eq "gzip") {
 	$main::path{'gzip'} = &checkinpath($cfg::compress);
-	push(@remoteprogs, $main::path{$cfg::compress});
+	push(@main::remoteprogs, $main::path{$cfg::compress});
 	if ($cfg::compr_level !~ m/^[123456789]$/) {
 	    push(@main::errors,"\$compr_level must be set to 1-9");
 	} else {
@@ -2295,7 +2297,7 @@ sub optioncheck {
 
     } elsif ($cfg::compress eq "bzip2") {
 	$main::path{'bzip2'} = &checkinpath($cfg::compress);
-	push(@remoteprogs, $main::path{$cfg::compress});
+	push(@main::remoteprogs, $main::path{$cfg::compress});
 	if ($cfg::compr_level !~ m/^[123456789]$/) {
 	    push(@main::errors,"\$compr_level must be set to 1-9");
 	} else {
@@ -2305,13 +2307,13 @@ sub optioncheck {
 
     } elsif ($cfg::compress eq "compress") {
 	$main::path{'compress'} = &checkinpath($cfg::compress);
-	push(@remoteprogs, $main::path{$cfg::compress});
+	push(@main::remoteprogs, $main::path{$cfg::compress});
 	$main::z = " | $main::path{$cfg::compress} -c";
 	$main::unz = "$main::path{$cfg::compress} -dc | ";
 
     } elsif ($cfg::compress eq "zip") {
 	$main::path{'zip'} = &checkinpath('zip');
-	push(@remoteprogs, $main::path{'zip'});
+	push(@main::remoteprogs, $main::path{'zip'});
 	$main::path{'funzip'} = &checkinpath('funzip');
 	if ($cfg::compr_level !~ m/^[123456789]$/) {
 	    push(@main::errors,"\$compr_level must be set to 1-9");
@@ -2337,7 +2339,7 @@ sub optioncheck {
     if ($cfg::buffer eq "buffer") {
 
 	$main::path{'buffer'} = &checkinpath('buffer');
-	push(@remoteprogs, $main::path{'buffer'});
+	push(@main::remoteprogs, $main::path{'buffer'});
 	if ($cfg::buffer_megs =~ m/^\d+$/) {
 	    my $write_flags;
 	    my $read_flags;
@@ -2384,7 +2386,7 @@ sub optioncheck {
 
 	    # Single fs
 	    if ($main::opt{'fs'} =~ /^(\S+):/) {
-		$remotehosts{$1} = 1;
+		$main::remotehosts{$1} = 1;
 	    }
 
 	} else {
@@ -2395,7 +2397,7 @@ sub optioncheck {
 		$main::num_tapes++;
 		foreach my $fs (split(/\s+/,$list)) {
 		    if ($fs =~ /^(\S+):/g) {
-			$remotehosts{$1} = 1;
+			$main::remotehosts{$1} = 1;
 		    }
 		}
 	    }
@@ -2454,7 +2456,7 @@ sub optioncheck {
 
 	$main::path{'dump'} = &checkinpath('dump');
 	$main::path{'restore'} = &checkinpath('restore');
-	push(@remoteprogs, $main::path{'dump'});
+	push(@main::remoteprogs, $main::path{'dump'});
 
 	# Length of tape
 	if ($cfg::dump_length !~ m/^\d+$/) {
@@ -2471,9 +2473,9 @@ sub optioncheck {
     } elsif ($cfg::type eq 'afio') {
 
 	$main::path{'afio'} = &checkinpath('afio');
-	push(@remoteprogs, $main::path{'afio'});
+	push(@main::remoteprogs, $main::path{'afio'});
 	$main::path{'echo'} = &checkinpath('echo');
-	push(@remoteprogs, $main::path{'echo'});
+	push(@main::remoteprogs, $main::path{'echo'});
 
 	&check(\$cfg::afio_nocompress_types,'afio_nocompress_types','exist');
 
@@ -2533,12 +2535,12 @@ sub optioncheck {
     } elsif ($cfg::type eq 'cpio') {
 
 	$main::path{'cpio'} = &checkinpath('cpio');
-	push(@remoteprogs, $main::path{'cpio'});
+	push(@main::remoteprogs, $main::path{'cpio'});
 
     } elsif ($cfg::type eq 'tar') {
 
 	$main::path{'tar'} = &checkinpath('tar');
-	push(@remoteprogs, $main::path{'tar'});
+	push(@main::remoteprogs, $main::path{'tar'});
 
 	# Echo record number
 	$main::tar_recnum_flag = "";
@@ -2551,7 +2553,7 @@ sub optioncheck {
     } elsif ($cfg::type eq 'star') {
 
 	$main::path{'star'} = &checkinpath('star');
-	push(@remoteprogs, $main::path{'star'});
+	push(@main::remoteprogs, $main::path{'star'});
 
 	# Echo block number
 	$main::star_blocknum_flag = "";
@@ -2581,12 +2583,12 @@ sub optioncheck {
     } elsif ($cfg::type eq 'pax') {
 
 	$main::path{'pax'} = &checkinpath('pax');
-	push(@remoteprogs, $main::path{'pax'});
+	push(@main::remoteprogs, $main::path{'pax'});
 
     } elsif ($cfg::type eq 'zip') {
 
 	$main::path{'zip'} = &checkinpath('zip');
-	push(@remoteprogs, $main::path{'zip'});
+	push(@main::remoteprogs, $main::path{'zip'});
 	$main::path{'unzip'} = &checkinpath('unzip');
 
 	$main::zip_compr_flag = "-$cfg::compr_level";
@@ -2702,7 +2704,7 @@ sub optioncheck {
 	}
     }
 
-    # Check toc/rmindex flags
+    # Check toc/rmindex/rmfile flags
     if (defined($main::opt{'toc'}) or defined($main::opt{'rmindex'})) {
 	if ($cfg::indexes eq "false") {
 	    push(@main::errors,"Can't do -toc with \$indexes set to false");
@@ -2713,6 +2715,9 @@ sub optioncheck {
     }
     if (defined($main::opt{'rmindex'}) and ($main::opt{'rmindex'} eq '')) {
 	    push(@main::errors,"-rmindex requires a key value or 'all'");
+    }
+    if (defined($main::opt{'rmfile'}) and ($main::opt{'rmfile'} eq '')) {
+	    push(@main::errors,"-rmfile requires a filename or 'all'");
     }
 
     # Mode
@@ -2750,9 +2755,20 @@ sub optioncheck {
 	}
     }
 
+    if (@main::errors) {
+	print "\nErrors:\n";
+	while(@main::errors) {
+	    print " " . shift(@main::errors) . "\n";
+	}
+	exit(1);
+    }
 
-    # Last step - check buffer, shelltype, and any remote hosts for required programs
-    &line('screen');
+}
+
+######################################################################
+# Check buffer, shelltype, and any remote hosts for required programs
+######################################################################
+sub test_before_run {
 
     if ($cfg::buffer eq 'buffer') {
 	&test_bufferprog($main::path{'buffer'}, $cfg::buffer_megs, 'localhost');
@@ -2760,7 +2776,7 @@ sub optioncheck {
 
     &check_shell('localhost');
 
-    &check_remote_progs(\%remotehosts, \@remoteprogs);
+    &check_remote_progs(\%main::remotehosts, \@main::remoteprogs);
 
     if (@main::errors) {
 	print "\nErrors:\n";

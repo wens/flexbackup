@@ -1,6 +1,13 @@
 $Id$
 $Name$
 
+Cleanup:
+ - "-rmfile" yells if no argument
+ - Move shell/remote/buffer check to its own function after option
+     checking.  (So commandline/config errors and these pre-tests are
+     displayed separately)
+
+----------------------------------------------------------------------
 Version 1.0pre5 (20030124)
 
 Bug fixes:
