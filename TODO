@@ -5,6 +5,7 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
+ - make tape change for set all level 0 turn off able
  - Consolidate use_file, use_pipe, etc to single string var.
  - Fix remote tape drive + mt uname conditionals are local
  - Clean up more $main:: vars, split into types or refactor code
@@ -22,7 +23,6 @@ Cleanup/fix:
     (This is why pax exists...)
 
 Misc:
- - Do .debs?
  - Try against torture-test list:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
  - Update mt manpages collection I keep in cvs
