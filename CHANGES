@@ -2,6 +2,26 @@ $Id$
 $Name$
 
 ----------------------------------------------------------------------
+Version 1.1.8 (20030621)
+
+Changes:
+  - Detect old config file
+  - Config file parsing not so rigid - if values not found, it now uses
+    defaults (w/ message printed so you know it)
+  - Can configure buffer percent full and write sleep time options
+  - Compare works for copy type (just diff -r -q)
+
+Bugfixes/cleanup:
+
+  - Doh! index key creation broken for to-disk backups as a result of 1.1.7
+    changes.  Fixed.
+  - Relative links for $device get chased correctly
+  - $pkgdelta_archive_changed = false didn't work.
+  - README updated; example for filesystem setup & cron.
+  - find -depth w/ -prune isn't supposed to work, no bug. (see single unix
+    spec and various manpages).
+
+----------------------------------------------------------------------
 Version 1.1.7 (20030618)
 
 Changes:

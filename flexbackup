@@ -2051,6 +2051,13 @@ sub compare_routine {
 	$cmd .= "-B ";
 	$cmd .= "file=-";
 
+    } elsif ($cfg::type eq 'copy') {
+
+	$main::path{'diff'} = &checkinpath('diff');
+
+	$cmd = "$main::path{diff} -r -q ";
+	$cmd .= ". $main::device";
+
     } else {
 	die("$cfg::type not capable of comparing files");
     }
@@ -2501,11 +2508,12 @@ sub mt {
 ######################################################################
 sub optioncheck {
 
-    my $realdev;
     my $buffer_blk_flag;
-    my $buffer_pad_flag;
+    my $buffer_write_pad_flag;
+    my $buffer_read_pad_flag;
     my $mbuffer_blk_flag;
-    my $mbuffer_pad_flag;
+    my $mbuffer_write_pad_flag;
+    my $mbuffer_read_pad_flag;
 
     # Archive type on commandline
     if (defined($main::opt{'type'})) {
@@ -2527,36 +2535,44 @@ sub optioncheck {
 	$main::debug = 1;
     }
 
+    # Flag old config file
+    if (defined(@cfg::filesystems) or defined($cfg::mt_var_blksize)) {
+	# so strict shuts up
+	my $junk = @cfg::filesystems;
+	$junk = $cfg::mt_var_blksize;
+	push(@main::errors,"You've got an old 1.0.x configuration file, please update it!");
+    }
+
     # First check if things are defined in the config file
     # Checks exist, true/false, or one of options
-    &check(\$cfg::type,'type','dump afio cpio tar star pax zip ar shar lha copy filelist');
-    &check(\$cfg::compress,'compress','gzip bzip2 compress zip false hardware');
-    &check(\$cfg::compr_level,'compr_level','exist');
-    &check(\$cfg::verbose,'verbose');
-    &check(\$cfg::sparse,'sparse');
-    &check(\$cfg::label,'label');
-    &check(\$cfg::atime_preserve,'atime_preserve');
-    &check(\$cfg::indexes,'indexes');
-    &check(\$cfg::staticfiles,'staticfiles');
-    &check(\$cfg::buffer,'buffer','false buffer mbuffer');
-    &check(\$cfg::buffer_megs,'buffer_megs','exist');
-    &check(\$cfg::pad_blocks,'pad_blocks');
-    &check(\$cfg::device,'device','exist');
-    &check(\$cfg::remoteshell,'remoteshell','ssh ssh2 ssh1 rsh');
-    &check(\$cfg::remoteuser,'remoteuser','exist');
-    &check(\$cfg::erase_tape_set_level_zero,'erase_tape_set_level_zero');
-    &check(\$cfg::erase_rewind_only,'erase_rewind_only');
-    &check(\$cfg::logdir,'logdir','exist');
-    &check(\$cfg::tmpdir,'tmpdir','exist');
-    &check(\$cfg::comp_log,'comp_log','gzip bzip2 compress zip false');
-    &check(\$cfg::stampdir,'stampdir','exist');
-    &check(\$cfg::index,'index','exist');
-    &check(\$cfg::staticlogs,'staticlogs');
-    &check(\$cfg::prefix,'prefix','exist');
-    &check(\$cfg::sprefix,'sprefix','exist');
+    &checkvar(\$cfg::type,'type','dump afio cpio tar star pax zip ar shar lha copy filelist','tar');
+    &checkvar(\$cfg::compress,'compress','gzip bzip2 compress zip false hardware','gzip');
+    &checkvar(\$cfg::compr_level,'compr_level','exist','4');
+    &checkvar(\$cfg::verbose,'verbose','bool','true');
+    &checkvar(\$cfg::sparse,'sparse','bool','true');
+    &checkvar(\$cfg::label,'label','bool','true');
+    &checkvar(\$cfg::atime_preserve,'atime_preserve','bool','false');
+    &checkvar(\$cfg::indexes,'indexes','bool','true');
+    &checkvar(\$cfg::staticfiles,'staticfiles','bool','false');
+    &checkvar(\$cfg::buffer,'buffer','false buffer mbuffer','false');
+    &checkvar(\$cfg::pad_blocks,'pad_blocks','bool','true');
+    &checkvar(\$cfg::device,'device','exist','/dev/tape');
+    &checkvar(\$cfg::remoteshell,'remoteshell','ssh ssh2 ssh1 rsh','ssh');
+    &checkvar(\$cfg::remoteuser,'remoteuser','exist','');
+    &checkvar(\$cfg::erase_tape_set_level_zero,'erase_tape_set_level_zero','bool','true');
+    &checkvar(\$cfg::erase_rewind_only,'erase_rewind_only','bool','false');
+    &checkvar(\$cfg::logdir,'logdir','exist','/var/log/flexbackup');
+    &checkvar(\$cfg::tmpdir,'tmpdir','exist','/tmp');
+    &checkvar(\$cfg::comp_log,'comp_log','gzip bzip2 compress zip false','gzip');
+    &checkvar(\$cfg::stampdir,'stampdir','exist','/var/lib/flexbackup');
+    &checkvar(\$cfg::index,'index','exist','/var/lib/flexbackup/index');
+    &checkvar(\$cfg::keyfile,'keyfile','exist','00-index-key');
+    &checkvar(\$cfg::staticlogs,'staticlogs','bool','false');
+    &checkvar(\$cfg::prefix,'prefix','exist','');
+    &checkvar(\$cfg::sprefix,'sprefix','exist','');
 
     if (@main::errors) {
-	print "\nErrors:\n";
+	print "Errors:\n";
 	while(@main::errors) {
 	    print " " . shift(@main::errors) . "\n";
 	}
@@ -2584,9 +2600,18 @@ sub optioncheck {
     push(@main::remoteprogs,($main::path{'touch'},$main::path{'rm'},$main::path{'find'},$main::path{'printf'}));
 
     # Chase links
-    $realdev = $cfg::device;
-    while (-l $realdev) {
-	$realdev = readlink($realdev);
+    # FIXME relative links don't work
+    my $realdev = $cfg::device;
+    while (-l "$realdev") {
+
+	my @pathname = split('/',$realdev);
+	$realdev = readlink("$realdev");
+
+	# If a relative link we'll need the dir from the link
+	if ($realdev !~ m:^/:) {
+	    pop(@pathname);
+	    $realdev = join('/',@pathname) . "/$realdev";
+	}
     }
 
     # Check device (or dir)
@@ -2688,7 +2713,7 @@ sub optioncheck {
     }
 
     # Traverse mountpoints?
-    &check(\$cfg::traverse_fs,'traverse_fs','false local all');
+    &checkvar(\$cfg::traverse_fs,'traverse_fs','false local all','false');
     if ($cfg::traverse_fs eq "local") {
 	$main::mountpoint_flag = "! -fstype nfs ! -fstype smbfs ! -fstype bind";
     } elsif ($cfg::traverse_fs eq "all") {
@@ -2698,7 +2723,9 @@ sub optioncheck {
     }
 
     # Block size
-    &check(\$cfg::blksize,'blksize','exist');
+    &checkvar(\$cfg::blksize,'blksize','exist','10');
+    # Isn't required; if commented out in config we use same as $blksize
+    #&checkvar(\$cfg::mt_blksize,'mt_blksize','exist');
     if ($cfg::blksize !~ m/^\d+$/) {
 	push(@main::errors,"\$blksize must be set to an integer");
     }
@@ -2796,75 +2823,90 @@ sub optioncheck {
 
     # Block padding
     if (($cfg::pad_blocks eq "true") and defined($main::tapedevice)) {
-	$main::dd_pad_flag = "conv=noerror,sync";
-	$buffer_pad_flag = "-B";
+	$main::dd_write_pad_flag = "conv=noerror,sync";
+	$main::dd_read_pad_flag = "conv=noerror,sync";
+	$buffer_write_pad_flag = "-B";
+	$buffer_read_pad_flag = "-B";
     } else {
-	$main::dd_pad_flag = "conv=noerror";
-	$buffer_pad_flag = "";
+	$main::dd_write_pad_flag = "conv=noerror";
+	$main::dd_read_pad_flag = "conv=noerror";
+	$buffer_write_pad_flag = "";
+	$buffer_read_pad_flag = "";
     }
 
     # Buffer setup
-    if (($cfg::buffer ne 'false') and ($cfg::buffer_megs !~ m/^\d+$/)) {
-	push(@main::errors,"\$buffer_megs must be set to integer number of megabytes");
-    }
-    if ($cfg::buffer eq "buffer") {
-
-	$main::path{'buffer'} = &checkinpath('buffer');
-	push(@main::remoteprogs, $main::path{'buffer'});
-
-	my $write_flags;
-	my $read_flags;
-	my $megs = $cfg::buffer_megs . "m";
-	my $bufcmd = "$main::path{buffer} -m $megs $buffer_blk_flag";
-
-	if (defined($main::tapedevice)) {
-	    $write_flags = "-u 100 -t -p 75 $buffer_pad_flag -o ";
-	    $read_flags = "-u 100 -t -p 75 $buffer_pad_flag -i ";
-	} else {
-	    $write_flags = "-t -p 75 $buffer_pad_flag -o ";
-	    $read_flags = "-t -p 75 $buffer_pad_flag -i ";
+    if ($cfg::buffer ne 'false') {
+	&checkvar(\$cfg::buffer_megs,'buffer_megs','exist');
+	&checkvar(\$cfg::buffer_fill_pct,'buffer_fill_pct','exist','75');
+	&checkvar(\$cfg::buffer_pause_usec,'buffer_pause_usec','exist','100');
+	if ($cfg::buffer_megs !~ m/^\d+$/) {
+	    push(@main::errors,"\$buffer_megs must be set to integer number of megabytes");
 	}
-	$main::buffer_cmd = " | $bufcmd";
-	$main::write_cmd = "$bufcmd $write_flags";
-	$main::read_cmd = "$bufcmd $read_flags";
+	if ($cfg::buffer_fill_pct !~ m/^\d+$/) {
+	    push(@main::errors,"\$buffer_fill_pct must be set to an integer");
+	}
+	if ($cfg::buffer_pause_usec !~ m/^\d+$/) {
+	    push(@main::errors,"\$buffer_pause_usec must be set to an integer");
+	}
+	if ($cfg::buffer eq "buffer") {
 
-    } elsif ($cfg::buffer eq "mbuffer") {
+	    $main::path{'buffer'} = &checkinpath('buffer');
+	    push(@main::remoteprogs, $main::path{'buffer'});
 
-	$main::path{'mbuffer'} = &checkinpath('mbuffer');
-	push(@main::remoteprogs, $main::path{'mbuffer'});
+	    my $write_flags;
+	    my $read_flags;
+	    my $megs = $cfg::buffer_megs . "m";
+	    my $bufcmd = "$main::path{buffer} -m $megs -p $cfg::buffer_fill_pct $buffer_blk_flag -t ";
 
-	my $megs = $cfg::buffer_megs . "M";
-	my $bufcmd = "$main::path{mbuffer} -m $megs $buffer_blk_flag";
+	    if (defined($main::tapedevice)) {
+		$write_flags = "-u $cfg::buffer_pause_usec $buffer_write_pad_flag -o ";
+		$read_flags = "-u $cfg::buffer_pause_usec $buffer_read_pad_flag -i ";
+	    } else {
+		$write_flags = "$buffer_write_pad_flag -o ";
+		$read_flags = "$buffer_read_pad_flag -i ";
+	    }
+	    $main::buffer_cmd = " | $bufcmd";
+	    $main::write_cmd = "$bufcmd $write_flags";
+	    $main::read_cmd = "$bufcmd $read_flags";
 
-	$main::buffer_cmd = " | $bufcmd -q";
-	$main::write_cmd = "$bufcmd | $main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=";
-	$main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag if=";
+	} elsif ($cfg::buffer eq "mbuffer") {
 
-    } elsif ($cfg::buffer eq "bfr") {
+	    $main::path{'mbuffer'} = &checkinpath('mbuffer');
+	    push(@main::remoteprogs, $main::path{'mbuffer'});
 
-	$main::path{'bfr'} = &checkinpath('bfr');
-	push(@main::remoteprogs, $main::path{'bfr'});
+	    my $megs = $cfg::buffer_megs . "M";
+	    my $bufcmd = "$main::path{mbuffer} -m $megs -p $cfg::buffer_fill_pct $mbuffer_blk_flag";
 
-	my $megs = $cfg::buffer_megs . "m";
-	my $bufcmd = "$main::path{bfr} -b $megs";
+	    # FIXME keep testing this
+	    # FIXME sleep setup just like buffer
+	    $main::buffer_cmd = " | $bufcmd -q";
+	    $main::write_cmd = "$bufcmd | $main::path{dd} $main::dd_blk_flag $main::dd_write_pad_flag of=";
+	    $main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_read_pad_flag if=";
 
-	$main::buffer_cmd = " | $bufcmd";
-	$main::write_cmd = "$bufcmd | $main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=";
-	$main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag if=";
+	} elsif ($cfg::buffer eq "bfr") {
 
+	    $main::path{'bfr'} = &checkinpath('bfr');
+	    push(@main::remoteprogs, $main::path{'bfr'});
+
+	    my $megs = $cfg::buffer_megs . "m";
+	    my $bufcmd = "$main::path{bfr} -b $megs";
+
+	    $main::buffer_cmd = " | $bufcmd";
+	    $main::write_cmd = "$bufcmd | $main::path{dd} $main::dd_blk_flag $main::dd_write_pad_flag of=";
+	    $main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_read_pad_flag if=";
+        }
     } else {
 
-	# If buffering disabled, use dd or cat depending on if blocking turned off on not
-	if ($cfg::blksize eq '0') {
-	    $main::buffer_cmd = "";
-	    $main::write_cmd = "$main::path{cat} > ";
-	    $main::read_cmd = "$main::path{cat} ";
-	} else {
-	    $main::buffer_cmd = "";
-	    $main::write_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=";
-	    $main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag if=";
-	}
-
+        # If buffering disabled, use dd or cat depending on if blocking turned off on not
+        if ($cfg::blksize eq '0') {
+            $main::buffer_cmd = "";
+            $main::write_cmd = "$main::path{cat} > ";
+            $main::read_cmd = "$main::path{cat} ";
+        } else {
+            $main::buffer_cmd = "";
+            $main::write_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_write_pad_flag of=";
+            $main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_read_pad_flag if=";
+        }
     }
 
     # Sets / filesystems
@@ -2973,8 +3015,8 @@ sub optioncheck {
     # Type-specific setup
     if ($cfg::type eq 'dump') {
 
-	&check(\$cfg::dump_length,'dump_length','exist');
-	&check(\$cfg::dump_use_dumpdates,'dump_use_dumpdates');
+	&checkvar(\$cfg::dump_length,'dump_length','exist','0');
+	&checkvar(\$cfg::dump_use_dumpdates,'dump_use_dumpdates','bool','false');
 
 	$main::path{'dump'} = &checkinpath('dump');
 	$main::path{'restore'} = &checkinpath('restore');
@@ -2994,14 +3036,13 @@ sub optioncheck {
 
     } elsif ($cfg::type eq 'afio') {
 
-	&check(\$cfg::afio_echo_block,'afio_echo_block');
-	&check(\$cfg::afio_compress_cache_size,'afio_compress_cache_size','exist');
-	&check(\$cfg::afio_compress_threshold,'afio_compress_threshold','exist');
+	&checkvar(\$cfg::afio_echo_block,'afio_echo_block','bool','false');
+	&checkvar(\$cfg::afio_compress_cache_size,'afio_compress_cache_size','exist','2');
+	&checkvar(\$cfg::afio_compress_threshold,'afio_compress_threshold','exist','3');
+	&checkvar(\$cfg::afio_nocompress_types,'afio_nocompress_types','exist','mp3 MP3 Z z gz gif zip ZIP lha jpeg jpg JPG taz tgz deb rpm bz2');
 
 	$main::path{'afio'} = &checkinpath('afio');
 	push(@main::remoteprogs, $main::path{'afio'});
-
-	&check(\$cfg::afio_nocompress_types,'afio_nocompress_types','exist');
 
 	# Compress flag for afio must be handled differently
 	if ($cfg::compress =~ m/^(gzip|bzip2|compress|zip)$/) {
@@ -3058,7 +3099,7 @@ sub optioncheck {
 
     } elsif (($cfg::type eq 'cpio') or ($cfg::type eq 'copy')) {
 
-	&check(\$cfg::cpio_format,'cpio_format','bin odc newc crc tar ustar hpbin hpodc');
+	&checkvar(\$cfg::cpio_format,'cpio_format','bin odc newc crc tar ustar hpbin hpodc','newc');
 
 	$main::path{'cpio'} = &checkinpath('cpio');
 	push(@main::remoteprogs, $main::path{'cpio'});
@@ -3071,7 +3112,7 @@ sub optioncheck {
 
     } elsif ($cfg::type eq 'tar') {
 
-	&check(\$cfg::tar_echo_record_num,'tar_echo_record_num');
+	&checkvar(\$cfg::tar_echo_record_num,'tar_echo_record_num','bool','false');
 
 	$main::path{'tar'} = &checkinpath('tar');
 	push(@main::remoteprogs, $main::path{'tar'});
@@ -3086,10 +3127,10 @@ sub optioncheck {
 
     } elsif ($cfg::type eq 'star') {
 
-	&check(\$cfg::star_acl,'star_acl');
-	&check(\$cfg::star_fifo,'star_fifo');
-	&check(\$cfg::star_format,'star_format','tar star gnutar ustar pax xstar xustar exustar suntar');
-	&check(\$cfg::star_echo_block_num,'star_echo_block_num');
+	&checkvar(\$cfg::star_acl,'star_acl','bool','true');
+	&checkvar(\$cfg::star_fifo,'star_fifo','bool','true');
+	&checkvar(\$cfg::star_format,'star_format','tar star gnutar ustar pax xstar xustar exustar suntar','exustar');
+	&checkvar(\$cfg::star_echo_block_num,'star_echo_block_num','bool','false');
 
 	$main::path{'star'} = &checkinpath('star');
 	push(@main::remoteprogs, $main::path{'star'});
@@ -3121,12 +3162,14 @@ sub optioncheck {
 
     } elsif ($cfg::type eq 'pax') {
 
-	&check(\$cfg::pax_format,'pax_format','cpio bcpio sv4cpio sv4crc tar ustar');
+	&checkvar(\$cfg::pax_format,'pax_format','cpio bcpio sv4cpio sv4crc tar ustar');
 
 	$main::path{'pax'} = &checkinpath('pax');
 	push(@main::remoteprogs, $main::path{'pax'});
 
     } elsif ($cfg::type eq 'zip') {
+
+	&checkvar(\$cfg::zip_nocompress_types,'zip_nocompress_types','exist','mp3 MP3 Z z gz gif zip ZIP lha jpeg jpg JPG taz tgz deb rpm bz2');
 
 	$main::path{'zip'} = &checkinpath('zip');
 	push(@main::remoteprogs, $main::path{'zip'});
@@ -3256,9 +3299,9 @@ sub optioncheck {
     # Package delta option
     if (defined($main::opt{'pkgdelta'})) {
 
-	&check(\$cfg::pkgdelta_archive_list,'pkgdelta_archive_list','true false rootonly');
-	&check(\$cfg::pkgdelta_archive_unowned,'pkgdelta_archive_unowned');
-	&check(\$cfg::pkgdelta_archive_changed,'pkgdelta_archive_changed');
+	&checkvar(\$cfg::pkgdelta_archive_list,'pkgdelta_archive_list','true false rootonly','rootonly');
+	&checkvar(\$cfg::pkgdelta_archive_unowned,'pkgdelta_archive_unowned','bool','true');
+	&checkvar(\$cfg::pkgdelta_archive_changed,'pkgdelta_archive_changed','bool','true');
 
 	if ($main::opt{'pkgdelta'} eq 'rpm') {
 	    $main::pkgdelta = 'rpm';
@@ -3612,23 +3655,32 @@ sub maybe_get_filename {
 ######################################################################
 # Check validity of a config option
 ######################################################################
-sub check {
+sub checkvar {
 
-    my $ref = shift(@_);
-    my $varname = shift(@_);
-    my $ok = shift(@_);         # list of ok values, or empty for t/f, or "exists"
+    my $ref = shift(@_);        # ref to variable
+    my $varname = shift(@_);    # name of variable
+    my $ok = shift(@_);         # list of ok values, "bool", "exists"
+    my $default = shift(@_);    # default to use if not set
     my @ok;
     my $found = 0;
-    my $realvarname;
 
     if (!defined($ok)) {
+	die("checkvar called incorrectly");
+    }
+
+    if ($ok eq 'bool') {
 	@ok = ('true','false');
     } else {
 	@ok = split(" ",$ok);
     }
 
     if (!defined($$ref)) {
-	push(@main::errors,"\$$varname not defined");
+	if (defined($default)) {
+	    print " \$$varname not found in config: default=$default\n";
+	    $$ref = $default;
+	} else {
+	    push(@main::errors,"\$$varname not defined");
+	}
     } else {
 	if ($ok[0] ne "exist") {
 	    foreach (@ok) {
@@ -3798,15 +3850,21 @@ sub maybe_remote_cmd {
 sub append_writer_cmd {
 
     my $cmd = shift(@_);
+    my $dev = shift(@_);
+
+    # Possibly override device
+    if (!defined($dev)) {
+        $dev = $main::device;
+    }
 
     if (!defined($main::remotetapehost)) {
 
-	$cmd .= " | " . $main::write_cmd . '"' . $main::device . '"' ;
+	$cmd .= " | " . $main::write_cmd . '"' . $dev . '"' ;
 
     } else {
 
 	$cmd .= "$main::buffer_cmd | ";
-	$cmd .= &maybe_remote_cmd($main::write_cmd . '"' . $main::device . '"', $main::remotetapehost);
+	$cmd .= &maybe_remote_cmd($main::write_cmd . '"' . $dev . '"', $main::remotetapehost);
     }
 
     return($cmd);
@@ -4082,7 +4140,7 @@ sub new_tape_key {
 
     &log("| Creating index key $key");
     $string = "$main::path{printf} \'$key\\nThis is a flexbackup index key\\n\' ";
-    $string = &append_writer_cmd($string);
+    $string = &append_writer_cmd($string, $dev);
     if (defined($main::debug)) {
 	&log("(debug) $string");
     } else {
@@ -4135,7 +4193,7 @@ sub get_tape_key {
 
     } else {
 
-	my $string = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag count=1 if=$main::device";
+	my $string = "$main::path{dd} $main::dd_blk_flag $main::dd_write_pad_flag count=1 if=$main::device";
 	if (defined($main::remotetapehost)) {
 	    $string = &maybe_remote_cmd($string, $main::remotetapehost);
 	}
@@ -4558,12 +4616,15 @@ sub file_list_cmd {
     }
 
     if (defined(%{$main::prune{$prunekey}})) {
+	# FIXME don't join , use separate -regex -o flags
+	# So freebsd find will work?  Bug john.
 	$cmd .= '-regex "\./\(';
 	$cmd .= join('\|', keys %{$main::prune{$prunekey}});
 	$cmd .= '\)/.*" -prune -o ';
     } else {
-	# Can't use find -depth with the -prune w/ gnu findutils 4.1.7
-	# It wasn't really required anyway...
+	# Can't use find -depth with -prune (see single unix spec etc)
+	# (not toally required anyway, only if you are archiving dirs you
+	# don't have permissions on and are running as non-root)
 	$cmd .= "-depth ";
     }
 
@@ -4681,8 +4742,6 @@ sub list_packages {
 
     my $host = shift (@_);
 
-    return if ($cfg::pkgdelta_archive_unowned eq 'false');
-
     if ($main::pkgdelta eq 'rpm') {
 
 	my $cmd = "$main::path{rpm} -q -a --queryformat '%{name}-%{version}-%{release}.%{arch}.rpm\\n'";
@@ -4738,7 +4797,7 @@ sub find_packaged_files {
 
     my $host = shift (@_);
 
-    return if ($cfg::pkgdelta_archive_changed eq 'false');
+    return if ($cfg::pkgdelta_archive_unowned eq 'false');
 
     if ($main::pkgdelta eq 'rpm') {
 

@@ -6,10 +6,13 @@ Some of these might not happen
 
 Cleanup/fix:
 
- - If on-disk backups, and yous use -rmfile all, the index for the keyfile
+ - Test %full, sleep additions
+ - Check -regex with '\(a\|b\)' with freebsd find
+ - Need to pad for reads?  test all types
+ - Test mbuffer more ; possibly remove
+ - If on-disk backups, and you use -rmfile all, the index for the keyfile
    gets removed.
 
- - Look into find -prune and -depth w/ gnu findutils problem
  - Better cleanup after error in backup
  - Clean up more $main:: vars, split into types or refactor code
  - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
@@ -24,35 +27,31 @@ Cleanup/fix:
     - How to handle (use lowest common denominator flags?  sorta what's tried now)
 
 Misc:
- - Add faq on files changing underneath tar
- - Add faq on sql db dump
+ - Add faq on files changing underneath tar? sql db dump?
  - re-word faq re trying by hand.
  - Add faq on max size
  - Add faq on -erase -newtape taking forever / erase_rewind_only
      could be mt erase, could be dd index hang (-test-tape-drive)
  - Add faq on extract filelist
      also .z at end if afio
- - Sample setup conf/cron
- - Update README/faq/spec/lsm for new items changes since 1.0.3
-     set/dir
+ - add faq -wday use
+ - update faq re: spanning
+ - add faq re: spaces in dirs/prune setup
+ - add faq re: pkg delta how it works
+ - add faq re; onefile/flist spec
+ - add faq re: updating 1.0.x -> 1.2.0 ; howto fix conf file, flag changes
+     mt_blksize change
+     -fs -> set/dir
+     -files -> -flist/-onefile
+ - Update README/faq/spec/lsm descriptions for new features since 1.0.3
+     sets
      pruning
      pkgdelta
      filelist
      copy
-     mt_blksize
-     example for -wday use
-     onefile
-     -files -> -flist
-     spaces in dirs/prune
-     updating your conf file
- - Create mbuffer rpm
-
- - Make a manual page (AND other enchanced documentation, more than a README)
-   someone made a good start or two:
-     http://www.law.utulsa.edu:8080/users/bchapman/linuxnotes/flexbackup
-     http://myezserver.com/downloads/mitel/howto/flexbackup-howto.html
-     http://www.cyber-euskadi.com/howtos/contrib/flexbackup-restore-from-disk-howto.html
-     how about french?  http://sgmf.free.fr/flexbackup_doc.html
+ - fix description text in sf project, freshmeat
+ - Create mbuffer rpm (if I can make it work)
+ - Man page (create from -help perhaps)
  - Try against torture-test list:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
  - Update mt manpages collection I keep in cvs
@@ -60,11 +59,10 @@ Misc:
 
 
 Features to add:
- - Configure buffer delay time?
 
  - Stdout output?
 
- - Handle multi-volume backups (original idea w/ 'multibuf' never panned out)
+  - Handle multi-volume backups (original idea w/ 'multibuf' never panned out)
 
       Found "multivol" program.
       Ack.  still not workable.  need edits to multivol...
