@@ -24,7 +24,7 @@ Features:
    o Uses dump, afio, tar, or cpio with the flick of a switch
    o Backup, extract, compare, list modes
    o Compression and buffering for all backup types
-   o Full (0) and 1-9 levels of incremental backup
+   o Full (0) and numbered levels of incremental backup
    o Keeps a table of contents so you know whats on each tape
    o Does remote filesystems (over rsh/ssh; no special service)
    o Works with IDE/SCSI tapes on Linux/FreeBSD, Linux ftape, or disk files

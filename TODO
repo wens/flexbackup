@@ -11,6 +11,7 @@ Cleanup/fix:
  - bash PIPESTATUS trick fails if remote filesystem and shell there!=bash
      and shell local==bash. bah.
  - check buffer avail mem thing from John
+ - fix the stamp find loop (See FIXME)
  - revisit -cnewer problem.  Make sure it works with touch -t/-d of
    timestamp refs (ctime isn't set backward like the mtime)
 
