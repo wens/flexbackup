@@ -10,7 +10,6 @@
 # USAGE:
 #
 #  flexbackup -help                : this message
-#
 #  flexbackup -fs all              : backup all filesystems, level 0
 #  flexbackup -fs <x>              : backup filesystem <x>, level 0
 #  flexbackup -fs all -level <n>   : backup all filesystems, level n
@@ -30,7 +29,6 @@
 #                                    list/extract/compare/restore options take
 #                                    a filename argument
 #  flexbackup -toc                 : list tape table of contents
-#                                    with Linux ftape only
 #  flexbackup [opt] -c <file>      : use <file> instead of /etc/flexbackup.conf
 #                                    for configuration
 #  flexbackup [opt] -type <x>      : override $type from config file
@@ -154,10 +152,10 @@ if (defined($main::opt{'restore'})) {
 
 } elsif (defined($main::opt{'toc'})) {
 
-    if ($cfg::ftape eq 'true') {
+    if ($main::ftape == 1) {
         &mt("generic-blksize $main::mt_blksize");
 	&mt('rewind');
-	exec("vtblc -p -f $cfg::rawdevice");
+	exec("vtblc -p -f $main::ftape_rawdevice");
 	die("Failed exec of vtblc");
     } else {
 	die("-toc only implemented for ftape under Linux");
@@ -183,6 +181,7 @@ sub backup_routine {
     my $symlink;
     my $logext = '';
     my $comp_cmd;
+    my $tape_key;
 
     # Get backup level...
     if (defined($main::opt{'level'})) {
@@ -252,11 +251,11 @@ sub backup_routine {
 
             # Maybe rewind/erase
             if ($main::do_erase == 1) {
-                $main::nextfile = 0;
                 &log('| Rewinding & erasing tape...');
                 &mt('rewind','erase');
+                $tape_key = &new_tape_key();
             } else {
-                $main::nextfile = &contents();
+                $main::nextfile = &print_contents();
                 &log('| Making sure tape is at end of data...');
                 &mt('generic-eod');
             }
@@ -295,7 +294,7 @@ sub backup_routine {
                     }
 
                     &update_toc();
-                    &contents();
+                    &print_contents();
 
                     $tapecounter++;
                     if (!defined($main::use_file)) {
@@ -324,11 +323,11 @@ sub backup_routine {
 
         # Maybe rewind/erase
         if ($main::do_erase == 1) {
-            $main::nextfile = 0;
             &log('| Rewinding & erasing tape...');
             &mt('rewind','erase');
+            $tape_key = &new_tape_key();
         } else {
-            $main::nextfile = &contents();
+            $main::nextfile = &print_contents();
             &log('| Making sure tape is at end of data...');
             &mt('generic-eod');
         }
@@ -348,7 +347,7 @@ sub backup_routine {
     }
 
     &update_toc();
-    &contents();
+    &print_contents();
 
     # Actually remove the old log and stamp files now that we are done
     foreach (sort keys %oldstamps) {
@@ -397,15 +396,15 @@ sub backup_routine {
 # Rewind & print TOC using vtblc
 # returns an integer that is the next file number
 ######################################################################
-sub contents {
+sub print_contents {
 
     my $output;
     my $filenumber;
 
-    if ($cfg::ftape eq "true") {
+    if ($main::ftape == 1) {
         &mt('rewind');
         &log('');
-        $output=`vtblc -p -f $cfg::rawdevice 2>&1`;
+        $output=`vtblc -p -f $main::ftape_rawdevice 2>&1`;
         &log($output);
         &log('');
         $filenumber = -1;
@@ -437,7 +436,7 @@ sub tag {
     my $filenum = shift(@_);
     my $title = shift(@_);
 
-    system("vtblc -f $cfg::rawdevice -# $filenum -m date -m label=\'$title\'");
+    system("vtblc -f $main::ftape_rawdevice -# $filenum -m date -m label=\'$title\'");
 
 }
 
@@ -504,7 +503,7 @@ sub backup {
     $_ =~ s/\+false//;
     $title = "level $main::level $dir $main::date_at_start $cfg::type" . "$_ flexbackup on $host";
     $title =~ s/\+flexbackup/ flexbackup /;
-    $main::title{$main::nextfile} = $title;
+#    $main::title{$main::nextfile} = $title;
 
     # If we started with level 0, and "all", and -noerase not given,
     # we know the file number, since we erased the tape
@@ -512,7 +511,7 @@ sub backup {
     # (or if we had -erase on the commandline)
     if ((($main::opt{'fs'} eq "all") and ($main::level == 0) and (!defined($main::opt{'noerase'})))
         or
-        ($cfg::ftape eq "true")
+        ($main::ftape == 1)
         or
         ($main::opt{'erase'})) {
         &log("| File number: $main::nextfile");
@@ -1291,7 +1290,7 @@ sub mt {
         if ($operation eq 'generic-query') {
             if ($main::uname =~ /BSD/) {
                 $operation = 'rdhpos';
-            } elsif ($cfg::ftape eq 'true') {
+            } elsif ($main::ftape == 1) {
                 $operation = 'getsize';
             } else {
                 $operation = 'status';
@@ -1300,7 +1299,7 @@ sub mt {
 
         # mt & ftmt slightly different
         if ($operation eq 'generic-eod') {
-            if ($cfg::ftape eq 'true') {
+            if ($main::ftape == 1) {
                 $operation = 'eom';
             } else {
                 $operation = 'eod';
@@ -1368,6 +1367,8 @@ sub mt {
 ######################################################################
 sub optioncheck {
 
+    my $realdev;
+
     # Archive type on commandline
     if (defined($main::opt{'type'})) {
         $cfg::type = $main::opt{'type'};
@@ -1393,6 +1394,7 @@ sub optioncheck {
     &check(\$cfg::traverse_fs,'traverse_fs','false local all');
     &check(\$cfg::nocompress_types,'nocompress_types','exist');
     &check(\$cfg::remoteshell,'remoteshell','ssh ssh2 ssh1 rsh');
+    &check(\$cfg::erase_tape_all_level_zero,'erase_tape_all_level_zero');
     &check(\$cfg::logdir,'logdir','exist');
     &check(\$cfg::tmpdir,'tmpdir','exist');
     &check(\$cfg::comp_log,'comp_log','gzip bzip2 compress false');
@@ -1407,8 +1409,6 @@ sub optioncheck {
     &check(\$cfg::dump_length,'dump_length','exist');
     &check(\$cfg::dump_use_dumpdates,'dump_use_dumpdates');
     &check(\$cfg::cpio_format,'cpio_format','bin odc newc crc tar ustar hpbin hpodc');
-    &check(\$cfg::ftape,'ftape');
-    &check(\$cfg::rawdevice,'rawdevice','exist');
     if (@main::errors) {
         print "\nErrors:\n";
         while(@main::errors) {
@@ -1417,14 +1417,21 @@ sub optioncheck {
         exit(1);
     }
 
-    # Check device (or dir)
-    if (-c $cfg::device) {
-        # ok
-	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
-	    $atime,$mtime,$ctime,$blksize,$blocks) = stat($cfg::device);
+    # Chase links
+    $realdev = $cfg::device;
+    while (-l $realdev) {
+        $realdev = readlink($realdev);
+    }
 
-	 print "rdev -s $rdev\n";
-	 exit;
+    # Check device (or dir)
+    $main::ftape = 0 ;
+    if (-c $realdev) {
+
+        # Check for ftape driver
+        if ($realdev =~ /n?z?[qr]ft(\d+)/) {
+            $main::ftape_rawdevice = "/dev/rawft" . $1;
+            $main::ftape = 1;
+        }
 
     } elsif (-d $cfg::device) {
         if ($cfg::device !~ m:^/:) {
@@ -1443,6 +1450,16 @@ sub optioncheck {
         push(@main::errors,"Can't write to $main::device");
     }
 
+    # Set mt type
+    if ($main::ftape == 1) {
+        &checkinpath('ftmt');
+        &checkinpath('vtblc');
+        $main::mt = 'ftmt';
+    } else {
+        &checkinpath('mt');
+        $main::mt = 'mt';
+    }
+
     # Exclude regexp for find
     $main::exclude_cmd = '';
     # Deal with the old non-array setting that may be in the config file
@@ -1452,26 +1469,40 @@ sub optioncheck {
     if (defined($cfg::exclude_expr[0])) {
         &checkinpath("egrep");
         my @excl_array;
-        foreach (@cfg::exclude_expr) {
+        my $expr;
+        foreach $expr (@cfg::exclude_expr) {
 
-            # If the user put "*whatever" as an expression, turn this
-            # "glob" into a regex for them
-            if (/^\*/) {
-                $_ =~ s/^\*/.*/;
-            }
-
+            # People jsut don't grok regex's.
+            #
+            # If the first character is a *, they obviously got it wrong,
+            # we can try to assume what they meant.
+            #
             # If the user put "*.whatever" as an expression, turn this
             # "glob" into a regex for them
-            if (/^\*\./) {
-                $_ =~ s/^\*\./.*\\./;
+            # If the user put "*whatever" as an expression, turn this
+            # "glob" into a regex for them
+            if ($expr =~ m/^\*\./) {
+                $expr =~ s/^\*\./.\*\\./;
+            }
+            if ($expr =~ m/^\*/) {
+                $expr =~ s/^\*/.*/;
             }
 
-            # Escape shell metacharacters (needed for csh/tcsh)
-            # this didn't work...
-            #$_ =~ s/([\$\*])/\\$1/g;
-            #push(@excl_array, "egrep -v \\\"$_\\\"");
+            # AAAH! Csh should be banned from the face of the earth!
+            #
+            # If an expression contains $ at the end we need to be careful
+            # and leave it out of the quotes, or csh will yack if doing a
+            # remote backup. This happens only if the user's shell is
+            # csh/tcsh.  Then the string is doublequoted inside single
+            # quotes and there is _no way_ for csh do deal with $ in that
+            # situation.  This took a LONG time to figure out.
+            if ($expr =~ m/^(.+)\$$/) {
+                $expr = '"' . $1 . '"' . '$'; #'# quote to keep font-lock happy
+            } else {
+                $expr = '"' . $expr . '"';
+            }
 
-            push(@excl_array, "egrep -v \"$_\"");
+            push(@excl_array, "egrep -v $expr");
         }
         $main::exclude_cmd = "| " . join(" | ", @excl_array);
     }
@@ -1499,7 +1530,7 @@ sub optioncheck {
     # buffer blocksize needs k appended
     $main::buffer_blk_flag = "-s " . $cfg::blksize . "k";
     # dd blocksize needs k appended
-    $main::dd_blk_flag = "bs=" . $cfg::blksize . "k";
+    $main::dd_blk_flag = "ibs=" . $cfg::blksize . "k obs=" . $cfg::blksize . "k";
     # afio blocksize needs k appended
     $main::afio_blk_flag = "-b " . $cfg::blksize . "k";
     # dump blocksize just in k like the config file
@@ -1562,9 +1593,9 @@ sub optioncheck {
         }
     } else {
         &checkinpath('dd');
-        $main::buffer_cmd = " | dd $main::dd_blk_flag";
+        $main::buffer_cmd = " | dd $main::dd_blk_flag conv=sync";
         $main::buffer_write_flags = "of=";
-        $main::read_cmd = "dd $main::dd_blk_flag if=";
+        $main::read_cmd = "dd $main::dd_blk_flag conv=sync if=";
     }
 
     # Check for type of touch flag
@@ -1585,16 +1616,6 @@ sub optioncheck {
     &checkinpath('rm');
     &checkinpath('find');
     &checkinpath('sed');
-
-    # Ftape support
-    if ($cfg::ftape eq 'true') {
-        &checkinpath('ftmt');
-        &checkinpath('vtblc');
-        $main::mt = 'ftmt';
-    } else {
-        &checkinpath('mt');
-        $main::mt = 'mt';
-    }
 
     # Filesystems
     $main::num_tapes = -1;
@@ -1875,17 +1896,21 @@ sub versionstring {
 
 ######################################################################
 # Return current time in ctime format if normal
-# in YYYYMMDDHHMM.SS format if on BSD (have to use touch -t)
-# just YYYYMMMDD if argument is given
+# in YYYYMMDDHHMM.SS format if on BSD or arg "numeric" is given
+# just YYYYMMMDD if argument "short" is given
 ######################################################################
 sub current_time {
 
-    my $short = shift(@_);
+    my $format = shift(@_);
     my $string;
     my $current_time = time;
 
-    if (defined($short)) {
-        $string = strftime("%Y%m%d", localtime($current_time));
+    if (defined($format)) {
+	if ($format eq "short") {
+	    $string = strftime("%Y%m%d", localtime($current_time));
+	} elsif ($format eq "numeric") {
+	    $string = strftime("%Y%m%d%H%M.%S", localtime($current_time));
+	}
     } elsif ($main::touch_flag eq "-t") {
         $string = strftime("%Y%m%d%H%M.%S", localtime($current_time));
     } else {
@@ -1997,7 +2022,7 @@ sub maybe_get_filename {
 sub update_toc {
 
     # Only ftape has the toc capability
-    if ($cfg::ftape eq 'true') {
+    if ($main::ftape == 1) {
         &log('| Updating table of contents...');
         foreach (keys %main::title) {
             &tag($_,$main::title{$_});
@@ -2193,8 +2218,14 @@ sub set_tape_operation_defaults {
         if ($main::opt{'fs'} eq 'all') {
             if ($main::level == 0) {
                 # All level zero - retension, and erase a new tape
-                $main::do_reten = 1;
-                $main::do_erase = 1;
+                # (config file may tell us not to erase)
+                if ($cfg::erase_tape_all_level_zero eq "true") {
+                    $main::do_reten = 1;
+                    $main::do_erase = 1;
+                } else {
+                    $main::do_reten = 0;
+                    $main::do_erase = 0;
+                }
                 $main::do_rewind_after = 1;
             } else {
                 # All incremental backup - go to end of tape
@@ -2278,4 +2309,39 @@ sub split_and_echo {
         # Indent next line(s) by one space
         $line = " ";
     }
+}
+
+
+######################################################################
+# Create new tape "key" and return it
+######################################################################
+sub new_tape_key {
+
+    my $key;
+    my $dev = $main::device;
+
+    $key = &current_time("numeric");
+
+    # If writing to a file see if there is already an index key and use it
+    if ($main::use_file == 1) {
+	$dev .= "/index-key";
+	if (-r $dev) {
+	    open(KEY,$dev) or die("Can't open existing key $dev: $OS_ERROR");
+	    chomp($key = <KEY>);
+	    close(KEY);
+	}
+    }
+
+    &log("| Creating tape index key $key");
+
+    open(DEV,">$dev") or die("Can't open $dev: $OS_ERROR");
+    print DEV "$key\nThis is a flexbackup index key\n";
+    close(DEV);
+
+    # change this to seek to the end.
+    $main::nextfile = 1;
+
+    ${$main::index{$key}}[0] = "tape index key";
+
+    return($key);
 }

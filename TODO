@@ -4,12 +4,11 @@ $Name$
 Flexbackup to-do list
 Some of these might not happen, but figured I should jot them down
 
- - fix exclude for root tcsh shell (test local remote both csh/bash)
- - test ftape
- - autodetect ftape and raw device to eliminate configuration
- - test erase/reten/etc
- - multiple fs for -fs...
-
+ - option to not erase, rewind only in config file?
+ - faq fix-up, redo doc files for index stuff
+ - indexes
+ - remove ftape stuff when indexes work
+ - deal with tape index for files
 
 Features to add:
  - multiple tapes for level that aren't 0
@@ -24,10 +23,6 @@ Features to add:
      - need to test with an almost-full tape, or a floppy
  - configurable path for programs (gtar=tar, etc)
      remote vs local too
- - table of contents for a tape
-     ftape + vtblc has it (needs testing)
-     need table of contents for others
-     Scott Penrose had some ideas here...
  - Gnome driver/configurator utility
      I have a "picture" of what I want this to look like
      use glade + libglade
@@ -46,6 +41,7 @@ Features to add:
 
 
 Cleanup/fix:
+ - do a debian package
  - make -extract -files for afio/cpio/zip recurse dirs
       dump/tar already to this.
  - zip/unzip backend, use fifos rather than temp files
