@@ -10,7 +10,7 @@ commit:
 all: tar rpm webdoc
 
 tag: version commit
-	perl -pi -e 's/^README for version .*/README for version $(VER)/' README
+	perl -pi -e 's/^ README for version .*/ README for version $(VER)/' README
 	perl -pi -e 's/^Flexbackup todo list as of version .*/Flexbackup todo list as of version $(VER)/' TODO
 	perl -pi -e 's/^Version:        .*/Version:        $(VER)/' flexbackup.lsm.template
 	perl -pi -e 's/^Entered-date:   .*/Entered-date:   $(DATE)/' flexbackup.lsm.template
