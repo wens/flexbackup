@@ -127,6 +127,7 @@ if (! &main::GetOptions(\%main::opt,
 			"compare:s",
 			"compress=s",
 			"d=s%",
+			"delta=s",
 			"device=s",
 			"differential",
 			"erase!",
@@ -151,7 +152,7 @@ if (! &main::GetOptions(\%main::opt,
 			"toc:s",
 			"type=s",
 			"version"
-		  )) {
+			)) {
     &usage();
     exit(0);
 }
@@ -2466,10 +2467,10 @@ sub optioncheck {
     $main::ftape = 0;
     if ($cfg::type eq 'filelist') {
 
-        $main::use_file = 1;
-        chomp($cfg::device = `pwd`);
-        $cfg::device =~ s:/$::;
-        $cfg::indexes = 'false';
+	$main::use_file = 1;
+	chomp($cfg::device = `pwd`);
+	$cfg::device =~ s:/$::;
+	$cfg::indexes = 'false';
 
     } elsif (-c $realdev) {
 
@@ -2507,7 +2508,7 @@ sub optioncheck {
     $main::device = $cfg::device;
 
     # Can we write to it?
-    if (! -w $main::device) {
+    if (! -w $main::device and !defined($main::remotetapehost)) {
 	push(@main::errors,"Can't write to $main::device");
     }
 
@@ -3127,6 +3128,15 @@ sub optioncheck {
 	} else {
 	    push(@main::errors,"-files can only be used with -extract");
 	}
+    }
+
+    # Requirements for testing
+    if (defined($main::opt{'test-tape-drive'})) {
+        if (defined($main::use_file)) {
+            push(@main::errors,"No use trying tape drive tests on directories!");
+        }
+        $main::path{'diff'} = &checkinpath('diff');
+        $main::path{'tr'} = &checkinpath('tr');
     }
 
     if (@main::errors) {
@@ -4422,4 +4432,96 @@ sub check_shell {
     } else {
 	print "$main::shelltype{$host}\n";
     }
+}
+
+
+#############################################################################
+#
+#############################################################################
+sub test_tape_drive () {
+
+    my $cmd;
+    my $tmp1 = "$cfg::tmpdir/test1.$PROCESS_ID";
+    my $tmp2 = "$cfg::tmpdir/test2.$PROCESS_ID";
+
+    # FIXME duplicated new tape routine
+    &line();
+    &mt("generic-blocksize $main::mt_blksize");
+    if (defined($main::tapedevice)) {
+	&log('| Rewinding & erasing tape...');
+    }
+    &mt('rewind');
+    &maybe_delete_old_index();
+    &mt('rewind');
+    &mt('generic-erase');
+    &new_tape_key();
+    &line();
+
+    &mt('generic-query');
+    &log('');
+
+    &log("Writing test file #1");
+    $cmd = "$main::path{cat} $0";
+    $cmd = &append_writer_cmd($cmd);
+    system($cmd);
+
+    &mt('generic-query');
+    &log('');
+
+    &log("Writing test file #2");
+    $cmd = "$main::path{cat} $0";
+    $cmd = &append_writer_cmd($cmd);
+    system($cmd);
+
+    &mt('generic-query');
+    &log('');
+
+    &log('Rewinding...');
+    &mt('rewind');
+    &mt('generic-query');
+    if ($cfg::indexes eq 'true') {
+        &mt('fsf 1');
+    }
+    &log('');
+
+    &log("Reading test file #1");
+    $cmd = $main::read_cmd . '"' . $main::device . '"';
+    if (defined($main::remotetapehost)) {
+	$cmd = &maybe_remote_cmd($cmd, $main::remotetapehost);
+	# Buffer both sides if remote
+	$cmd .= $main::buffer_cmd;
+    }
+    # if pad blocks was true e have nulls at the end
+    $cmd .= " | $main::path{tr} -d '\\0' > $tmp1";
+    system($cmd);
+
+    &mt('generic-query');
+    &log('');
+
+    &log("Reading test file #1");
+    $cmd = $main::read_cmd . '"' . $main::device . '"';
+    if (defined($main::remotetapehost)) {
+	$cmd = &maybe_remote_cmd($cmd, $main::remotetapehost);
+	# Buffer both sides if remote
+	$cmd .= $main::buffer_cmd;
+    }
+    # if pad blocks was true e have nulls at the end
+    $cmd .= " | $main::path{tr} -d '\\0' > $tmp2";
+    system($cmd);
+
+    &mt('generic-query');
+    &log('');
+
+    &mt('rewind');
+
+    # FIXME flag CHILD_ERROR
+    system("$main::path{diff} -q $0 $tmp1");
+    &log('');
+
+    system("$main::path{diff} -q $0 $tmp2");
+    &log('');
+
+    unlink $tmp1;
+    unlink $tmp2;
+
 }
