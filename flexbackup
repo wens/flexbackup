@@ -903,7 +903,6 @@ sub backup_cpio {
     # Kludge a title by replacing / with - in the title
     # then touch a file in the dir we are going to back up.
     $title =~ s%/%-%g;
-    $title =~ s% %_%g;
     $cmd = "$main::path{touch} \"$dir/$title\"";
     push(@cmds, &maybe_remote_cmd($cmd, $remote));
 
@@ -1099,7 +1098,6 @@ sub backup_pax {
     # Kludge a title by replacing / with - in the title
     # then touch a file in the dir we are going to back up.
     $title =~ s%/%-%g;
-    $title =~ s% %_%g;
     $cmd = "$main::path{touch} \"$dir/$title\"";
     push(@cmds, &maybe_remote_cmd($cmd, $remote));
 
@@ -1167,7 +1165,6 @@ sub backup_zip {
     # Kludge a title by replacing / with - in the title
     # then touch a file in the dir we are going to back up.
     $title =~ s%/%-%g;
-    $title =~ s% %_%g;
     $cmd = "$main::path{touch} \"$dir/$title\"";
     push(@cmds, &maybe_remote_cmd($cmd, $remote));
 
@@ -3355,14 +3352,14 @@ sub get_tape_key {
 	    chomp($key);
 	    if ($key !~ m/^\d+$/) {
 		if (!defined($quiet)) {
-		    &log("| ERROR: This tape doesn't have an index! (use -erase or -newtape?)");
+		    &log("| ERROR: Tape doesn't have an index! (use \"-fs <x> -erase\" or -newtape?)");
 		}
 		$main::nextfile = 0;
 		return('');
 	    }
 	} else {
 	    if (!defined($quiet)) {
-		&log("| ERROR: This tape doesn't have an index! (use -erase or -newtape?)");
+		&log("| ERROR: Tape doesn't have an index! (use \"-fs <x> -erase\" or -newtape?)");
 	    }
 	    $main::nextfile = 0;
 	    return('');
