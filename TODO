@@ -5,19 +5,13 @@ $Name$
 
 Some of these might not happen, but figured I should jot them down
 
-
  - mail new maintainer of  dump now and ask about -T
    ask about dump length deal
-
- - fix readme for makefile base install
-   fix spec file for makefile based install
 
  - cleanup erase/reten/etc.  Throw global flags based on options.
    use only -erase -reten flags
 
  - check removing old log files
-
- - remove cd $dir and use find -printf "%P\0";
 
 Features to add:
 

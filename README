@@ -32,7 +32,7 @@ Software needed:
        dump/restore afio tar cpio
    o possibly ftape and ftape-tools
 
-See the INSTALL file for isstallation instructions.
+See the INSTALL file for installation instructions.
 
 I looked at many other packages and didn't really find anything that
 worked the way I wanted it to.  For my needs I felt the existing

@@ -1,13 +1,13 @@
 $Id$
 $Name$
 
-
 New Features:
  - minimal Makefile that lets you set config path, bin path, etc. for install
 
 Bug fixes/cleanup:
  - make better afio control file handling for volume labels
- - dates back to string format )easier to read), use numeric only on BSD
+ - forgot to remove tar_verbose and cpio_verbose from conf file
+ - dates back to string format (easier to read), use numeric only on BSD
  - debug shows real mt command
  - sleep at end of backup not done if file or debug
  - if -noerase, move to eod before starting

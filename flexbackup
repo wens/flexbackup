@@ -55,7 +55,6 @@ use Getopt::Long;
 use English;
 use strict;
 require 'ctime.pl';
-use diagnostics;
 
 # No output buffering
 $OUTPUT_AUTOFLUSH = 1;
@@ -184,7 +183,7 @@ sub backup_routine {
 
     # Figure out log file name & empty log file
     $label = &get_label($main::opt{'fs'});
-    $main::log = "$cfg::logdir/$cfg::prefix$label.$main::level.$main::date";
+    $main::log = "$cfg::logdir/$cfg::prefix$label.$main::date.$main::level";
     if (! open(LOG,">$main::log")) {
         die "Can't write to $main::log: $OS_ERROR";
     }
@@ -211,10 +210,10 @@ sub backup_routine {
     opendir(DIR,"$cfg::logdir") or die("Can't open cfg::logdir: $OS_ERROR");
     @files = readdir(DIR);
     foreach (reverse sort @files) {
-        next if (! m/^$cfg::prefix$label\.([0-9])\.([0-9]+)(\.gz|\.bz2)?$/);
-        $olddate = $2;
-        if ($1 > $main::level) {
-            $oldlogs{"$cfg::logdir/$_"} = $1 . "|" . $olddate;
+        next if (! m/^$cfg::prefix$label\.([0-9]+)\.([0-9])(\.gz|\.bz2)?$/);
+        $olddate = $1;
+        if ($2 > $main::level) {
+            $oldlogs{"$cfg::logdir/$_"} = $2 . "|" . $olddate;
         }
     }
     close(DIR);
@@ -1181,7 +1180,7 @@ sub optioncheck {
         $main::buffer_cmd = "buffer -m $main::buffer_megs -s $main::buffer_blksize";
         $main::buffer_flags = "-t -p 75 -B";
         if (!defined($main::use_file)) {
-            $main::buffer_flags .= "-u 100";
+            $main::buffer_flags .= " -u 100";
         }
     } else {
         push(@main::errors,"\$buffer_megs must be set to integer number of megabytes");
