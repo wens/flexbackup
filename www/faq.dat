@@ -31,8 +31,9 @@ your expression matches what you want to exclude by:<BR><BR> <CODE>cd
 Do this for all commands that will need privilege (find, afio/tar/etc, perhaps buffer)
 <LI>Set up an /etc/sudoers file with something like this:<BR><BR>
 <CODE>
+Defaults:backupuser !authenticate
 Cmnd_Alias BACKUP = /usr/bin/afio, /usr/bin/find<BR>
-backupuser  ALL = NOPASSWD: BACKUP</CODE>
+backupuser ALL = NOPASSWD: BACKUP</CODE>
 </OL>
 
 <c>Backup

@@ -3437,13 +3437,14 @@ sub checkinpath {
 		return(0);
 	    }
 
-	} elsif (($cfg::path{$file} =~ m:^\s*sudo\s+(\S+):) or
-		 ($cfg::path{$file} =~ m:^\s*sudo\s+-u\s+\S+\s+(\S+):)) {
-
-	    &checkinpath('sudo');
+	} elsif (($cfg::path{$file} =~ m:^\s*sudo\s+-u\s+\S+\s+(\S+):) or
+		 ($cfg::path{$file} =~ m:^\s*sudo\s+(\S+):)) {
 
 	    # some sort of sudo...
 	    my $prog = $1;
+
+	    &checkinpath('sudo');
+
 	    # sudo with full pathname
 	    if (($prog =~ m:^/:) and (-e $prog) and (-x _)) {
 		print "path $file = $cfg::path{$file}\n";
