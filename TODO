@@ -32,6 +32,7 @@ Misc:
  - Add faq on extract filelist
      also .z at end if afio
  - add faq -wday use
+ - add faq -pipe use
  - update faq re: spanning
  - add faq re: spaces in dirs/prune setup
  - add faq re: pkg delta how it works

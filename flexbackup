@@ -21,6 +21,8 @@
 #                                    <x> can be "rpm" or "freebsd" package systems
 #  flexbackup [...] -wday <n>      : backup only if the week day matches
 #                                    the input number.  Sunday is 0 or 7.
+#  flexbackup [...] -pipe          : write to stdout rather than archive/device
+#
 # READING ARCHIVES:
 #  flexbackup -list                : list files in archive
 #  flexbackup -extract             : extract all files from archive into your
@@ -97,8 +99,6 @@ use strict;
 # No output buffering
 $OUTPUT_AUTOFLUSH = 1;
 
-package main;
-
 # Set the traditional UNIX system locale behavior (touch doesn't read LANG)
 my $loc = POSIX::setlocale( &POSIX::LC_ALL, "C" );
 
@@ -108,10 +108,7 @@ if (defined($ARGV[0]) and ($ARGV[0] =~ /flexbackup.volume_header_info/)) {
 }
 
 # This is changed during "make install"
-$main::CONFFILE="/etc/flexbackup.conf";
-
-# Default fd for messages (we might have stdout as archive output - not working yet, FIXME)
-$main::msg = *STDOUT;
+$::CONFFILE="/etc/flexbackup.conf";
 
 # This took awhile to figure out.  if the shell is capable of it, we use
 # this on the end of any pipelines to see if any of the commands in the
@@ -126,16 +123,17 @@ $main::msg = *STDOUT;
 # With tcsh/csh as a remote shell, you don't know which command, but
 # $? is still set if anything in the pipeline failed
 #
-$main::bash_pipe_exit = '; x=(${PIPESTATUS[@]}); i=0; while [ $i -lt ${#x[@]} ]; do [ ${x[$i]} -eq 0 ] || exit ${x[$i]}; i=$(($i+1)); done';
-$main::zsh_pipe_exit = '; x=(${pipestatus[@]}); i=1; while [ $i -le ${#x[@]} ]; do [ ${x[$i]} -eq 0 ] || exit ${x[$i]}; i=$(($i+1)); done';
+$::bash_pipe_exit = '; x=(${PIPESTATUS[@]}); i=0; while [ $i -lt ${#x[@]} ]; do [ ${x[$i]} -eq 0 ] || exit ${x[$i]}; i=$(($i+1)); done';
+$::zsh_pipe_exit = '; x=(${pipestatus[@]}); i=1; while [ $i -le ${#x[@]} ]; do [ ${x[$i]} -eq 0 ] || exit ${x[$i]}; i=$(($i+1)); done';
 
-%main::opt = ();
-if (! &main::GetOptions(\%main::opt,
+%::opt = ();
+if (! &::GetOptions(\%::opt,
 			"c=s",
 			"compare:s",
 			"compress=s",
 			"d=s%",
 			"dir=s",
+			"pipe",
 			"pkgdelta=s",
 			"device=s",
 			"differential",
@@ -167,16 +165,23 @@ if (! &main::GetOptions(\%main::opt,
     exit(0);
 }
 
+# Default fd for messages (we might have stdout as archive output)
+if (defined($::opt{'pipe'})) {
+    $::msg = *STDERR;
+} else {
+    $::msg = *STDOUT;
+}
+
 # Give usage message
-if (defined($main::opt{'help'})) {
+if (defined($::opt{'help'})) {
     &usage();
     exit(0);
 }
 
 # Version
-if (defined($main::opt{'version'})) {
-    print $main::msg "flexbackup version " . &versionstring() . "\n";
-    print $main::msg '$Id$ ' . "\n";
+if (defined($::opt{'version'})) {
+    print $::msg "flexbackup version " . &versionstring() . "\n";
+    print $::msg '$Id$ ' . "\n";
     exit(0);
 }
 
@@ -184,12 +189,12 @@ if (defined($main::opt{'version'})) {
 &check_wday();
 
 # Get/read config file
-print $main::msg "\nflexbackup version " . &versionstring() . "\n";
+print $::msg "\nflexbackup version " . &versionstring() . "\n";
 &readconfigfile();
-print $main::msg "\n";
+print $::msg "\n";
 
 # Set OS type
-chomp($main::uname = `uname -s`);
+chomp($::uname = `uname -s`);
 
 # Sanity check commandline flags and config file options
 &optioncheck();
@@ -202,56 +207,56 @@ chomp($main::uname = `uname -s`);
 &set_tape_operation_defaults();
 
 # Get current date string
-$main::date = &current_time('numeric');
+$::date = &current_time('numeric');
 
 # Decide what to do
-if (defined($main::opt{'restore'})) {
+if (defined($::opt{'restore'})) {
     &restore_routine();
 
-} elsif (defined($main::opt{'extract'})) {
+} elsif (defined($::opt{'extract'})) {
     &extract_routine();
 
-} elsif (defined($main::opt{'compare'})) {
+} elsif (defined($::opt{'compare'})) {
     &compare_routine();
 
-} elsif (defined($main::opt{'list'})) {
+} elsif (defined($::opt{'list'})) {
     &list_routine();
 
-} elsif (defined($main::opt{'dir'}) or defined($main::opt{'set'})) {
+} elsif (defined($::opt{'dir'}) or defined($::opt{'set'})) {
     &backup_routine();
 
-} elsif (defined($main::opt{'toc'})) {
+} elsif (defined($::opt{'toc'})) {
     &line();
     # Only do this if we're going to grab current tape index
-    if ($main::opt{'toc'} eq '') {
-	&mt("generic-blocksize $main::mt_blksize");
+    if ($::opt{'toc'} eq '') {
+	&mt("generic-blocksize $::mt_blksize");
     }
     &toc_routine();
 
-} elsif (defined($main::opt{'rmindex'})) {
+} elsif (defined($::opt{'rmindex'})) {
     &line();
-    foreach my $arg (@{$main::opt{'rmindex'}}) {
+    foreach my $arg (@{$::opt{'rmindex'}}) {
 	&rmindex($arg);
     }
 
-} elsif (defined($main::opt{'newtape'})) {
+} elsif (defined($::opt{'newtape'})) {
     &line();
-    &mt("generic-blocksize $main::mt_blksize");
+    &mt("generic-blocksize $::mt_blksize");
     &newtape();
 
-} elsif (defined($main::opt{'rmfile'})) {
+} elsif (defined($::opt{'rmfile'})) {
     &line();
     &rmfile();
 
-} elsif (defined($main::opt{'test-tape-drive'})) {
+} elsif (defined($::opt{'test-tape-drive'})) {
     &line();
     &test_tape_drive();
 
 }
 
-if (($main::mode !~ m/^(list|extract|restore|compare|test-tape-drive)$/) and
+if (($::mode !~ m/^(list|extract|restore|compare|test-tape-drive)$/) and
     ($cfg::indexes eq "true")) {
-    untie(%main::index);
+    untie(%::index);
 }
 
 exit(0);
@@ -280,36 +285,36 @@ sub backup_routine {
 
 
     # Figure out log file name & empty log file
-    if (defined($main::opt{'set'})) {
-	$label = &get_label($main::opt{'set'});
+    if (defined($::opt{'set'})) {
+	$label = &get_label($::opt{'set'});
     } else {
-	$label = &get_label($main::opt{'dir'});
+	$label = &get_label($::opt{'dir'});
     }
 
     if ($cfg::staticlogs eq 'false' ) {
-	$logsuffix = ".$main::date";
+	$logsuffix = ".$::date";
     }
 
-    if (!defined($main::set_incremental)) {
-	$logfile = "$cfg::prefix$label.$main::level" . $logsuffix;
+    if (!defined($::set_incremental)) {
+	$logfile = "$cfg::prefix$label.$::level" . $logsuffix;
     } else {
 	$logfile = "$cfg::prefix$label.incremental" . $logsuffix;
     }
 
     $symlink = "$cfg::prefix$label.latest";
-    $main::log = "$cfg::logdir/$logfile";
-    if (! open(LOG,">$main::log")) {
-	die "Can't write to $main::log: $OS_ERROR";
+    $::log = "$cfg::logdir/$logfile";
+    if (! open(LOG,">$::log")) {
+	die "Can't write to $::log: $OS_ERROR";
     }
     close(LOG);
 
     &line();
-    &mt("generic-blocksize $main::mt_blksize");
+    &mt("generic-blocksize $::mt_blksize");
 
 
     # Remember old log files (will remove at end of job)
     # ("old" = any higher- or equal-numbered logs for this label)
-    if (!defined($main::set_incremental)) {
+    if (!defined($::set_incremental)) {
 	opendir(DIR,"$cfg::logdir") or die("Can't open cfg::logdir: $OS_ERROR");
 	@files = readdir(DIR);
 	foreach my $lf (reverse sort @files) {
@@ -319,7 +324,7 @@ sub backup_routine {
 
 	    # Find normal old logs
 	    if ($lf =~ m/^$cfg::prefix$label\.(\d+)(\.(\d+))?(\.gz|\.bz2|\.Z|\.zip)?$/) {
-		if ($1 >= $main::level) {
+		if ($1 >= $::level) {
 		    # Might be from $staticlogs=true or false
 		    if (defined($3)) {
 			$oldlogs{"$cfg::logdir/$lf"} = $1 . "|" . $3;
@@ -330,7 +335,7 @@ sub backup_routine {
 	    }
 
 	    # If this is a level 0, we can nuke incremental logs
-	    if (($main::level == 0) and ($lf =~ m/^$cfg::prefix$label\.(incremental)(\.(\d+))?(\.gz|\.bz2|\.Z|\.zip)?$/)) {
+	    if (($::level == 0) and ($lf =~ m/^$cfg::prefix$label\.(incremental)(\.(\d+))?(\.gz|\.bz2|\.Z|\.zip)?$/)) {
 		# Might be from $staticlogs=true or false
 		if (defined($3)) {
 		    $oldlogs{"$cfg::logdir/$lf"} = $1 . "|" . $3;
@@ -346,18 +351,18 @@ sub backup_routine {
     # Possibly populate package-file hashes if we are using
     # -pkgdelta.  This is so we only have to run through these operations
     # once per machine if multiple fs's are being run
-    if (defined($main::pkgdelta)) {
-	if (defined($main::local)) {
+    if (defined($::pkgdelta)) {
+	if (defined($::local)) {
 	    &list_packages('localhost');
 	    &find_packaged_files('localhost');
 	    &find_changed_files('localhost');
 	}
-	foreach my $host (keys %main::remotehosts) {
+	foreach my $host (keys %::remotehosts) {
 	    &list_packages($host);
 	    &find_packaged_files($host);
 	    &find_changed_files($host);
 	}
-	$main::pkgdelta_filelist = "$cfg::tmpdir/pkgdelta.$PROCESS_ID";
+	$::pkgdelta_filelist = "$cfg::tmpdir/pkgdelta.$PROCESS_ID";
 	&line();
     }
 
@@ -366,19 +371,19 @@ sub backup_routine {
     # Main backup routine
     #
     ##########################
-    if (defined($main::opt{'set'})) {
+    if (defined($::opt{'set'})) {
 
-	if (!defined($main::set_incremental)) {
-	    &log("| Doing level $main::level backup of set $main::opt{set} using $cfg::type");
+	if (!defined($::set_incremental)) {
+	    &log("| Doing level $::level backup of set $::opt{set} using $cfg::type");
 	} else {
-	    &log("| Doing incremental backup of $main::opt{set} using $cfg::type");
+	    &log("| Doing incremental backup of $::opt{set} using $cfg::type");
 	}
 
 	# All sets or just one?
 	my @do_sets;
-	if ($main::opt{'set'} eq 'all') {
+	if ($::opt{'set'} eq 'all') {
 	    @do_sets = keys(%cfg::set);
-	    if (defined($main::tapedevice)) {
+	    if (defined($::tapedevice)) {
 		$_ = scalar(@do_sets);
 		$_ = join(" ", @do_sets) . " ($_ tapes)";
 	    } else {
@@ -386,25 +391,25 @@ sub backup_routine {
 	    }
 	    &log("| All sets = $_");
 	} else {
-	    @do_sets = ($main::opt{'set'});
+	    @do_sets = ($::opt{'set'});
 	}
 
 	my $num_tapes = scalar(@do_sets) - 1;
 	foreach my $this_set (@do_sets) {
 
 	    # Maybe retension
-	    if (($main::do_reten == 1) and defined($main::tapedevice)) {
+	    if (($::do_reten == 1) and defined($::tapedevice)) {
 		&log('| Retensioning tape...');
 		&mt('retension');
 	    }
 
 	    # Maybe rewind/erase
-	    if ($main::do_erase == 1) {
+	    if ($::do_erase == 1) {
 		$tape_key = &newtape();
 	    } else {
 		&mt('rewind');
 		$tape_key = &get_tape_key();
-		if(defined($main::tapedevice)) {
+		if(defined($::tapedevice)) {
 		    &log('| Making sure tape is at end of data...');
 		}
 		&mt('generic-eod');
@@ -414,9 +419,9 @@ sub backup_routine {
 	    &log("| Backup set $this_set ($cfg::set{$this_set})");
 
 	    # Show tape position
-	    if (defined($main::tapedevice)) {
+	    if (defined($::tapedevice)) {
 		# Multiple tapes are only for level 0
-		if (!defined($main::set_incremental) and ($main::level == 0)) {
+		if (!defined($::set_incremental) and ($::level == 0)) {
 		    &log("| Tape \#$tapecounter");
 		}
 		&line();
@@ -433,44 +438,44 @@ sub backup_routine {
 
 		# If level is icremental for the set, each dir might
 		# have a different numeric level
-		if (!defined($main::set_incremental)) {
-		    $level = $main::level;
+		if (!defined($::set_incremental)) {
+		    $level = $::level;
 		} else {
 		    $level = &get_incremental_level($dir);
 		}
 
 		&backup($dir, $tape_key, $level);
 		if ($cfg::indexes eq "true") {
-		    $main::nextfile++;
+		    $::nextfile++;
 		}
 	    }
 
 	    # Prompt for new tape if more than one set in list & level 0
-	    if (!defined($main::set_incremental) and ($main::level == 0)) {
+	    if (!defined($::set_incremental) and ($::level == 0)) {
 		if ($tapecounter < $num_tapes) {
 
 		    # Maybe rewind (usually true)
-		    if ($main::do_rewind_after == 1) {
-			if(defined($main::tapedevice)) {
+		    if ($::do_rewind_after == 1) {
+			if(defined($::tapedevice)) {
 			    &log("| Rewinding...");
 			}
 			&mt('rewind');
 			&line();
 		    }
 
-		    if (defined($main::tapedevice)) {
+		    if (defined($::tapedevice)) {
 			&toc_routine($tape_key);
 		    }
 
 		    $tapecounter++;
-		    if (defined($main::tapedevice)) {
-			print $main::msg "\n";
+		    if (defined($::tapedevice)) {
+			print $::msg "\n";
 			while(1) {
-			    print $main::msg "---> Insert tape \#$tapecounter (enter y to continue) ";
+			    print $::msg "---> Insert tape \#$tapecounter (enter y to continue) ";
 			    chomp($_ = <STDIN>);
 			    last if ($_ =~ m/^y/i);
 			}
-			print $main::msg "\n";
+			print $::msg "\n";
 			&line();
 		    }
 
@@ -482,43 +487,43 @@ sub backup_routine {
     } else {
 
 	# Just one filesystem, -dir given
-	&log("| Doing level $main::level backup of $main::opt{dir} using $cfg::type");
+	&log("| Doing level $::level backup of $::opt{dir} using $cfg::type");
 
 	# Maybe retension
-	if ($main::do_reten == 1) {
-	    if (defined($main::tapedevice)) {
+	if ($::do_reten == 1) {
+	    if (defined($::tapedevice)) {
 		&log('| Retensioning tape...');
 	    }
 	    &mt('retension');
 	}
 
 	# Maybe rewind/erase
-	if ($main::do_erase == 1) {
+	if ($::do_erase == 1) {
 	    $tape_key = &newtape();
 	} else {
 	    &mt('rewind');
 	    $tape_key = &get_tape_key();
-	    if (defined($main::tapedevice)) {
+	    if (defined($::tapedevice)) {
 		&log('| Making sure tape is at end of data...');
 	    }
 	    &mt('generic-eod');
 	}
 
-	if (defined($main::tapedevice)) {
+	if (defined($::tapedevice)) {
 	    &line();
 	    &mt('generic-query');
 	}
 
-	&backup($main::opt{'dir'}, $tape_key, $main::level);
+	&backup($::opt{'dir'}, $tape_key, $::level);
 
     } # end set or single fs
 
-    if (defined($main::tapedevice)) {
+    if (defined($::tapedevice)) {
 	&line();
     }
 
     # Maybe rewind (usually true)
-    if (($main::do_rewind_after == 1) and defined($main::tapedevice)) {
+    if (($::do_rewind_after == 1) and defined($::tapedevice)) {
 	&log("| Rewinding...");
 	&mt('rewind');
     }
@@ -533,7 +538,7 @@ sub backup_routine {
 	} else{
 	    &log("| Removing old level $lev log of $label");
 	}
-	if (!defined($main::debug)) {
+	if (!defined($::debug)) {
 	    unlink("$lf") or warn("Can't remove $lf: $OS_ERROR\n");
 	}
     }
@@ -543,18 +548,18 @@ sub backup_routine {
     if ($cfg::comp_log ne 'false') {
 	if ($cfg::comp_log eq "gzip") {
 	    $logext = ".gz";
-	    $comp_cmd = "$main::path{gzip} -f \"$main::log\"";
+	    $comp_cmd = "$::path{gzip} -f \"$::log\"";
 	} elsif ($cfg::comp_log eq "bzip2") {
 	    $logext = ".bz2";
-	    $comp_cmd = "$main::path{bzip2} -f \"$main::log\"";
+	    $comp_cmd = "$::path{bzip2} -f \"$::log\"";
 	} elsif ($cfg::comp_log eq "zip") {
 	    $logext = ".zip";
-	    $comp_cmd = "$main::path{cat} \"$main::log\" | $main::path{zip} -q - - > \"$main::log" . $logext . "\"; $main::path{rm} -f \"$main::log\"";
+	    $comp_cmd = "$::path{cat} \"$::log\" | $::path{zip} -q - - > \"$::log" . $logext . "\"; $::path{rm} -f \"$::log\"";
 	} elsif ($cfg::comp_log eq "compress") {
 	    $logext = ".Z";
-	    $comp_cmd = "$main::path{compress} -f \"$main::log\"";
+	    $comp_cmd = "$::path{compress} -f \"$::log\"";
 	}
-	undef $main::log;
+	undef $::log;
 	&log("| Compressing log ($logfile" . "$logext)", 'screen');
 	system("$comp_cmd");
 	if ($CHILD_ERROR) {
@@ -632,18 +637,18 @@ sub backup {
 
     # Create file name if writing to a file
     # (config file's $device points to a dir in this case)
-    if (defined($main::use_file)) {
+    if (defined($::use_file)) {
 
 	my $filename = $level;
 
-	if (defined($main::pkgdelta)) {
-	    $filename .= $main::pkgdelta;
+	if (defined($::pkgdelta)) {
+	    $filename .= $::pkgdelta;
 	}
 
 	if ($cfg::staticfiles eq 'true') {
 	    $filename .= "." . $cfg::type;
 	} else {
-	    $filename .= "." . $main::date . "." . $cfg::type;
+	    $filename .= "." . $::date . "." . $cfg::type;
 	}
 
 	# Some types need the filename modified
@@ -679,26 +684,26 @@ sub backup {
 	}
 
 	# Overwirte device var to be the archive filename
-	$main::device = $cfg::device . "/" . $label . "." . $filename;
+	$::device = $cfg::device . "/" . $label . "." . $filename;
 
     }
 
     # Just get the date for now; don't write the timestamp
     # Until after the backup has run
-    $main::date_at_start = &current_time('ctime');
-    $main::stamp_at_start = &current_time('numeric');
+    $::date_at_start = &current_time('ctime');
+    $::stamp_at_start = &current_time('numeric');
 
     # Label for this archive
     chomp($host = `hostname`);
     $title = $cfg::type . "+" . $cfg::compress;
     $title =~ s/\+false//;
-    if (!defined($main::pkgdelta)) {
-	$title = "level $level $dir $main::date_at_start $title from $host";
-	$title_without_type = "level $level $dir $main::date_at_start from $host";
+    if (!defined($::pkgdelta)) {
+	$title = "level $level $dir $::date_at_start $title from $host";
+	$title_without_type = "level $level $dir $::date_at_start from $host";
     } else {
-	$pkglist = "flexbackup.$main::pkgdelta.packagelist";
-	$title = "level $level+$main::pkgdelta $dir $main::date_at_start $title from $host";
-	$title_without_type = "level $level+$main::pkgdelta $dir $main::date_at_start from $host";
+	$pkglist = "flexbackup.$::pkgdelta.packagelist";
+	$title = "level $level+$::pkgdelta $dir $::date_at_start $title from $host";
+	$title_without_type = "level $level+$::pkgdelta $dir $::date_at_start from $host";
     }
 
     # Modify table of contents
@@ -706,28 +711,28 @@ sub backup {
 	and
 	($cfg::indexes eq "true")) {
 	# If writing to files, store the filename
-	if (defined($main::use_file)) {
-	    @_ = split(/\//,$main::device);
+	if (defined($::use_file)) {
+	    @_ = split(/\//,$::device);
 	    $_ = pop(@_);
 	    $indexkey = "$tape_key|$_";
-	    if (defined($main::debug)) {
-		&log("(debug) \$main::index{$indexkey} = $title_without_type");
+	    if (defined($::debug)) {
+		&log("(debug) \$::index{$indexkey} = $title_without_type");
 	    } else {
-		$main::index{$indexkey} = "$title_without_type";
+		$::index{$indexkey} = "$title_without_type";
 	    }
 	} else {
-	    $indexkey = "$tape_key|$main::nextfile";
-	    if (defined($main::debug)) {
-		&log("(debug) \$main::index{$indexkey} = $title");
+	    $indexkey = "$tape_key|$::nextfile";
+	    if (defined($::debug)) {
+		&log("(debug) \$::index{$indexkey} = $title");
 	    } else {
-		$main::index{$indexkey} = $title;
+		$::index{$indexkey} = $title;
 	    }
-	    &log("| File number $main::nextfile, tape index $tape_key");
+	    &log("| File number $::nextfile, tape index $tape_key");
 	}
     }
 
     # Write list of packages
-    if (defined($main::pkgdelta) and
+    if (defined($::pkgdelta) and
 	(
 	 ($cfg::pkgdelta_archive_list eq 'true') or
 	 (($cfg::pkgdelta_archive_list eq 'rootonly') and ($localdir eq '/'))
@@ -738,15 +743,15 @@ sub backup {
 	my $h;
 
 	if(defined($remote)) {
-	    $write = &maybe_remote_cmd("$main::path{cat} $write", $remote);
+	    $write = &maybe_remote_cmd("$::path{cat} $write", $remote);
 	    $write = "| $write";
 	    $h = $remote;
 	} else {
 	    $h = 'localhost';
 	}
-	if (!defined($main::debug)) {
+	if (!defined($::debug)) {
 	    open(LIST,"$write") || die;
-	    foreach my $pkg (sort keys %{$main::package_list{$h}}) {
+	    foreach my $pkg (sort keys %{$::package_list{$h}}) {
 		print LIST "$pkg\n";
 	    }
 	    close(LIST);
@@ -783,18 +788,18 @@ sub backup {
 
     # Nuke any tmp files used in the above routines
     if ($remove ne '') {
-	push(@cmds, &maybe_remote_cmd("$main::path{rm} -f $remove", $remote));
+	push(@cmds, &maybe_remote_cmd("$::path{rm} -f $remove", $remote));
     }
 
     # Create/nuke tmp file list if we did local package delta
-    if (defined($main::pkgdelta)) {
+    if (defined($::pkgdelta)) {
 	if (
 	    ($cfg::pkgdelta_archive_list eq 'true') or
 	    (($cfg::pkgdelta_archive_list eq 'rootonly') and ($localdir eq '/'))
 	    ) {
-	    push(@cmds, &maybe_remote_cmd("$main::path{rm} -f $main::pkgdelta_filelist $pkglist", $remote));
+	    push(@cmds, &maybe_remote_cmd("$::path{rm} -f $::pkgdelta_filelist $pkglist", $remote));
 	} else {
-	    push(@cmds, &maybe_remote_cmd("$main::path{rm} -f $pkglist", $remote));
+	    push(@cmds, &maybe_remote_cmd("$::path{rm} -f $pkglist", $remote));
 	}
     }
 
@@ -804,7 +809,7 @@ sub backup {
     }
 
    # Use pipeline exitcode hook if /bin/sh can't report pipeline status
-    if ($main::shelltype{'localhost'} =~ m/^(unknown|bash1|ksh)$/) {
+    if ($::shelltype{'localhost'} =~ m/^(unknown|bash1|ksh)$/) {
 
 	$catchexit = 1;
 
@@ -860,24 +865,28 @@ sub backup {
     &line();
 
     # Enough fooling around... run it.
-    if (!defined($main::debug)) {
+    if (!defined($::debug)) {
 	foreach $cmd (@cmds) {
 
-	    if ($main::shelltype{'localhost'} eq 'bash2') {
-		# /bin/sh is really bash2 on this system
-		open(CMD,"($cmd " . $main::bash_pipe_exit . ") 2>&1 |") || die;
-	    } elsif ($main::shelltype{'localhost'} eq 'zsh') {
-		# Does anybody make /bin/sh be zsh? probably not...
-		open(CMD,"($cmd " . $main::zsh_pipe_exit . ") 2>&1 |") || die;
+	    if (defined($::use_stdout)) {
+		system("$cmd");
 	    } else {
-		open(CMD,"($cmd) 2>&1 |") || die;
+		if ($::shelltype{'localhost'} eq 'bash2') {
+		    # /bin/sh is really bash2 on this system
+		    open(CMD,"($cmd " . $::bash_pipe_exit . ") 2>&1 |") || die;
+		} elsif ($::shelltype{'localhost'} eq 'zsh') {
+		    # Does anybody make /bin/sh be zsh? probably not...
+		    open(CMD,"($cmd " . $::zsh_pipe_exit . ") 2>&1 |") || die;
+		} else {
+		    open(CMD,"($cmd) 2>&1 |") || die;
+		}
+		open(LOG,">>$::log") || die;
+		while(<CMD>) {
+		    print $::msg $_;
+		    print LOG $_;
+		}
+		close(CMD);
 	    }
-	    open(LOG,">>$main::log") || die;
-	    while(<CMD>) {
-		print $_;
-		print LOG $_;
-	    }
-	    close(CMD);
 
 	    if ($CHILD_ERROR) {
 		&log('');
@@ -893,18 +902,18 @@ sub backup {
 
 		# Put ERROR in the index if tapedevice, or nuke index if file
 		if (defined($indexkey)) {
-		    if (defined($main::use_file)) {
-			delete $main::index{$indexkey};
+		    if (defined($::use_file)) {
+			delete $::index{$indexkey};
 		    } else {
-			$main::index{$indexkey} .= "\n\t---> ERROR occurred during write, above may not be valid";
+			$::index{$indexkey} .= "\n\t---> ERROR occurred during write, above may not be valid";
 		    }
 		}
 		# If file, rm botched file regardless of index
-		if (defined($main::use_file)) {
+		if (defined($::use_file)) {
 		    if ($cfg::type eq 'copy') {
-			system("rm -rf $main::device");
+			system("rm -rf $::device");
 		    } else {
-			unlink($main::device);
+			unlink($::device);
 		    }
 		}
 
@@ -925,8 +934,8 @@ sub backup {
 
     # Actually remove the old stamp files now that we are done
     foreach my $ts (sort keys %oldstamps) {
-	print $main::msg "| Removing out of date level $oldstamps{$ts} timestamp for $dir\n";
-	if (!defined($main::debug)) {
+	print $::msg "| Removing out of date level $oldstamps{$ts} timestamp for $dir\n";
+	if (!defined($::debug)) {
 	    unlink("$ts") or warn("Can't remove $ts: $OS_ERROR\n");
 	}
     }
@@ -934,16 +943,16 @@ sub backup {
     # Create timestamp file, but use date from before the backup started
     # so next time we will catch files that might have been touched during the run
     my $t = &current_time('ctime');
-    &log("| Backup start: $main::date_at_start");
+    &log("| Backup start: $::date_at_start");
     &log("| Backup end:   $t");
-    if (!defined($main::debug)) {
-	system("$main::path{touch} -t \"$main::stamp_at_start\" \"$cfg::stampdir/$cfg::sprefix$label.$level\"");
+    if (!defined($::debug)) {
+	system("$::path{touch} -t \"$::stamp_at_start\" \"$cfg::stampdir/$cfg::sprefix$label.$level\"");
     }
 
     &line();
 
     # Got errors unless I paused before trying to access the tape right way...
-    if ((!defined($main::debug)) and defined($main::tapedevice)) {
+    if ((!defined($::debug)) and defined($::tapedevice)) {
 	sleep 10;
     }
 
@@ -987,7 +996,7 @@ sub backup_dump {
     } else {
 	$prunekey = $dir;
     }
-    if (defined(%{$main::prune{$prunekey}})) {
+    if (defined(%{$::prune{$prunekey}})) {
 	&log("| NOTE: \$prune is ignored for type=dump");
     }
 
@@ -995,7 +1004,7 @@ sub backup_dump {
 	&log("| NOTE: \$traverse_fs is always false for type=dump");
     }
 
-    if (defined($main::pkgdelta)) {
+    if (defined($::pkgdelta)) {
 	&log("| NOTE: packaging system delta ignored for for type=dump");
     }
 
@@ -1010,19 +1019,19 @@ sub backup_dump {
 
     $cmd = '';
     $cmd .= "dump -$level ";
-    $cmd .= "$main::dump_blk_flag ";
+    $cmd .= "$::dump_blk_flag ";
     if ($cfg::dump_use_dumpdates eq "true") {
 	$cmd .= "-u ";
     } else {
 	$cmd .= $date_flag;
     }
-    $cmd .= "$main::dump_len_flag ";
+    $cmd .= "$::dump_len_flag ";
     $cmd .= "-f - ";
-    $cmd .= "$dir $main::z";
+    $cmd .= "$dir $::z";
 
     # Buffer both sides if remote
     if (defined($remote)) {
-	$cmd .= $main::buffer_cmd;
+	$cmd .= $::buffer_cmd;
     }
 
     # Wrap all that together
@@ -1058,7 +1067,7 @@ sub backup_afio {
 
     if (defined($remote) and ($level != 0)) {
 	my $time = &get_last_date($label, $level, 'numeric');
-	$cmd = "$main::path{touch} -t \"$time\" $stamp";
+	$cmd = "$::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
 	$remove .= " $stamp";
     } else {
@@ -1067,21 +1076,21 @@ sub backup_afio {
 
     # list of file exenstions to not compress
     if (($cfg::compress !~ /^(false|hardware)$/) and ($cfg::afio_nocompress_types ne "")) {
-	$cmd = "$main::path{printf} \"$cfg::afio_nocompress_types\" > $tmpnocompress";
+	$cmd = "$::path{printf} \"$cfg::afio_nocompress_types\" > $tmpnocompress";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
 	$no_compress = "-E $tmpnocompress";
 	$remove .= " $tmpnocompress";
     }
 
     if ($cfg::label ne 'false') {
-	$cmd = "$main::path{printf} \"Volume Label:\\n$title\\n\\n\" > $tmplabel";
+	$cmd = "$::path{printf} \"Volume Label:\\n$title\\n\\n\" > $tmplabel";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
 	$remove .= " $tmplabel";
     }
 
     $cmd = "cd \"$dir\" && ";
     if ($cfg::label ne 'false') {
-	$cmd .= "($main::path{printf} \"//--$tmplabel flexbackup.volume_header_info\\n\" && ";
+	$cmd .= "($::path{printf} \"//--$tmplabel flexbackup.volume_header_info\\n\" && ";
     }
     $cmd .= &file_list_cmd($dir, $stamp, 'newline', $level, $remote);
     if ($cfg::label ne 'false') {
@@ -1089,21 +1098,21 @@ sub backup_afio {
     }
     $cmd .= " | ";
 
-    $cmd .= "$main::path{afio} -o ";
+    $cmd .= "$::path{afio} -o ";
     $cmd .= "$no_compress ";
     $cmd .= "-z ";
     $cmd .= "-1 m ";
-    $cmd .= "$main::afio_z_flag ";
-    $cmd .= "$main::afio_verb_flag ";
-    $cmd .= "$main::afio_sparse_flag ";
-    $cmd .= "$main::afio_atime_flag ";
-    $cmd .= "$main::afio_bnum_flag ";
-    $cmd .= "$main::afio_blk_flag ";
+    $cmd .= "$::afio_z_flag ";
+    $cmd .= "$::afio_verb_flag ";
+    $cmd .= "$::afio_sparse_flag ";
+    $cmd .= "$::afio_atime_flag ";
+    $cmd .= "$::afio_bnum_flag ";
+    $cmd .= "$::afio_blk_flag ";
     $cmd .= "-";
 
     # Buffer both sides if remote
     if (defined($remote)) {
-	$cmd .= $main::buffer_cmd;
+	$cmd .= $::buffer_cmd;
     }
 
     # Wrap all that together
@@ -1135,7 +1144,7 @@ sub backup_cpio {
 
     if (defined($remote) and ($level != 0)) {
 	my $time = &get_last_date($label, $level, 'numeric');
-	$cmd = "$main::path{touch} -t \"$time\" $stamp";
+	$cmd = "$::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
 	$remove .= " $stamp";
     } else {
@@ -1146,7 +1155,7 @@ sub backup_cpio {
 	# Kludge a title by replacing / with - in the title
 	# then touch a file in the dir we are going to back up.
 	$title =~ s%/%-%g;
-	$cmd = "$main::path{touch} \"$dir/$title\"";
+	$cmd = "$::path{touch} \"$dir/$title\"";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
 	$remove .= " \"$dir/$title\"";
     }
@@ -1155,16 +1164,16 @@ sub backup_cpio {
     $cmd .= &file_list_cmd($dir, $stamp, 'null', $level, $remote);
     $cmd .= "| ";
 
-    $cmd .= "$main::path{cpio} -o ";
+    $cmd .= "$::path{cpio} -o ";
     $cmd .= "-0 ";
     $cmd .= "-H $cfg::cpio_format ";
-    $cmd .= "$main::cpio_verb_flag ";
-    $cmd .= "$main::cpio_blk_flag ";
-    $cmd .= "$main::z";
+    $cmd .= "$::cpio_verb_flag ";
+    $cmd .= "$::cpio_blk_flag ";
+    $cmd .= "$::z";
 
     # Buffer both sides if remote
     if (defined($remote)) {
-	$cmd .= $main::buffer_cmd;
+	$cmd .= $::buffer_cmd;
     }
 
     # Wrap all that together
@@ -1196,7 +1205,7 @@ sub backup_copy {
 
     if (defined($remote) and ($level != 0)) {
 	my $time = &get_last_date($label, $level, 'numeric');
-	$cmd = "$main::path{touch} -t \"$time\" $stamp";
+	$cmd = "$::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
 	$remove .= " $stamp";
     } else {
@@ -1207,43 +1216,43 @@ sub backup_copy {
     $cmd .= &file_list_cmd($dir, $stamp, 'null', $level, $remote);
     $cmd .= "| ";
 
-    $cmd .= "$main::path{cpio} -o ";
+    $cmd .= "$::path{cpio} -o ";
     $cmd .= "-0 ";
     $cmd .= "-H $cfg::cpio_format ";
-    $cmd .= "$main::cpio_verb_flag ";
-    $cmd .= "$main::cpio_blk_flag ";
+    $cmd .= "$::cpio_verb_flag ";
+    $cmd .= "$::cpio_blk_flag ";
 
     # Buffer both sides / compress if remote
     if (defined($remote)) {
-	$cmd .= "$main::z";
-	$cmd .= $main::buffer_cmd;
+	$cmd .= "$::z";
+	$cmd .= $::buffer_cmd;
     }
 
     # Wrap all that together
     $cmd = &maybe_remote_cmd($cmd, $remote);
 
     # Yell if destination exists
-    if (-d "$main::device") {
-	&log("| Existing destination directory $main::device found!");
+    if (-d "$::device") {
+	&log("| Existing destination directory $::device found!");
 	&log("| It will be *deleted*, unless you hit CTRL-C");
 	&log("| and abort within 10 seconds...");
 	&line();
 	sleep(10);
-	system("rm -rf $main::device");
+	system("rm -rf $::device");
     }
 
     # Expand cpio archive on other side of pipe
     $cmd .= " | ";
     if (defined($remote)) {
-	$cmd .= "$main::unz";
+	$cmd .= "$::unz";
     }
     $cmd .= "(";
-    $cmd .= "mkdir -p $main::device ; ";
-    $cmd .= "cd $main::device ; ";
-    $cmd .= "$main::path{cpio} -i ";
+    $cmd .= "mkdir -p $::device ; ";
+    $cmd .= "cd $::device ; ";
+    $cmd .= "$::path{cpio} -i ";
     $cmd .= "-m ";
     $cmd .= "-d ";
-    $cmd .= "$main::cpio_blk_flag";
+    $cmd .= "$::cpio_blk_flag";
     $cmd .= ")";
 
     push(@cmds, $cmd);
@@ -1269,7 +1278,7 @@ sub backup_tar {
 
     if (defined($remote) and ($level != 0)) {
 	my $time = &get_last_date($label, $level, 'numeric');
-	$cmd = "$main::path{touch} -t \"$time\" $stamp";
+	$cmd = "$::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
 	$remove .= " $stamp";
     } else {
@@ -1280,7 +1289,7 @@ sub backup_tar {
     $cmd .= &file_list_cmd($dir, $stamp, 'null', $level, $remote);
     $cmd .= "| ";
 
-    $cmd .= "$main::path{tar} --create ";
+    $cmd .= "$::path{tar} --create ";
     $cmd .= "--null ";
     $cmd .= "--files-from=- ";
     $cmd .= "--ignore-failed-read ";
@@ -1290,17 +1299,17 @@ sub backup_tar {
     if ($cfg::label ne 'false') {
 	$cmd .= "--label \"$title\" ";
     }
-    $cmd .= "$main::tar_verb_flag ";
-    $cmd .= "$main::tar_sparse_flag ";
-    $cmd .= "$main::tar_atime_flag ";
-    $cmd .= "$main::tar_recnum_flag ";
-    $cmd .= "$main::tar_blk_flag ";
+    $cmd .= "$::tar_verb_flag ";
+    $cmd .= "$::tar_sparse_flag ";
+    $cmd .= "$::tar_atime_flag ";
+    $cmd .= "$::tar_recnum_flag ";
+    $cmd .= "$::tar_blk_flag ";
     $cmd .= "--file - ";
-    $cmd .= "$main::z";
+    $cmd .= "$::z";
 
     # Buffer both sides if remote
     if (defined($remote)) {
-	$cmd .= $main::buffer_cmd;
+	$cmd .= $::buffer_cmd;
     }
 
     # Wrap all that together
@@ -1332,7 +1341,7 @@ sub backup_star {
 
     if (defined($remote) and ($level != 0)) {
 	my $time = &get_last_date($label, $level, 'numeric');
-	$cmd = "$main::path{touch} -t \"$time\" $stamp";
+	$cmd = "$::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
 	$remove .= " $stamp";
     } else {
@@ -1343,7 +1352,7 @@ sub backup_star {
     $cmd .= &file_list_cmd($dir, $stamp, 'newline', $level, $remote);
     $cmd .= "| ";
 
-    $cmd .= "$main::path{star} -c ";
+    $cmd .= "$::path{star} -c ";
     $cmd .= "list=- ";
     $cmd .= "-p ";
     $cmd .= "-l ";
@@ -1354,19 +1363,19 @@ sub backup_star {
 	$cmd .= "VOLHDR=\"$title\" ";
     }
     $cmd .= "H=$cfg::star_format ";
-    $cmd .= "$main::star_fifo_flag ";
-    $cmd .= "$main::star_acl_flag ";
-    $cmd .= "$main::star_verb_flag ";
-    $cmd .= "$main::star_sparse_flag ";
-    $cmd .= "$main::star_atime_flag ";
-    $cmd .= "$main::star_blocknum_flag ";
-    $cmd .= "$main::star_blk_flag ";
+    $cmd .= "$::star_fifo_flag ";
+    $cmd .= "$::star_acl_flag ";
+    $cmd .= "$::star_verb_flag ";
+    $cmd .= "$::star_sparse_flag ";
+    $cmd .= "$::star_atime_flag ";
+    $cmd .= "$::star_blocknum_flag ";
+    $cmd .= "$::star_blk_flag ";
     $cmd .= "file=- ";
-    $cmd .= "$main::z";
+    $cmd .= "$::z";
 
     # Buffer both sides if remote
     if (defined($remote)) {
-	$cmd .= $main::buffer_cmd;
+	$cmd .= $::buffer_cmd;
     }
 
     # Wrap all that together
@@ -1398,7 +1407,7 @@ sub backup_pax {
 
     if (defined($remote) and ($level != 0)) {
 	my $time = &get_last_date($label, $level, 'numeric');
-	$cmd = "$main::path{touch} -t \"$time\" $stamp";
+	$cmd = "$::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
 	$remove .= " $stamp";
     } else {
@@ -1409,7 +1418,7 @@ sub backup_pax {
 	# Kludge a title by replacing / with - in the title
 	# then touch a file in the dir we are going to back up.
 	$title =~ s%/%-%g;
-	$cmd = "$main::path{touch} \"$dir/$title\"";
+	$cmd = "$::path{touch} \"$dir/$title\"";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
 	$remove .= " \"$dir/$title\"";
     }
@@ -1418,17 +1427,17 @@ sub backup_pax {
     $cmd .= &file_list_cmd( $dir, $stamp, 'newline', $level, $remote);
     $cmd .= "| ";
 
-    $cmd .= "$main::path{pax} -w ";
+    $cmd .= "$::path{pax} -w ";
     $cmd .= "-d ";
     $cmd .= "-s %^./%% ";
     $cmd .= "-x $cfg::pax_format ";
-    $cmd .= "$main::pax_verb_flag ";
-    $cmd .= "$main::pax_blk_flag ";
-    $cmd .= "$main::z";
+    $cmd .= "$::pax_verb_flag ";
+    $cmd .= "$::pax_blk_flag ";
+    $cmd .= "$::z";
 
     # Buffer both sides if remote
     if (defined($remote)) {
-	$cmd .= $main::buffer_cmd;
+	$cmd .= $::buffer_cmd;
     }
 
     # Wrap all that together
@@ -1461,7 +1470,7 @@ sub backup_zip {
 
     if (defined($remote) and ($level != 0)) {
 	my $time = &get_last_date($label, $level, 'numeric');
-	$cmd = "$main::path{touch} -t \"$time\" $stamp";
+	$cmd = "$::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
 	$remove .= " $stamp";
     } else {
@@ -1472,7 +1481,7 @@ sub backup_zip {
 	# Kludge a title by replacing / with - in the title
 	# then touch a file in the dir we are going to back up.
 	$title =~ s%/%-%g;
-	$cmd = "$main::path{touch} \"$dir/$title\"";
+	$cmd = "$::path{touch} \"$dir/$title\"";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
 	$remove .= " \"$dir/$title\"";
     }
@@ -1481,22 +1490,22 @@ sub backup_zip {
     $cmd .= &file_list_cmd($dir, $stamp, 'newline', $level, $remote);
     $cmd .= "| ";
 
-    $cmd .= "$main::path{zip} -@ ";
+    $cmd .= "$::path{zip} -@ ";
     $cmd .= "-b $cfg::tmpdir "; # temp file path
     $cmd .= "-y "; # store symlinks
-    $cmd .= "$main::zip_compr_flag ";
-    $cmd .= "$main::zip_noz_flag "; # nocompress list
-    $cmd .= "$main::zip_verb_flag "; # verbose flag
+    $cmd .= "$::zip_compr_flag ";
+    $cmd .= "$::zip_noz_flag "; # nocompress list
+    $cmd .= "$::zip_verb_flag "; # verbose flag
     $cmd .= "$tmpzip";
 
     # Wrap all that together
     $cmd = &maybe_remote_cmd($cmd, $remote);
     push(@cmds,$cmd);
 
-    $cmd = "$main::path{cat} $tmpzip ";
+    $cmd = "$::path{cat} $tmpzip ";
     # Buffer both sides if remote
     if (defined($remote)) {
-	$cmd .= $main::buffer_cmd;
+	$cmd .= $::buffer_cmd;
     }
     $cmd = &maybe_remote_cmd($cmd, $remote);
 
@@ -1534,7 +1543,7 @@ sub backup_ar {
 
     if (defined($remote) and ($level != 0)) {
 	my $time = &get_last_date($label, $level, 'numeric');
-	$cmd = "$main::path{touch} -t \"$time\" $stamp";
+	$cmd = "$::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
 	$remove .= " $stamp";
     } else {
@@ -1546,7 +1555,7 @@ sub backup_ar {
 	# then touch a file in the dir we are going to back up.
 	$title =~ s%/%-%g;
 	$title =~ s% %_%g;
-	$cmd = "$main::path{touch} \"$dir/$title\"";
+	$cmd = "$::path{touch} \"$dir/$title\"";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
 	$remove .= " \"$dir/$title\"";
     }
@@ -1555,15 +1564,15 @@ sub backup_ar {
     $cmd .= &file_list_cmd( $dir, $stamp, 'newline', $level, $remote, '-maxdepth 1 ! -type d');
     $cmd .= "> $filelist; ";
 
-    $cmd .= "$main::path{ar} rc";
-    $cmd .= "$main::ar_verb_flag ";
+    $cmd .= "$::path{ar} rc";
+    $cmd .= "$::ar_verb_flag ";
     $cmd .= "$tmpfile ";
-    $cmd .= "`$main::path{cat} $filelist`";
-    $cmd .= "; $main::path{cat} $tmpfile $main::z";
+    $cmd .= "`$::path{cat} $filelist`";
+    $cmd .= "; $::path{cat} $tmpfile $::z";
 
     # Buffer both sides if remote
     if (defined($remote)) {
-	$cmd .= $main::buffer_cmd;
+	$cmd .= $::buffer_cmd;
     }
 
     # Wrap all that together
@@ -1597,7 +1606,7 @@ sub backup_shar {
 
     if (defined($remote) and ($level != 0)) {
 	my $time = &get_last_date($label, $level, 'numeric');
-	$cmd = "$main::path{touch} -t \"$time\" $stamp";
+	$cmd = "$::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
 	$remove .= " $stamp";
     } else {
@@ -1608,17 +1617,17 @@ sub backup_shar {
     $cmd .= &file_list_cmd( $dir, $stamp, 'newline', $level, $remote, '! -type d');
     $cmd .= " | ";
 
-    $cmd .= "$main::path{shar} ";
-    $cmd .= "$main::shar_verb_flag ";
+    $cmd .= "$::path{shar} ";
+    $cmd .= "$::shar_verb_flag ";
     if ($cfg::label ne 'false') {
 	$cmd .= "-n \"$title\" ";
     }
     $cmd .= "-S ";
-    $cmd .= "$main::z";
+    $cmd .= "$::z";
 
     # Buffer both sides if remote
     if (defined($remote)) {
-	$cmd .= $main::buffer_cmd;
+	$cmd .= $::buffer_cmd;
     }
 
     # Wrap all that together
@@ -1653,7 +1662,7 @@ sub backup_lha {
 
     if (defined($remote) and ($level != 0)) {
 	my $time = &get_last_date($label, $level, 'numeric');
-	$cmd = "$main::path{touch} -t \"$time\" $stamp";
+	$cmd = "$::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
 	$remove .= " $stamp";
     } else {
@@ -1674,15 +1683,15 @@ sub backup_lha {
     $cmd .= &file_list_cmd( $dir, $stamp, 'newline', $level, $remote);
     $cmd .= "> $filelist; ";
 
-    $cmd .= "$main::path{lha} a";
-    $cmd .= "$main::lha_verb_flag ";
+    $cmd .= "$::path{lha} a";
+    $cmd .= "$::lha_verb_flag ";
     $cmd .= "$tmpfile ";
-    $cmd .= "`$main::path{cat} $filelist`";
-    $cmd .= "; $main::path{cat} $tmpfile $main::z";
+    $cmd .= "`$::path{cat} $filelist`";
+    $cmd .= "; $::path{cat} $tmpfile $::z";
 
     # Buffer both sides if remote
     if (defined($remote)) {
-	$cmd .= $main::buffer_cmd;
+	$cmd .= $::buffer_cmd;
     }
 
     # Wrap all that together
@@ -1717,7 +1726,7 @@ sub backup_filelist {
 
     if (defined($remote) and ($level != 0)) {
 	my $time = &get_last_date($label, $level, 'numeric');
-	$cmd = "$main::path{touch} -t \"$time\" $stamp";
+	$cmd = "$::path{touch} -t \"$time\" $stamp";
 	push(@cmds, &maybe_remote_cmd($cmd, $remote));
 	$remove .= " $stamp";
     } else {
@@ -1728,12 +1737,12 @@ sub backup_filelist {
 
     $cmd = "cd \"$dir\" && ";
     $cmd .= &file_list_cmd( $dir, $stamp, 'newline', $level, $remote);
-    $cmd .= "> $filelist; $main::path{cat} $filelist 1>&2; $main::path{cat} $filelist ";
-    $cmd .= "$main::z";
+    $cmd .= "> $filelist; $::path{cat} $filelist 1>&2; $::path{cat} $filelist ";
+    $cmd .= "$::z";
 
     # Buffer both sides if remote
     if (defined($remote)) {
-	$cmd .= $main::buffer_cmd;
+	$cmd .= $::buffer_cmd;
     }
 
     # Wrap all that together
@@ -1758,66 +1767,66 @@ sub list_routine {
     my $cmd = &setup_before_read('list');
 
     if ($cfg::type eq 'dump') {
-	$cmd .= "$main::path{restore} -t ";
-	$cmd .= "$main::dump_verb_flag ";
-	$cmd .= "$main::dump_blk_flag ";
+	$cmd .= "$::path{restore} -t ";
+	$cmd .= "$::dump_verb_flag ";
+	$cmd .= "$::dump_blk_flag ";
 	$cmd .= "-f -";
 
     } elsif ($cfg::type eq 'afio') {
-	$cmd .= "$main::path{afio} -t ";
+	$cmd .= "$::path{afio} -t ";
 	$cmd .= "-z ";
 	$cmd .= "-D $0 ";
-	$cmd .= "$main::afio_unz_flag ";
-	$cmd .= "$main::afio_verb_flag ";
-	$cmd .= "$main::afio_sparse_flag ";
-	$cmd .= "$main::afio_bnum_flag ";
-	$cmd .= "$main::afio_blk_flag ";
+	$cmd .= "$::afio_unz_flag ";
+	$cmd .= "$::afio_verb_flag ";
+	$cmd .= "$::afio_sparse_flag ";
+	$cmd .= "$::afio_bnum_flag ";
+	$cmd .= "$::afio_blk_flag ";
 	$cmd .= "-";
 
     } elsif ($cfg::type eq 'cpio') {
-	$cmd .= "$main::path{cpio} -t ";
-	$cmd .= "$main::cpio_verb_flag ";
-	$cmd .= "$main::cpio_blk_flag";
+	$cmd .= "$::path{cpio} -t ";
+	$cmd .= "$::cpio_verb_flag ";
+	$cmd .= "$::cpio_blk_flag";
 
     } elsif ($cfg::type eq 'tar') {
-	$cmd .= "$main::path{tar} --list ";
+	$cmd .= "$::path{tar} --list ";
 	$cmd .= "--totals ";
-	$cmd .= "$main::tar_verb_flag ";
-	$cmd .= "$main::tar_sparse_flag ";
-	$cmd .= "$main::tar_recnum_flag ";
-	$cmd .= "$main::tar_blk_flag ";
+	$cmd .= "$::tar_verb_flag ";
+	$cmd .= "$::tar_sparse_flag ";
+	$cmd .= "$::tar_recnum_flag ";
+	$cmd .= "$::tar_blk_flag ";
 	$cmd .= "-B ";
 	$cmd .= "--file -";
 
     } elsif ($cfg::type eq 'star') {
-	$cmd .= "$main::path{star} -t ";
-	$cmd .= "$main::star_fifo_flag ";
-	$cmd .= "$main::star_verb_flag ";
-	$cmd .= "$main::star_sparse_flag ";
-	$cmd .= "$main::star_blocknum_flag ";
-	$cmd .= "$main::star_blk_flag ";
+	$cmd .= "$::path{star} -t ";
+	$cmd .= "$::star_fifo_flag ";
+	$cmd .= "$::star_verb_flag ";
+	$cmd .= "$::star_sparse_flag ";
+	$cmd .= "$::star_blocknum_flag ";
+	$cmd .= "$::star_blk_flag ";
 	$cmd .= "-B ";
 	$cmd .= "file=-";
 
     } elsif ($cfg::type eq 'pax') {
-	$cmd .= "$main::path{pax} ";
-	$cmd .= "$main::pax_verb_flag ";
+	$cmd .= "$::path{pax} ";
+	$cmd .= "$::pax_verb_flag ";
 
     } elsif ($cfg::type eq 'zip') {
 	my $tmpfile = "$cfg::tmpdir/zip.$PROCESS_ID";
-	$cmd .= "$main::path{cat} > $tmpfile ; ";
-	$cmd .= "$main::path{unzip} -l ";
-	$cmd .= "$main::zip_verb_flag ";
+	$cmd .= "$::path{cat} > $tmpfile ; ";
+	$cmd .= "$::path{unzip} -l ";
+	$cmd .= "$::zip_verb_flag ";
 	$cmd .= "$tmpfile ; ";
-	$cmd .= "$main::path{rm} -f $tmpfile";
+	$cmd .= "$::path{rm} -f $tmpfile";
 
     } elsif ($cfg::type eq 'ar') {
 	my $tmpfile = "$cfg::tmpdir/ar.$PROCESS_ID";
-	$cmd .= "$main::path{cat} > $tmpfile; ";
-	$cmd .= "$main::path{ar} t";
-	$cmd .= "$main::ar_verb_flag ";
+	$cmd .= "$::path{cat} > $tmpfile; ";
+	$cmd .= "$::path{ar} t";
+	$cmd .= "$::ar_verb_flag ";
 	$cmd .= "$tmpfile; ";
-	$cmd .= "$main::path{rm} -f $tmpfile";
+	$cmd .= "$::path{rm} -f $tmpfile";
 
     } elsif ($cfg::type eq 'shar') {
 
@@ -1826,22 +1835,22 @@ sub list_routine {
     } elsif ($cfg::type eq 'copy') {
 
 	if ($cfg::verbose eq "true") {
-	    $cmd = "ls -laR $main::device";
+	    $cmd = "ls -laR $::device";
 	} else {
-	    $cmd = "ls -aR $main::device";
+	    $cmd = "ls -aR $::device";
 	}
 
     } elsif ($cfg::type eq 'lha') {
 	my $tmpfile = "$cfg::tmpdir/lha.$PROCESS_ID";
-	$cmd .= "$main::path{cat} > $tmpfile ; ";
-	$cmd .= "$main::path{lha} l";
-	$cmd .= "$main::lha_verb_flag ";
+	$cmd .= "$::path{cat} > $tmpfile ; ";
+	$cmd .= "$::path{lha} l";
+	$cmd .= "$::lha_verb_flag ";
 	$cmd .= "$tmpfile ; ";
-	$cmd .= "$main::path{rm} -f $tmpfile";
+	$cmd .= "$::path{rm} -f $tmpfile";
 
     } elsif ($cfg::type eq 'filelist') {
 
-	$cmd .= "$main::path{cat}";
+	$cmd .= "$::path{cat}";
 
     }
 
@@ -1859,9 +1868,9 @@ sub extract_routine {
 
     my $cmd = &setup_before_read('extract');
 
-    if (defined($main::opt{'flist'})) {
+    if (defined($::opt{'flist'})) {
 	# Have to get a list of the files for restore to use
-	open(LIST,"$main::opt{flist}") or die ("Can't open $main::opt{flist}: $OS_ERROR");
+	open(LIST,"$::opt{flist}") or die ("Can't open $::opt{flist}: $OS_ERROR");
 	open(NEWLIST,">$newlist") or die ("Can't open $newlist: $OS_ERROR");
 	while(<LIST>) {
 	    chomp;
@@ -1878,12 +1887,12 @@ sub extract_routine {
 	}
 	close(LIST);
 	close(NEWLIST);
-	&log("| Extracting files listed in $main::opt{flist}");
+	&log("| Extracting files listed in $::opt{flist}");
     }
 
-    if (defined($main::opt{'onefile'})) {
+    if (defined($::opt{'onefile'})) {
 	open(NEWLIST,">$newlist") or die ("Can't open $newlist: $OS_ERROR");
-	$_ = $main::opt{'onefile'};
+	$_ = $::opt{'onefile'};
 	$_ =~ s%^/%%;
 	$_ =~ s%^\./%%;
 	# Some types need the leading ./ to extract the file list,
@@ -1898,88 +1907,88 @@ sub extract_routine {
     }
 
     if ($cfg::type eq 'dump') {
-	$cmd .= "$main::path{restore} -x ";
-	$cmd .= "$main::dump_verb_flag ";
-	$cmd .= "$main::dump_blk_flag ";
+	$cmd .= "$::path{restore} -x ";
+	$cmd .= "$::dump_verb_flag ";
+	$cmd .= "$::dump_blk_flag ";
 	$cmd .= "-f -";
 	$cmd .= $restore_files;
 
     } elsif ($cfg::type eq 'afio') {
-	$cmd .= "$main::path{afio} -i ";
+	$cmd .= "$::path{afio} -i ";
 	if ($restore_files ne '') {
 	    $cmd .= "-w $newlist ";
 	}
 	$cmd .= "-z ";
 	$cmd .= "-x ";
 	$cmd .= "-D $0 ";
-	$cmd .= "$main::afio_unz_flag ";
-	$cmd .= "$main::afio_verb_flag ";
-	$cmd .= "$main::afio_sparse_flag ";
-	$cmd .= "$main::afio_bnum_flag ";
-	$cmd .= "$main::afio_blk_flag ";
+	$cmd .= "$::afio_unz_flag ";
+	$cmd .= "$::afio_verb_flag ";
+	$cmd .= "$::afio_sparse_flag ";
+	$cmd .= "$::afio_bnum_flag ";
+	$cmd .= "$::afio_blk_flag ";
 	$cmd .= "-";
 
     } elsif ($cfg::type eq 'cpio') {
-	$cmd .= "$main::path{cpio} -i ";
+	$cmd .= "$::path{cpio} -i ";
 	if ($restore_files ne '') {
 	    $cmd .= "-E $newlist ";
 	}
 	$cmd .= "-m ";
 	$cmd .= "-d ";
-	$cmd .= "$main::cpio_verb_flag ";
-	$cmd .= "$main::cpio_blk_flag";
+	$cmd .= "$::cpio_verb_flag ";
+	$cmd .= "$::cpio_blk_flag";
 
     } elsif ($cfg::type eq 'tar') {
-	$cmd .= "$main::path{tar} --extract ";
+	$cmd .= "$::path{tar} --extract ";
 	if ($restore_files ne '') {
 	    $cmd .= "--files-from $newlist ";
 	}
 	$cmd .= "--totals ";
 	$cmd .= "--same-permissions ";
-	$cmd .= "$main::tar_verb_flag ";
-	$cmd .= "$main::tar_sparse_flag ";
-	$cmd .= "$main::tar_recnum_flag ";
-	$cmd .= "$main::tar_blk_flag ";
+	$cmd .= "$::tar_verb_flag ";
+	$cmd .= "$::tar_sparse_flag ";
+	$cmd .= "$::tar_recnum_flag ";
+	$cmd .= "$::tar_blk_flag ";
 	$cmd .= "-B ";
 	$cmd .= "--file -";
 
     } elsif ($cfg::type eq 'star') {
-	$cmd .= "$main::path{star} -x ";
+	$cmd .= "$::path{star} -x ";
 	if ($restore_files ne '') {
 	    $cmd .= "list=$newlist ";
 	}
 	$cmd .= "-p ";
-	$cmd .= "$main::star_fifo_flag ";
-	$cmd .= "$main::star_verb_flag ";
-	$cmd .= "$main::star_sparse_flag ";
-	$cmd .= "$main::star_blocknum_flag ";
-	$cmd .= "$main::star_blk_flag ";
+	$cmd .= "$::star_fifo_flag ";
+	$cmd .= "$::star_verb_flag ";
+	$cmd .= "$::star_sparse_flag ";
+	$cmd .= "$::star_blocknum_flag ";
+	$cmd .= "$::star_blk_flag ";
 	$cmd .= "-B ";
 	$cmd .= "file=-";
 
     } elsif ($cfg::type eq 'pax') {
-	$cmd .= "$main::path{pax} -r ";
-	$cmd .= "$main::pax_verb_flag ";
+	$cmd .= "$::path{pax} -r ";
+	$cmd .= "$::pax_verb_flag ";
 	$cmd .= $restore_files;
 
    } elsif ($cfg::type eq 'zip') {
 	my $tmpfile = "$cfg::tmpdir/zip.$PROCESS_ID";
-	$cmd .= "$main::path{cat} > $tmpfile ; ";
-	$cmd .= "$main::path{unzip} ";
+	$cmd .= "$::path{cat} > $tmpfile ; ";
+	$cmd .= "$::path{unzip} ";
 	$cmd .= "$tmpfile ";
 	$cmd .= $restore_files;
 	$cmd .= "; ";
-	$cmd .= "$main::path{rm} -f $tmpfile";
+	$cmd .= "$::path{rm} -f $tmpfile";
 
     } elsif ($cfg::type eq 'ar') {
 	my $tmpfile = "$cfg::tmpdir/ar.$PROCESS_ID";
-	$cmd .= "$main::path{cat} > $tmpfile; ";
-	$cmd .= "$main::path{ar} xo";
-	$cmd .= "$main::ar_verb_flag ";
+	$cmd .= "$::path{cat} > $tmpfile; ";
+	$cmd .= "$::path{ar} xo";
+	$cmd .= "$::ar_verb_flag ";
 	$cmd .= "$tmpfile ";
 	$cmd .= $restore_files;
 	$cmd .= "; ";
-	$cmd .= "$main::path{rm} -f $tmpfile";
+	$cmd .= "$::path{rm} -f $tmpfile";
 
     } elsif ($cfg::type eq 'shar') {
 	$cmd .= "sh ";
@@ -1997,19 +2006,19 @@ sub extract_routine {
 
     } elsif ($cfg::type eq 'lha') {
 	my $tmpfile = "$cfg::tmpdir/lha.$PROCESS_ID";
-	$cmd .= "$main::path{cat} > $tmpfile ; ";
-	$cmd .= "$main::path{lha} x";
-	$cmd .= "$main::lha_verb_flag ";
+	$cmd .= "$::path{cat} > $tmpfile ; ";
+	$cmd .= "$::path{lha} x";
+	$cmd .= "$::lha_verb_flag ";
 	$cmd .= "$tmpfile ";
 	$cmd .= $restore_files;
 	$cmd .= "; ";
-	$cmd .= "$main::path{rm} -f $tmpfile";
+	$cmd .= "$::path{rm} -f $tmpfile";
 
     }
 
     &run_or_echo_then_query($cmd);
 
-    if (defined($main::opt{'flist'})) {
+    if (defined($::opt{'flist'})) {
 	unlink("$newlist") or die ("Can't remove $newlist: $OS_ERROR");
     }
 }
@@ -2022,46 +2031,46 @@ sub compare_routine {
     my $cmd = &setup_before_read('compare');
 
     if ($cfg::type eq 'dump') {
-	$cmd .= "$main::path{restore} -C ";
-	$cmd .= "$main::dump_blk_flag ";
+	$cmd .= "$::path{restore} -C ";
+	$cmd .= "$::dump_blk_flag ";
 	$cmd .= "-f -";
 
     } elsif ($cfg::type eq 'afio') {
-	$cmd .= "$main::path{afio} -r ";
+	$cmd .= "$::path{afio} -r ";
 	$cmd .= "-z ";
 	$cmd .= "-D $0 ";
-	$cmd .= "$main::afio_unz_flag ";
-	$cmd .= "$main::afio_sparse_flag ";
-	$cmd .= "$main::afio_blk_flag ";
+	$cmd .= "$::afio_unz_flag ";
+	$cmd .= "$::afio_sparse_flag ";
+	$cmd .= "$::afio_blk_flag ";
 	$cmd .= "-";
 
     } elsif ($cfg::type eq 'cpio') {
 	die("cpio not capable of comparing files");
 
     } elsif ($cfg::type eq 'tar') {
-	$cmd .= "$main::path{tar} --diff ";
+	$cmd .= "$::path{tar} --diff ";
 	$cmd .= "--totals ";
-	$cmd .= "$main::tar_blk_flag ";
-	$cmd .= "$main::tar_sparse_flag ";
-	$cmd .= "$main::tar_recnum_flag ";
+	$cmd .= "$::tar_blk_flag ";
+	$cmd .= "$::tar_sparse_flag ";
+	$cmd .= "$::tar_recnum_flag ";
 	$cmd .= "-B ";
 	$cmd .= "--file -";
 
     } elsif ($cfg::type eq 'star') {
-	$cmd .= "$main::path{star} -diff ";
-	$cmd .= "$main::star_fifo_flag ";
-	$cmd .= "$main::star_blk_flag ";
-	$cmd .= "$main::star_sparse_flag ";
-	$cmd .= "$main::star_blocknum_flag ";
+	$cmd .= "$::path{star} -diff ";
+	$cmd .= "$::star_fifo_flag ";
+	$cmd .= "$::star_blk_flag ";
+	$cmd .= "$::star_sparse_flag ";
+	$cmd .= "$::star_blocknum_flag ";
 	$cmd .= "-B ";
 	$cmd .= "file=-";
 
     } elsif ($cfg::type eq 'copy') {
 
-	$main::path{'diff'} = &checkinpath('diff');
+	$::path{'diff'} = &checkinpath('diff');
 
-	$cmd = "$main::path{diff} -r -q ";
-	$cmd .= ". $main::device";
+	$cmd = "$::path{diff} -r -q ";
+	$cmd .= ". $::device";
 
     } else {
 	die("$cfg::type not capable of comparing files");
@@ -2079,9 +2088,9 @@ sub restore_routine {
     my $cmd = &setup_before_read('restore');
 
     if ($cfg::type eq 'dump') {
-	$cmd .= "$main::path{restore} -i ";
-	$cmd .= "$main::dump_verb_flag ";
-	$cmd .= "$main::dump_blk_flag ";
+	$cmd .= "$::path{restore} -i ";
+	$cmd .= "$::dump_verb_flag ";
+	$cmd .= "$::dump_blk_flag ";
 	$cmd .= "-f -";
 
     } else {
@@ -2167,7 +2176,7 @@ sub get_last_date {
 
     }
 
-    &log("| Date of this level $thislevel backup: $main::date_at_start");
+    &log("| Date of this level $thislevel backup: $::date_at_start");
     if ($thislevel == 0) {
 	&log("| Date of last level $thislevel backup: the epoch");
     } else {
@@ -2213,11 +2222,11 @@ sub log {
     }
 
     if ($do_screen == 1) {
-	print $main::msg "$msg\n";
+	print $::msg "$msg\n";
     }
 
-    if (($do_log == 1) and defined($main::log)) {
-	open(LOG,">>$main::log") || warn("can't open logfile");
+    if (($do_log == 1) and defined($::log)) {
+	open(LOG,">>$::log") || warn("can't open logfile");
 	print LOG "$msg\n";
 	close(LOG);
     }
@@ -2248,13 +2257,13 @@ sub line {
     }
 
     if ($do_screen == 1) {
-	print $main::msg '|';
-	print $main::msg '-' x $length;
-	print $main::msg "\n";
+	print $::msg '|';
+	print $::msg '-' x $length;
+	print $::msg "\n";
     }
 
-    if (($do_log == 1) and defined($main::log)) {
-	open(LOG,">>$main::log") || warn("can't open logfile");
+    if (($do_log == 1) and defined($::log)) {
+	open(LOG,">>$::log") || warn("can't open logfile");
 	print LOG '|';
 	print LOG '-' x $length;
 	print LOG "\n";
@@ -2271,12 +2280,12 @@ sub readconfigfile {
     my $configfile;
     my $var;
     my $value;
-    my $defines = $main::opt{'d'};
+    my $defines = $::opt{'d'};
 
-    if (defined($main::opt{'c'})) {
-	$configfile = $main::opt{'c'};
+    if (defined($::opt{'c'})) {
+	$configfile = $::opt{'c'};
     } else {
-	$configfile = $main::CONFFILE;
+	$configfile = $::CONFFILE;
     }
     if (! -r "$configfile") {
 	die("config file $configfile: $OS_ERROR");
@@ -2310,9 +2319,9 @@ sub mt {
     if ($cfg::compress eq "hardware") {
 	foreach my $operation (@operations) {
 	    if ($operation =~ m/generic-blocksize/) {
-		if ($main::uname =~ /Linux/) {
+		if ($::uname =~ /Linux/) {
 		    push(@operations,'compression 1');
-		} elsif ($main::uname =~ /FreeBSD/) {
+		} elsif ($::uname =~ /FreeBSD/) {
 		    push(@operations,'comp on');
 		} else {
 		    push(@operations,'compression 1');
@@ -2325,7 +2334,7 @@ sub mt {
     # Set if currently doing blocksize command
     foreach my $operation (@operations) {
 	if ($operation =~ m/generic-blocksize/) {
-	    if ($main::uname =~ /FreeBSD/) {
+	    if ($::uname =~ /FreeBSD/) {
 		push(@operations,'seteotmodel 1');
 	    }
 	}
@@ -2335,24 +2344,24 @@ sub mt {
 
 	# mt flavors for block number
 	if ($operation eq 'generic-query') {
-	    if ($main::uname =~ /Linux/) {
+	    if ($::uname =~ /Linux/) {
 		$operation = 'tell';
-		if ($main::ftape == 1) {
+		if ($::ftape == 1) {
 		    $operation = 'getsize';
 		}
-	    } elsif ($main::uname =~ /OpenBSD/) {
+	    } elsif ($::uname =~ /OpenBSD/) {
 		$operation = 'status';
-	    } elsif ($main::uname =~ /FreeBSD/) {
+	    } elsif ($::uname =~ /FreeBSD/) {
 		$operation = 'rdhpos';
-	    } elsif ($main::uname =~ /OSF1/) {
+	    } elsif ($::uname =~ /OSF1/) {
 		$operation = 'status';
-	    } elsif ($main::uname =~ /AIX/) {
+	    } elsif ($::uname =~ /AIX/) {
 		$operation = 'status';
-	    } elsif ($main::uname =~ /HP-UX/) {
+	    } elsif ($::uname =~ /HP-UX/) {
 		$operation = 'status';
-	    } elsif ($main::uname =~ /SunOS/) {
+	    } elsif ($::uname =~ /SunOS/) {
 		$operation = 'status';
-	    } elsif ($main::uname =~ /IRIX/) {
+	    } elsif ($::uname =~ /IRIX/) {
 		$operation = 'status';
 	    } else {
 		$operation = 'status';
@@ -2361,24 +2370,24 @@ sub mt {
 
 	# mt flavors for eod
 	if ($operation eq 'generic-eod') {
-	    if ($main::uname =~ /Linux/) {
+	    if ($::uname =~ /Linux/) {
 		$operation = 'eod';
-		if ($main::ftape == 1) {
+		if ($::ftape == 1) {
 		    $operation = 'eom';
 		}
-	    } elsif ($main::uname =~ /OpenBSD/) {
+	    } elsif ($::uname =~ /OpenBSD/) {
 		$operation = 'eod';
-	    } elsif ($main::uname =~ /FreeBSD/) {
+	    } elsif ($::uname =~ /FreeBSD/) {
 		$operation = 'eod';
-	    } elsif ($main::uname =~ /OSF1/) {
+	    } elsif ($::uname =~ /OSF1/) {
 		$operation = 'seod';
-	    } elsif ($main::uname =~ /AIX/) {
+	    } elsif ($::uname =~ /AIX/) {
 		$operation = 'fsf 1000';
-	    } elsif ($main::uname =~ /HP-UX/) {
+	    } elsif ($::uname =~ /HP-UX/) {
 		$operation = 'eod';
-	    } elsif ($main::uname =~ /SunOS/) {
+	    } elsif ($::uname =~ /SunOS/) {
 		$operation = 'eom';
-	    } elsif ($main::uname =~ /IRIX/) {
+	    } elsif ($::uname =~ /IRIX/) {
 		$operation = 'eod';
 	    } else {
 		$operation = 'eod';
@@ -2391,21 +2400,21 @@ sub mt {
 
 	    if ($cfg::erase_rewind_only eq "true") {
 		$operation = 'rewind';
-	    } elsif ($main::uname =~ /Linux/) {
+	    } elsif ($::uname =~ /Linux/) {
 		$operation = 'erase';
-	    } elsif ($main::uname =~ /OpenBSD/) {
+	    } elsif ($::uname =~ /OpenBSD/) {
 		$operation = 'erase';
-	    } elsif ($main::uname =~ /FreeBSD/) {
+	    } elsif ($::uname =~ /FreeBSD/) {
 		$operation = 'erase';
-	    } elsif ($main::uname =~ /OSF1/) {
+	    } elsif ($::uname =~ /OSF1/) {
 		$operation = 'erase';
-	    } elsif ($main::uname =~ /AIX/) {
+	    } elsif ($::uname =~ /AIX/) {
 		$operation = 'erase';
-	    } elsif ($main::uname =~ /HP-UX/) {
+	    } elsif ($::uname =~ /HP-UX/) {
 		$operation = 'erase';
-	    } elsif ($main::uname =~ /SunOS/) {
+	    } elsif ($::uname =~ /SunOS/) {
 		$operation = 'erase';
-	    } elsif ($main::uname =~ /IRIX/) {
+	    } elsif ($::uname =~ /IRIX/) {
 		$operation = 'erase';
 	    } else {
 		$operation = 'erase';
@@ -2414,32 +2423,32 @@ sub mt {
 
 	# mt flavors for setblk
 	if ($operation =~ /generic-blocksize/) {
-	    if ($main::uname =~ /Linux/) {
+	    if ($::uname =~ /Linux/) {
 		$operation =~ s/generic-blocksize/setblk/;
-	    } elsif ($main::uname =~ /OpenBSD/) {
+	    } elsif ($::uname =~ /OpenBSD/) {
 		$operation =~ s/generic-blocksize/blocksize/;
-	    } elsif ($main::uname =~ /FreeBSD/) {
+	    } elsif ($::uname =~ /FreeBSD/) {
 		$operation =~ s/generic-blocksize/blocksize/;
-	    } elsif ($main::uname =~ /OSF1/) {
+	    } elsif ($::uname =~ /OSF1/) {
 		$operation =~ s/generic-blocksize/setblk/;
-	    } elsif ($main::uname =~ /AIX/) {
+	    } elsif ($::uname =~ /AIX/) {
 		$operation =~ s/generic-blocksize/setblk/;
-	    } elsif ($main::uname =~ /HP-UX/) {
+	    } elsif ($::uname =~ /HP-UX/) {
 		$operation =~ s/generic-blocksize/setblk/;
-	    } elsif ($main::uname =~ /SunOS/) {
+	    } elsif ($::uname =~ /SunOS/) {
 		$operation =~ s/generic-blocksize/setblk/;
-	    } elsif ($main::uname =~ /IRIX/) {
+	    } elsif ($::uname =~ /IRIX/) {
 		$operation =~ s/generic-blocksize/setblksz/;
 	    } else {
 		$operation =~ s/generic-blocksize/setblk/;
 	    }
 	}
 
-	if (defined($main::use_file)) {
+	if (defined($::use_file)) {
 
 	    # mt ops skipped for files
 
-	} elsif (defined($main::blockdevice)) {
+	} elsif (defined($::blockdevice)) {
 
 	    # mt ops skipped for block device
 
@@ -2457,11 +2466,11 @@ sub mt {
 	    if ($operation =~ /setblk/) {
 		# Try and see which of setblk/defblksize will work
 		# This is kludgy, but doable
-		$command = "$main::path{mt} -f $main::device $operation > /dev/null 2>&1";
-		if (defined($main::remotetapehost)) {
-		    $command = &maybe_remote_cmd($command, $main::remotetapehost);
+		$command = "$::path{mt} -f $::device $operation > /dev/null 2>&1";
+		if (defined($::remotetapehost)) {
+		    $command = &maybe_remote_cmd($command, $::remotetapehost);
 		}
-		if (defined($main::debug)) {
+		if (defined($::debug)) {
 		    &log("(debug) $command");
 		}
 		system($command);
@@ -2469,40 +2478,40 @@ sub mt {
 		    &log("| Trying \"mt defblksize\" instead of \"mt setblk\"");
 		    my $oldoperation = $operation;
 		    $operation =~ s/setblk/defblksize/;
-		    $command = "$main::path{mt} -f $main::device $operation > /dev/null 2>&1";
-		    if (defined($main::remotetapehost)) {
-			$command = &maybe_remote_cmd($command, $main::remotetapehost);
+		    $command = "$::path{mt} -f $::device $operation > /dev/null 2>&1";
+		    if (defined($::remotetapehost)) {
+			$command = &maybe_remote_cmd($command, $::remotetapehost);
 		    }
-		    if (defined($main::debug)) {
+		    if (defined($::debug)) {
 			&log("(debug) $command");
 		    }
 		    system($command);
 		    if ($CHILD_ERROR) {
 			&log("Error setting block size");
 			&log("Neither of these commands worked:");
-			&log("  $main::path{mt} -f $main::device $oldoperation");
-			&log("  $main::path{mt} -f $main::device $operation");
+			&log("  $::path{mt} -f $::device $oldoperation");
+			&log("  $::path{mt} -f $::device $operation");
 			exit(1);
 		    } # error on second guess
 		} # error on first guess
 	    } # operation = setblk
 
-	    $command = "$main::path{mt} -f $main::device $operation 2>&1 ";
+	    $command = "$::path{mt} -f $::device $operation 2>&1 ";
 
-	    if (defined($main::remotetapehost)) {
-		$command = &maybe_remote_cmd($command, $main::remotetapehost);
+	    if (defined($::remotetapehost)) {
+		$command = &maybe_remote_cmd($command, $::remotetapehost);
 	    }
 
-	    if (!defined($main::debug)) {
+	    if (!defined($::debug)) {
 
 		open(CMD,"($command) 2>&1 |") || die;
-		if (defined($main::log)) { open(LOG,">>$main::log") || die; }
+		if (defined($::log)) { open(LOG,">>$::log") || die; }
 		while(<CMD>) {
 		    print $_;
-		    if (defined($main::log)) { print LOG $_; }
+		    if (defined($::log)) { print LOG $_; }
 		}
 		close(CMD);
-		if (defined($main::log)) { close(LOG); }
+		if (defined($::log)) { close(LOG); }
 
 	    } else {
 		&log("(debug) $command");
@@ -2527,23 +2536,26 @@ sub optioncheck {
     my $mbuffer_read_pad_flag;
 
     # Archive type on commandline
-    if (defined($main::opt{'type'})) {
-	$cfg::type = $main::opt{'type'};
+    if (defined($::opt{'type'})) {
+	$cfg::type = $::opt{'type'};
     }
 
     # Compress flag on commandline
-    if (defined($main::opt{'compress'})) {
-	$cfg::compress = $main::opt{'compress'};
+    if (defined($::opt{'compress'})) {
+	$cfg::compress = $::opt{'compress'};
     }
 
     # Device flag on commandline
-    if (defined($main::opt{'device'})) {
-	$cfg::device = $main::opt{'device'};
+    if (defined($::opt{'device'})) {
+	$cfg::device = $::opt{'device'};
+	if (defined($::opt{'stdout'})) {
+	    push(@::errors,"Can't use -device and -pipe at the same time");
+	}
     }
 
     # Debug
-    if (defined($main::opt{'n'})) {
-	$main::debug = 1;
+    if (defined($::opt{'n'})) {
+	$::debug = 1;
     }
 
     # Flag old config file
@@ -2551,7 +2563,27 @@ sub optioncheck {
 	# so strict shuts up
 	my $junk = @cfg::filesystems;
 	$junk = $cfg::mt_var_blksize;
-	push(@main::errors,"You've got an old 1.0.x configuration file, please update it!");
+	push(@::errors,"You've got an old 1.0.x configuration file, please update it!");
+    }
+
+    # Mode
+    my (@modelist) = qw(set dir list extract compare restore toc newtape rmindex rmfile test-tape-drive);
+    my @modes;
+    my $modecount = 0;
+    $::mode = '';
+    foreach my $mode (@modelist) {
+	if (defined($::opt{$mode})) {
+	    $modecount++;
+	    $::mode = $mode;
+	    push(@modes,$mode);
+	}
+    }
+    if ($modecount > 1) {
+	$_ = join(" -",@modes);
+	push(@::errors,"Can't specify more than one mode (given \"-$_\")");
+    }
+    if ($modecount == 0) {
+	push(@::errors,"Nothing to do (see -help)");
     }
 
     # First check if things are defined in the config file
@@ -2582,118 +2614,133 @@ sub optioncheck {
     &checkvar(\$cfg::prefix,'prefix','exist','');
     &checkvar(\$cfg::sprefix,'sprefix','exist','');
 
-    if (@main::errors) {
-	print $main::msg "Errors:\n";
-	while(@main::errors) {
-	    print $main::msg " " . shift(@main::errors) . "\n";
+    if (@::errors) {
+	print $::msg "Errors:\n";
+	while(@::errors) {
+	    print $::msg " " . shift(@::errors) . "\n";
 	}
 	exit(1);
     }
 
     # Check we can find rsh or ssh
-    $main::path{$cfg::remoteshell} = &checkinpath($cfg::remoteshell);
+    $::path{$cfg::remoteshell} = &checkinpath($cfg::remoteshell);
     if ($cfg::remoteuser ne '') {
-	$main::remoteshell = "$main::path{$cfg::remoteshell} -l $cfg::remoteuser";
+	$::remoteshell = "$::path{$cfg::remoteshell} -l $cfg::remoteuser";
     } else {
-	$main::remoteshell = $main::path{$cfg::remoteshell};
+	$::remoteshell = $::path{$cfg::remoteshell};
     }
 
     # Check we can find common stuff
-    $main::path{'touch'} = &checkinpath('touch');
-    $main::path{'hostname'} = &checkinpath('hostname');
-    $main::path{'cat'} = &checkinpath('cat');
-    $main::path{'rm'} = &checkinpath('rm');
-    $main::path{'tee'} = &checkinpath('tee');
-    $main::path{'find'} = &checkinpath('find');
-    $main::path{'dd'} = &checkinpath('dd');
-    $main::path{'printf'} = &checkinpath('printf');
+    $::path{'touch'} = &checkinpath('touch');
+    $::path{'hostname'} = &checkinpath('hostname');
+    $::path{'cat'} = &checkinpath('cat');
+    $::path{'rm'} = &checkinpath('rm');
+    $::path{'tee'} = &checkinpath('tee');
+    $::path{'find'} = &checkinpath('find');
+    $::path{'dd'} = &checkinpath('dd');
+    $::path{'printf'} = &checkinpath('printf');
 
-    push(@main::remoteprogs,($main::path{'touch'},$main::path{'rm'},$main::path{'find'},$main::path{'printf'}));
-
-    # Chase links
-    # FIXME relative links don't work
-    my $realdev = $cfg::device;
-    while (-l "$realdev") {
-
-	my @pathname = split('/',$realdev);
-	$realdev = readlink("$realdev");
-
-	# If a relative link we'll need the dir from the link
-	if ($realdev !~ m:^/:) {
-	    pop(@pathname);
-	    $realdev = join('/',@pathname) . "/$realdev";
-	}
-    }
+    push(@::remoteprogs,($::path{'touch'},$::path{'rm'},$::path{'find'},$::path{'printf'}));
 
     # Check device (or dir)
-    $main::ftape = 0;
+    $::ftape = 0;
     if ($cfg::type eq 'filelist') {
 
-	$main::use_file = 1;
+	$::use_file = 1;
 	chomp($cfg::device = `pwd`);
 	$cfg::device =~ s:/$::;
 	$cfg::indexes = 'false';
 
-    } elsif (-c $realdev) {
-
-	# Check for ftape driver
-	if ($realdev =~ /n?z?[qr]ft(\d+)/) {
-	    $main::ftape = 1;
-	}
-	$main::tapedevice = 1;
-
-    } elsif (-b $realdev) {
-
-	# In case of floppy or similar.
-	# Can't do multiple files this way; turn indexing off
-	$main::blockdevice = 1;
-	$cfg::indexes = 'false';
-
-    } elsif (-d "$cfg::device") {
-	if ($cfg::device !~ m:^/:) {
-	    push(@main::errors,"Please give full path, not relative (\$device=$cfg::device)");
-	} else {
-	    $main::use_file = 1;
-	    $cfg::device =~ s:/$::;            # nuke trailing slash if any
+	# Can we write to cwd?
+	if (! -w $cfg::device) {
+	    push(@::errors,"Can't write to $cfg::device");
 	}
 
-    } elsif ($cfg::device eq '-') {
+    } elsif (defined($::opt{'pipe'})) {
 
 	# Dump to stdout.
 	# Disable indexing, all messages to stderr
-	# FIXME this doesn't work yet
-	$main::msg = *STDERR;
-	$main::use_file = 1;
-	$main::use_stdout = 1;
+	$::use_file = 1;
+	$::use_stdout = 1;
 	$cfg::indexes = 'false';
+	$cfg::device = '-';
 
-    } elsif ($cfg::device =~ m%(\S+):(/dev/.*)%) {
-
-	$main::remotetapehost = $1;
-	$cfg::device = $2;
-	$main::tapedevice = 1;
+	if ($::mode !~ m/(set|dir|newtape)$/) {
+	    push(@::errors,"Can't use -pipe in read mode");
+	}
 
     } else {
-	push(@main::errors,"\$device must be set to a directory, a local device, or a remote device");
-    }
-    $main::device = $cfg::device;
 
-    # Can we write to it?
-    if (! -w $main::device and !defined($main::remotetapehost) and !defined($main::use_stdout)) {
-	push(@main::errors,"Can't write to $main::device");
+	# Chase device links
+	my $realdev = $cfg::device;
+	while (-l "$realdev") {
+
+	    my @pathname = split('/',$realdev);
+	    $realdev = readlink("$realdev");
+
+	    # If a relative link we'll need the dir from the link
+	    if ($realdev !~ m:^/:) {
+		pop(@pathname);
+		$realdev = join('/',@pathname) . "/$realdev";
+	    }
+	}
+
+	if (-c $realdev) {
+
+	    # Check for ftape driver
+	    if ($realdev =~ /n?z?[qr]ft(\d+)/) {
+		$::ftape = 1;
+	    }
+	    $::tapedevice = 1;
+
+	} elsif (-b $realdev) {
+
+	    # In case of floppy or similar.
+	    # Can't do multiple files this way; turn indexing off
+	    $::blockdevice = 1;
+	    $cfg::indexes = 'false';
+
+	} elsif (-d "$cfg::device") {
+	    if ($cfg::device !~ m:^/:) {
+		push(@::errors,"Please give full path, not relative (\$device=$cfg::device)");
+	    } else {
+		$::use_file = 1;
+		$cfg::device =~ s:/$::;        # nuke trailing slash if any
+	    }
+
+	} elsif ($cfg::device =~ m%(\S+):(/dev/.*)%) {
+
+	    $::remotetapehost = $1;
+	    $cfg::device = $2;
+	    $::tapedevice = 1;
+
+	} else {
+	    push(@::errors,"\$device must be set to a directory, a local device, or a remote device");
+	}
+
+	# Can we write to it?
+	if ((! -w $cfg::device) and
+	    !defined($::remotetapehost) and
+	    ($::mode =~ m/^(set|dir|newtape)$/)) {
+	    push(@::errors,"Can't write to $cfg::device");
+	}
+
     }
+
+    $::device = $cfg::device;
+
 
     # Set mt type
-    if (defined($main::tapedevice)) {
-	if ($main::ftape == 1) {
-	    $main::path{'mt'} = &checkinpath('ftmt');
+    if (defined($::tapedevice)) {
+	if ($::ftape == 1) {
+	    $::path{'mt'} = &checkinpath('ftmt');
 	} else {
-	    $main::path{'mt'} = &checkinpath('mt');
+	    $::path{'mt'} = &checkinpath('mt');
 	}
     }
 
     # Exclude regexp for find
-    $main::exclude_expr = '';
+    $::exclude_expr = '';
     if (defined($cfg::exclude_expr[0])) {
 	my @excl_array;
 	my $expr;
@@ -2724,23 +2771,23 @@ sub optioncheck {
 	    # quotes and there is _no way_ for csh do deal with $ in that
 	    # situation.  This took a LONG time to figure out.
 	    if ($expr =~ m/^(.+)\$$/) {
-		$expr = '"' . $1 . '"' . '$';  #' (comment to fool emacs 20.7
+		$expr = '"' . $1 . '"' . '$'; #' (comment to fool emacs 20.7
 	    } else {
 		$expr = '"' . $expr . '"';
 	    }
 
-	    $main::exclude_expr .= "! -regex $expr ";
+	    $::exclude_expr .= "! -regex $expr ";
 	}
     }
 
     # Traverse mountpoints?
     &checkvar(\$cfg::traverse_fs,'traverse_fs','false local all','false');
     if ($cfg::traverse_fs eq "local") {
-	$main::mountpoint_flag = "! -fstype nfs ! -fstype smbfs ! -fstype bind";
+	$::mountpoint_flag = "! -fstype nfs ! -fstype smbfs ! -fstype bind";
     } elsif ($cfg::traverse_fs eq "all") {
-	$main::mountpoint_flag = "";
+	$::mountpoint_flag = "";
     } else {
-	$main::mountpoint_flag = "-xdev";
+	$::mountpoint_flag = "-xdev";
     }
 
     # Block size
@@ -2748,7 +2795,7 @@ sub optioncheck {
     # Isn't required; if commented out in config we use same as $blksize
     #&checkvar(\$cfg::mt_blksize,'mt_blksize','exist');
     if ($cfg::blksize !~ m/^\d+$/) {
-	push(@main::errors,"\$blksize must be set to an integer");
+	push(@::errors,"\$blksize must be set to an integer");
     }
     if ($cfg::blksize ne '0') {
 	# buffer blocksize needs k appended
@@ -2756,101 +2803,101 @@ sub optioncheck {
 	# mbuffer blocksize in bytes
 	$mbuffer_blk_flag = "-s " . $cfg::blksize * 1024;
 	# dd blocksize needs k appended
-	$main::dd_blk_flag = "ibs=" . $cfg::blksize . "k obs=" . $cfg::blksize . "k";
+	$::dd_blk_flag = "ibs=" . $cfg::blksize . "k obs=" . $cfg::blksize . "k";
 	# dump blocksize just in k like the config file
-	$main::dump_blk_flag = "-b $cfg::blksize";
+	$::dump_blk_flag = "-b $cfg::blksize";
 	# afio blocksize needs k appended
-	$main::afio_blk_flag = "-b " . $cfg::blksize . "k";
+	$::afio_blk_flag = "-b " . $cfg::blksize . "k";
 	# cpio blocks are in bytes
-	$main::cpio_blk_flag = "-C " . $cfg::blksize * 1024;
+	$::cpio_blk_flag = "-C " . $cfg::blksize * 1024;
 	# tar blocks are in 512-byte units
 	# long name is really --blocking-factor but changed from --block-size
 	# only in recent versions.  just use the short flag.
-	$main::tar_blk_flag = "-b " . $cfg::blksize * 2;
+	$::tar_blk_flag = "-b " . $cfg::blksize * 2;
 	# star blocks are in 512-byte units
-	$main::star_blk_flag = "blocks=" . $cfg::blksize * 2;
+	$::star_blk_flag = "blocks=" . $cfg::blksize * 2;
 	# pax blocksize needs k appended
-	$main::pax_blk_flag = "-b " . $cfg::blksize . "k";
+	$::pax_blk_flag = "-b " . $cfg::blksize . "k";
     } else {
 	$buffer_blk_flag = "";
 	$mbuffer_blk_flag = "";
-	$main::dd_blk_flag = "";
-	$main::dump_blk_flag = "";
-	$main::afio_blk_flag = "";
-	$main::cpio_blk_flag = "";
-	$main::tar_blk_flag =  "";
-	$main::star_blk_flag =  "";
-	$main::pax_blk_flag = "";
+	$::dd_blk_flag = "";
+	$::dump_blk_flag = "";
+	$::afio_blk_flag = "";
+	$::cpio_blk_flag = "";
+	$::tar_blk_flag =  "";
+	$::star_blk_flag =  "";
+	$::pax_blk_flag = "";
     }
 
     # mt block size (in bytes not k)
     if (!defined($cfg::mt_blksize)) {
 	$cfg::mt_blksize = $cfg::blksize * 1024;
-	$main::mt_blksize = $cfg::mt_blksize;
+	$::mt_blksize = $cfg::mt_blksize;
     }
     if ($cfg::mt_blksize !~ m/^\d+$/) {
-	push(@main::errors,"\$mt_blksize must be set to an integer");
+	push(@::errors,"\$mt_blksize must be set to an integer");
     } else {
 	if ($cfg::mt_blksize != 0) {
 	    my $tmp = $cfg::blksize * 1024;
 	    if ($tmp%$cfg::mt_blksize != 0) {
-		push(@main::errors,"\$mt_blksize ($cfg::mt_blksize) should be a factor of \$blksize ($tmp)");
+		push(@::errors,"\$mt_blksize ($cfg::mt_blksize) should be a factor of \$blksize ($tmp)");
 	    }
 	}
-	$main::mt_blksize = $cfg::mt_blksize;
+	$::mt_blksize = $cfg::mt_blksize;
     }
 
     # Generic compression (afio archives will do their own flags)
     if ($cfg::compress eq "gzip") {
-	$main::path{'gzip'} = &checkinpath($cfg::compress);
-	push(@main::remoteprogs, $main::path{$cfg::compress});
+	$::path{'gzip'} = &checkinpath($cfg::compress);
+	push(@::remoteprogs, $::path{$cfg::compress});
 	if ($cfg::compr_level !~ m/^[123456789]$/) {
-	    push(@main::errors,"\$compr_level must be set to 1-9");
+	    push(@::errors,"\$compr_level must be set to 1-9");
 	} else {
-	    $main::z = " | $main::path{$cfg::compress} -$cfg::compr_level";
+	    $::z = " | $::path{$cfg::compress} -$cfg::compr_level";
 	}
-	$main::unz = "$main::path{$cfg::compress} -dq | ";
+	$::unz = "$::path{$cfg::compress} -dq | ";
 
     } elsif ($cfg::compress eq "bzip2") {
-	$main::path{'bzip2'} = &checkinpath($cfg::compress);
-	push(@main::remoteprogs, $main::path{$cfg::compress});
+	$::path{'bzip2'} = &checkinpath($cfg::compress);
+	push(@::remoteprogs, $::path{$cfg::compress});
 	if ($cfg::compr_level !~ m/^[123456789]$/) {
-	    push(@main::errors,"\$compr_level must be set to 1-9");
+	    push(@::errors,"\$compr_level must be set to 1-9");
 	} else {
-	    $main::z = " | $main::path{$cfg::compress} -$cfg::compr_level";
+	    $::z = " | $::path{$cfg::compress} -$cfg::compr_level";
 	}
-	$main::unz = "$main::path{$cfg::compress} -d | ";
+	$::unz = "$::path{$cfg::compress} -d | ";
 
     } elsif ($cfg::compress eq "compress") {
-	$main::path{'compress'} = &checkinpath($cfg::compress);
-	push(@main::remoteprogs, $main::path{$cfg::compress});
-	$main::z = " | $main::path{$cfg::compress} -c";
-	$main::unz = "$main::path{$cfg::compress} -dc | ";
+	$::path{'compress'} = &checkinpath($cfg::compress);
+	push(@::remoteprogs, $::path{$cfg::compress});
+	$::z = " | $::path{$cfg::compress} -c";
+	$::unz = "$::path{$cfg::compress} -dc | ";
 
     } elsif ($cfg::compress eq "zip") {
-	$main::path{'zip'} = &checkinpath('zip');
-	push(@main::remoteprogs, $main::path{'zip'});
-	$main::path{'funzip'} = &checkinpath('funzip');
+	$::path{'zip'} = &checkinpath('zip');
+	push(@::remoteprogs, $::path{'zip'});
+	$::path{'funzip'} = &checkinpath('funzip');
 	if ($cfg::compr_level !~ m/^[123456789]$/) {
-	    push(@main::errors,"\$compr_level must be set to 1-9");
+	    push(@::errors,"\$compr_level must be set to 1-9");
 	} else {
-	    $main::z = " | $main::path{zip} -$cfg::compr_level - -";
-	    $main::unz = "$main::path{funzip} | ";
+	    $::z = " | $::path{zip} -$cfg::compr_level - -";
+	    $::unz = "$::path{funzip} | ";
 	}
     } else {
-	$main::z = "";
-	$main::unz = "";
+	$::z = "";
+	$::unz = "";
     }
 
     # Block padding
-    if (($cfg::pad_blocks eq "true") and defined($main::tapedevice)) {
-	$main::dd_write_pad_flag = "conv=noerror,sync";
-	$main::dd_read_pad_flag = "conv=noerror,sync";
+    if (($cfg::pad_blocks eq "true") and defined($::tapedevice)) {
+	$::dd_write_pad_flag = "conv=noerror,sync";
+	$::dd_read_pad_flag = "conv=noerror,sync";
 	$buffer_write_pad_flag = "-B";
 	$buffer_read_pad_flag = "-B";
     } else {
-	$main::dd_write_pad_flag = "conv=noerror";
-	$main::dd_read_pad_flag = "conv=noerror";
+	$::dd_write_pad_flag = "conv=noerror";
+	$::dd_read_pad_flag = "conv=noerror";
 	$buffer_write_pad_flag = "";
 	$buffer_read_pad_flag = "";
     }
@@ -2861,119 +2908,119 @@ sub optioncheck {
 	&checkvar(\$cfg::buffer_fill_pct,'buffer_fill_pct','exist','75');
 	&checkvar(\$cfg::buffer_pause_usec,'buffer_pause_usec','exist','100');
 	if ($cfg::buffer_megs !~ m/^\d+$/) {
-	    push(@main::errors,"\$buffer_megs must be set to integer number of megabytes");
+	    push(@::errors,"\$buffer_megs must be set to integer number of megabytes");
 	}
 	if ($cfg::buffer_fill_pct !~ m/^\d+$/) {
-	    push(@main::errors,"\$buffer_fill_pct must be set to an integer");
+	    push(@::errors,"\$buffer_fill_pct must be set to an integer");
 	}
 	if ($cfg::buffer_pause_usec !~ m/^\d+$/) {
-	    push(@main::errors,"\$buffer_pause_usec must be set to an integer");
+	    push(@::errors,"\$buffer_pause_usec must be set to an integer");
 	}
 	if ($cfg::buffer eq "buffer") {
 
-	    $main::path{'buffer'} = &checkinpath('buffer');
-	    push(@main::remoteprogs, $main::path{'buffer'});
+	    $::path{'buffer'} = &checkinpath('buffer');
+	    push(@::remoteprogs, $::path{'buffer'});
 
 	    my $write_flags;
 	    my $read_flags;
 	    my $megs = $cfg::buffer_megs . "m";
-	    my $bufcmd = "$main::path{buffer} -m $megs -p $cfg::buffer_fill_pct $buffer_blk_flag -t ";
+	    my $bufcmd = "$::path{buffer} -m $megs -p $cfg::buffer_fill_pct $buffer_blk_flag -t ";
 
-	    if (defined($main::tapedevice)) {
+	    if (defined($::tapedevice)) {
 		$write_flags = "-u $cfg::buffer_pause_usec $buffer_write_pad_flag -o ";
 		$read_flags = "-u $cfg::buffer_pause_usec $buffer_read_pad_flag -i ";
 	    } else {
 		$write_flags = "$buffer_write_pad_flag -o ";
 		$read_flags = "$buffer_read_pad_flag -i ";
 	    }
-	    $main::buffer_cmd = " | $bufcmd";
-	    $main::write_cmd = "$bufcmd $write_flags";
-	    $main::read_cmd = "$bufcmd $read_flags";
+	    $::buffer_cmd = " | $bufcmd";
+	    $::write_cmd = "$bufcmd $write_flags";
+	    $::read_cmd = "$bufcmd $read_flags";
 
 	} elsif ($cfg::buffer eq "mbuffer") {
 
-	    $main::path{'mbuffer'} = &checkinpath('mbuffer');
-	    push(@main::remoteprogs, $main::path{'mbuffer'});
+	    $::path{'mbuffer'} = &checkinpath('mbuffer');
+	    push(@::remoteprogs, $::path{'mbuffer'});
 
 	    my $megs = $cfg::buffer_megs . "M";
-	    my $bufcmd = "$main::path{mbuffer} -m $megs -p $cfg::buffer_fill_pct $mbuffer_blk_flag";
+	    my $bufcmd = "$::path{mbuffer} -m $megs -p $cfg::buffer_fill_pct $mbuffer_blk_flag";
 
 	    # FIXME keep testing this
 	    # FIXME sleep setup just like buffer
-	    $main::buffer_cmd = " | $bufcmd -q";
-	    $main::write_cmd = "$bufcmd | $main::path{dd} $main::dd_blk_flag $main::dd_write_pad_flag of=";
-	    $main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_read_pad_flag if=";
+	    $::buffer_cmd = " | $bufcmd -q";
+	    $::write_cmd = "$bufcmd | $::path{dd} $::dd_blk_flag $::dd_write_pad_flag of=";
+	    $::read_cmd = "$::path{dd} $::dd_blk_flag $::dd_read_pad_flag if=";
 
 	} elsif ($cfg::buffer eq "bfr") {
 
-	    $main::path{'bfr'} = &checkinpath('bfr');
-	    push(@main::remoteprogs, $main::path{'bfr'});
+	    $::path{'bfr'} = &checkinpath('bfr');
+	    push(@::remoteprogs, $::path{'bfr'});
 
 	    my $megs = $cfg::buffer_megs . "m";
-	    my $bufcmd = "$main::path{bfr} -b $megs";
+	    my $bufcmd = "$::path{bfr} -b $megs";
 
-	    $main::buffer_cmd = " | $bufcmd";
-	    $main::write_cmd = "$bufcmd | $main::path{dd} $main::dd_blk_flag $main::dd_write_pad_flag of=";
-	    $main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_read_pad_flag if=";
+	    $::buffer_cmd = " | $bufcmd";
+	    $::write_cmd = "$bufcmd | $::path{dd} $::dd_blk_flag $::dd_write_pad_flag of=";
+	    $::read_cmd = "$::path{dd} $::dd_blk_flag $::dd_read_pad_flag if=";
 	}
     } else {
 
 	# If buffering disabled, use dd or cat depending on if blocking turned off on not
 	if ($cfg::blksize eq '0') {
-	    $main::buffer_cmd = "";
-	    $main::write_cmd = "$main::path{cat} > ";
-	    $main::read_cmd = "$main::path{cat} ";
+	    $::buffer_cmd = "";
+	    $::write_cmd = "$::path{cat} > ";
+	    $::read_cmd = "$::path{cat} ";
 	} else {
-	    $main::buffer_cmd = "";
-	    $main::write_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_write_pad_flag of=";
-	    $main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_read_pad_flag if=";
+	    $::buffer_cmd = "";
+	    $::write_cmd = "$::path{dd} $::dd_blk_flag $::dd_write_pad_flag of=";
+	    $::read_cmd = "$::path{dd} $::dd_blk_flag $::dd_read_pad_flag if=";
 	}
     }
 
     # Sets / filesystems
-    if (defined($main::opt{'dir'})) {
+    if (defined($::opt{'dir'})) {
 
-	    # Single directory
-	    if ($main::opt{'dir'} =~ /^(\S+):/) {
-		$main::remotehosts{$1} = 1;
-	    } else {
-		$main::local = 1;
-	    }
+	# Single directory
+	if ($::opt{'dir'} =~ /^(\S+):/) {
+	    $::remotehosts{$1} = 1;
+	} else {
+	    $::local = 1;
+	}
 
-	    # Get rid of trailing /
-	    $main::opt{'dir'} = &nuke_trailing_slash($main::opt{'dir'});
+	# Get rid of trailing /
+	$::opt{'dir'} = &nuke_trailing_slash($::opt{'dir'});
 
-    } elsif (defined($main::opt{'set'})) {
+    } elsif (defined($::opt{'set'})) {
 
-	if (defined($main::use_stdout)) {
-	    push(@main::errors,"can't use -set with stdout option");
+	if (defined($::use_stdout)) {
+	    push(@::errors,"can't use -set with -pipe option");
 	}
 
 	foreach my $set (keys %cfg::set) {
 	    if ($set eq 'all') {
-		push(@main::errors,"can't define a set named 'all'");
+		push(@::errors,"can't define a set named 'all'");
 	    }
 	}
 
 	my @do_sets;
-	if ($main::opt{'set'} eq 'all') {
+	if ($::opt{'set'} eq 'all') {
 	    @do_sets = keys(%cfg::set);
 	    if (scalar(@do_sets) == 0) {
-		push(@main::errors,"no backup sets defined");
+		push(@::errors,"no backup sets defined");
 	    }
 	} else {
-	    @do_sets = ($main::opt{'set'});
+	    @do_sets = ($::opt{'set'});
 	}
 
 	foreach my $this_set (@do_sets) {
 	    if (!defined($cfg::set{$this_set})) {
-		push(@main::errors,"set $this_set is not defined");
+		push(@::errors,"set $this_set is not defined");
 	    } else {
 		foreach my $dir (&split_list($cfg::set{$this_set})) {
 		    if ($dir =~ /^(\S+):/g) {
-			$main::remotehosts{$1} = 1;
+			$::remotehosts{$1} = 1;
 		    } else {
-			$main::local = 1;
+			$::local = 1;
 		    }
 		}
 	    }
@@ -2984,57 +3031,57 @@ sub optioncheck {
     foreach my $fs (keys %cfg::prune) {
 	$fs = &nuke_trailing_slash($fs);
 	foreach my $expr (&split_list($cfg::prune{$fs})) {
-	    $main::prune{$fs}{$expr} = 1;
+	    $::prune{$fs}{$expr} = 1;
 	}
     }
 
     # Verbose flag
     if ($cfg::verbose eq "true") {
-	$main::dump_verb_flag = "-v";
-	$main::afio_verb_flag = "-v";
-	$main::cpio_verb_flag = "-v";
-	$main::tar_verb_flag = "--verbose";
-	$main::star_verb_flag = "-v";
-	$main::pax_verb_flag = "-v";
-	$main::zip_verb_flag = "-v";
-	$main::ar_verb_flag = "v";
-	$main::shar_verb_flag = "";
-	$main::lha_verb_flag = "";
+	$::dump_verb_flag = "-v";
+	$::afio_verb_flag = "-v";
+	$::cpio_verb_flag = "-v";
+	$::tar_verb_flag = "--verbose";
+	$::star_verb_flag = "-v";
+	$::pax_verb_flag = "-v";
+	$::zip_verb_flag = "-v";
+	$::ar_verb_flag = "v";
+	$::shar_verb_flag = "";
+	$::lha_verb_flag = "";
     } else {
-	$main::dump_verb_flag = "";
-	$main::afio_verb_flag = "";
-	$main::cpio_verb_flag = "";
-	$main::tar_verb_flag = "";
-	$main::star_verb_flag = "-silent";
-	$main::pax_verb_flag = "";
-	$main::zip_verb_flag = "-q";
-	$main::ar_verb_flag = "";
-	$main::shar_verb_flag = "-q";
-	$main::lha_verb_flag = "q";
+	$::dump_verb_flag = "";
+	$::afio_verb_flag = "";
+	$::cpio_verb_flag = "";
+	$::tar_verb_flag = "";
+	$::star_verb_flag = "-silent";
+	$::pax_verb_flag = "";
+	$::zip_verb_flag = "-q";
+	$::ar_verb_flag = "";
+	$::shar_verb_flag = "-q";
+	$::lha_verb_flag = "q";
     }
 
     # Sparse flag
     if ($cfg::sparse eq "true") {
-	$main::afio_sparse_flag = "";
-	$main::cpio_sparse_flag = "";
-	$main::tar_sparse_flag = "--sparse";
-	$main::star_sparse_flag = "-sparse";
+	$::afio_sparse_flag = "";
+	$::cpio_sparse_flag = "";
+	$::tar_sparse_flag = "--sparse";
+	$::star_sparse_flag = "-sparse";
     } else {
-	$main::afio_sparse_flag = "-j";
-	$main::cpio_sparse_flag = "";
-	$main::tar_sparse_flag = "";
-	$main::star_sparse_flag = "";
+	$::afio_sparse_flag = "-j";
+	$::cpio_sparse_flag = "";
+	$::tar_sparse_flag = "";
+	$::star_sparse_flag = "";
     }
 
     # atime preserve flag
     if ($cfg::atime_preserve eq "true") {
-	$main::afio_atime_flag = "-a";
-	$main::tar_atime_flag = "--atime-preserve";
-	$main::star_atime_flag = "-atime";
+	$::afio_atime_flag = "-a";
+	$::tar_atime_flag = "--atime-preserve";
+	$::star_atime_flag = "-atime";
     } else {
-	$main::afio_atime_flag = "";
-	$main::tar_atime_flag = "";
-	$main::star_atime_flag = "";
+	$::afio_atime_flag = "";
+	$::tar_atime_flag = "";
+	$::star_atime_flag = "";
     }
 
     # Type-specific setup
@@ -3043,20 +3090,20 @@ sub optioncheck {
 	&checkvar(\$cfg::dump_length,'dump_length','exist','0');
 	&checkvar(\$cfg::dump_use_dumpdates,'dump_use_dumpdates','bool','false');
 
-	$main::path{'dump'} = &checkinpath('dump');
-	$main::path{'restore'} = &checkinpath('restore');
-	push(@main::remoteprogs, $main::path{'dump'});
+	$::path{'dump'} = &checkinpath('dump');
+	$::path{'restore'} = &checkinpath('restore');
+	push(@::remoteprogs, $::path{'dump'});
 
 	# Length of tape
 	if ($cfg::dump_length !~ m/^\d+$/) {
-	    push(@main::errors,"\$dump_length must be set to integer number of kilobytes");
+	    push(@::errors,"\$dump_length must be set to integer number of kilobytes");
 	}
 
 	# If length set to 0 will will try autosize
 	if ($cfg::dump_length == 0) {
-	    $main::dump_len_flag = "-a";
+	    $::dump_len_flag = "-a";
 	} else {
-	    $main::dump_len_flag = "-B $cfg::dump_length";
+	    $::dump_len_flag = "-B $cfg::dump_length";
 	}
 
     } elsif ($cfg::type eq 'afio') {
@@ -3066,59 +3113,59 @@ sub optioncheck {
 	&checkvar(\$cfg::afio_compress_threshold,'afio_compress_threshold','exist','3');
 	&checkvar(\$cfg::afio_nocompress_types,'afio_nocompress_types','exist','mp3 MP3 Z z gz gif zip ZIP lha jpeg jpg JPG taz tgz deb rpm bz2');
 
-	$main::path{'afio'} = &checkinpath('afio');
-	push(@main::remoteprogs, $main::path{'afio'});
+	$::path{'afio'} = &checkinpath('afio');
+	push(@::remoteprogs, $::path{'afio'});
 
 	# Compress flag for afio must be handled differently
 	if ($cfg::compress =~ m/^(gzip|bzip2|compress|zip)$/) {
 
 	    if ($cfg::compress eq "gzip") {
-		$main::afio_z_flag = "-P $main::path{$cfg::compress} -Q -$cfg::compr_level -Z";
-		$main::afio_unz_flag = "-P $main::path{$cfg::compress} -Q -d -Q -q -Z";
+		$::afio_z_flag = "-P $::path{$cfg::compress} -Q -$cfg::compr_level -Z";
+		$::afio_unz_flag = "-P $::path{$cfg::compress} -Q -d -Q -q -Z";
 
 	    } elsif ($cfg::compress eq "bzip2") {
-		$main::afio_z_flag = "-P $main::path{$cfg::compress} -Q -$cfg::compr_level -Z";
-		$main::afio_unz_flag = "-P $main::path{$cfg::compress} -Q -d -Z";
+		$::afio_z_flag = "-P $::path{$cfg::compress} -Q -$cfg::compr_level -Z";
+		$::afio_unz_flag = "-P $::path{$cfg::compress} -Q -d -Z";
 
 	    } elsif ($cfg::compress eq "zip") {
-		$main::afio_z_flag = "-P $main::path{zip} -Q -$cfg::compr_level -Q - -Q - -Z";
-		$main::afio_unz_flag = "-P $main::path{funzip} -Q \"\" -Z";
+		$::afio_z_flag = "-P $::path{zip} -Q -$cfg::compr_level -Q - -Q - -Z";
+		$::afio_unz_flag = "-P $::path{funzip} -Q \"\" -Z";
 
 	    } elsif ($cfg::compress eq "compress") {
-		$main::afio_z_flag = "-P $main::path{$cfg::compress} -Q -c -Z";
-		$main::afio_unz_flag = "-P $main::path{$cfg::compress} -Q -d -Q -c -Z";
+		$::afio_z_flag = "-P $::path{$cfg::compress} -Q -c -Z";
+		$::afio_unz_flag = "-P $::path{$cfg::compress} -Q -d -Q -c -Z";
 
 	    }
-	    $main::unz = ""; # Reset & just use this for reading the archive file.
+	    $::unz = ""; # Reset & just use this for reading the archive file.
 
 	    # Compression cache size
 	    if ($cfg::afio_compress_cache_size !~ m/^\d+$/) {
-		push(@main::errors,"\$afio_compress_cache_size must be set to an integer");
+		push(@::errors,"\$afio_compress_cache_size must be set to an integer");
 	    } else {
 		if ($cfg::afio_compress_cache_size != 0) {
-		    $main::afio_z_flag .= " -M " . $cfg::afio_compress_cache_size . "m";
+		    $::afio_z_flag .= " -M " . $cfg::afio_compress_cache_size . "m";
 		}
 	    }
 
 	    # Compression threshold
 	    if ($cfg::afio_compress_threshold !~ m/^\d+$/) {
-		push(@main::errors,"\$afio_compress_threshold must be set to an integer");
+		push(@::errors,"\$afio_compress_threshold must be set to an integer");
 	    } else {
 		if ($cfg::afio_compress_threshold != 0) {
-		    $main::afio_z_flag .= " -T " . $cfg::afio_compress_threshold . "k";
+		    $::afio_z_flag .= " -T " . $cfg::afio_compress_threshold . "k";
 		}
 	    }
 
 	} else {
-	    $main::afio_z_flag = "";
-	    $main::afio_unz_flag = "";
+	    $::afio_z_flag = "";
+	    $::afio_unz_flag = "";
 	}
 
 	# Echo block number
-	$main::afio_bnum_flag = "";
+	$::afio_bnum_flag = "";
 	if ($cfg::verbose eq "true") {
 	    if ($cfg::afio_echo_block eq "true") {
-		$main::afio_bnum_flag = "-B";
+		$::afio_bnum_flag = "-B";
 	    }
 	}
 
@@ -3126,12 +3173,12 @@ sub optioncheck {
 
 	&checkvar(\$cfg::cpio_format,'cpio_format','bin odc newc crc tar ustar hpbin hpodc','newc');
 
-	$main::path{'cpio'} = &checkinpath('cpio');
-	push(@main::remoteprogs, $main::path{'cpio'});
+	$::path{'cpio'} = &checkinpath('cpio');
+	push(@::remoteprogs, $::path{'cpio'});
 
 	if ($cfg::type eq 'copy') {
-	    if (!defined($main::use_file)) {
-		push(@main::errors,"Can't use copy unless archiving to disk!");
+	    if (!defined($::use_file)) {
+		push(@::errors,"Can't use copy unless archiving to disk!");
 	    }
 	}
 
@@ -3139,14 +3186,14 @@ sub optioncheck {
 
 	&checkvar(\$cfg::tar_echo_record_num,'tar_echo_record_num','bool','false');
 
-	$main::path{'tar'} = &checkinpath('tar');
-	push(@main::remoteprogs, $main::path{'tar'});
+	$::path{'tar'} = &checkinpath('tar');
+	push(@::remoteprogs, $::path{'tar'});
 
 	# Echo record number
-	$main::tar_recnum_flag = "";
+	$::tar_recnum_flag = "";
 	if ($cfg::verbose eq "true") {
 	    if ($cfg::tar_echo_record_num eq "true") {
-		$main::tar_recnum_flag = "-R";
+		$::tar_recnum_flag = "-R";
 	    }
 	}
 
@@ -3157,89 +3204,89 @@ sub optioncheck {
 	&checkvar(\$cfg::star_format,'star_format','tar star gnutar ustar pax xstar xustar exustar suntar','exustar');
 	&checkvar(\$cfg::star_echo_block_num,'star_echo_block_num','bool','false');
 
-	$main::path{'star'} = &checkinpath('star');
-	push(@main::remoteprogs, $main::path{'star'});
+	$::path{'star'} = &checkinpath('star');
+	push(@::remoteprogs, $::path{'star'});
 
 	# Echo block number
-	$main::star_blocknum_flag = "";
+	$::star_blocknum_flag = "";
 	if ($cfg::verbose eq "true") {
 	    if ($cfg::star_echo_block_num eq "true") {
-		$main::star_blocknum_flag = "-block-number";
+		$::star_blocknum_flag = "-block-number";
 	    }
 	}
 
 	# ACL flag
 	if ($cfg::star_acl eq "true") {
-	    $main::star_acl_flag = "-acl";
+	    $::star_acl_flag = "-acl";
 	} else {
-	    $main::star_acl_flag = "";
+	    $::star_acl_flag = "";
 	}
 
 	# fifo
 	if ($cfg::star_fifo eq "true") {
-	    $main::star_fifo_flag = "-fifo";
+	    $::star_fifo_flag = "-fifo";
 	    if ($cfg::verbose eq "true") {
-		$main::star_fifo_flag .= " -fifostats";
+		$::star_fifo_flag .= " -fifostats";
 	    }
 	} else {
-	    $main::star_fifo_flag = "";
+	    $::star_fifo_flag = "";
 	}
 
     } elsif ($cfg::type eq 'pax') {
 
 	&checkvar(\$cfg::pax_format,'pax_format','cpio bcpio sv4cpio sv4crc tar ustar');
 
-	$main::path{'pax'} = &checkinpath('pax');
-	push(@main::remoteprogs, $main::path{'pax'});
+	$::path{'pax'} = &checkinpath('pax');
+	push(@::remoteprogs, $::path{'pax'});
 
     } elsif ($cfg::type eq 'zip') {
 
 	&checkvar(\$cfg::zip_nocompress_types,'zip_nocompress_types','exist','mp3 MP3 Z z gz gif zip ZIP lha jpeg jpg JPG taz tgz deb rpm bz2');
 
-	$main::path{'zip'} = &checkinpath('zip');
-	push(@main::remoteprogs, $main::path{'zip'});
-	$main::path{'unzip'} = &checkinpath('unzip');
+	$::path{'zip'} = &checkinpath('zip');
+	push(@::remoteprogs, $::path{'zip'});
+	$::path{'unzip'} = &checkinpath('unzip');
 
-	$main::zip_compr_flag = "-$cfg::compr_level";
+	$::zip_compr_flag = "-$cfg::compr_level";
 
-       if ($cfg::compress =~ /^(gzip|bzip2|compress|zip)$/) {
+	if ($cfg::compress =~ /^(gzip|bzip2|compress|zip)$/) {
 	    warn("Using type \"zip\" with compress=$cfg::compress makes no sense");
 	    warn("Setting compression to false");
-	    $main::unz = "";
-	    $main::z = "";
+	    $::unz = "";
+	    $::z = "";
 	    $cfg::compress = "false";
 	}
 
-	$main::zip_noz_flag = "";
+	$::zip_noz_flag = "";
 	if (defined($cfg::zip_nocompress_types) and $cfg::zip_nocompress_types ne "") {
 	    # Add dots to file extensions, make -n flag
 	    @_ =  split(" ",$cfg::zip_nocompress_types);
 	    foreach (@_) {
 		$_ = "." . $_;
 	    }
-	    $main::zip_noz_flag = " -n " . join(":",@_);
+	    $::zip_noz_flag = " -n " . join(":",@_);
 	}
 
     } elsif ($cfg::type eq 'ar') {
 
-	$main::path{'ar'} = &checkinpath('ar');
-	push(@main::remoteprogs, $main::path{'ar'});
+	$::path{'ar'} = &checkinpath('ar');
+	push(@::remoteprogs, $::path{'ar'});
 
     } elsif ($cfg::type eq 'shar') {
 
-	$main::path{'shar'} = &checkinpath('shar');
-	push(@main::remoteprogs, $main::path{'shar'});
+	$::path{'shar'} = &checkinpath('shar');
+	push(@::remoteprogs, $::path{'shar'});
 
     } elsif ($cfg::type eq 'lha') {
 
-	$main::path{'lha'} = &checkinpath('lha');
-	push(@main::remoteprogs, $main::path{'lha'});
+	$::path{'lha'} = &checkinpath('lha');
+	push(@::remoteprogs, $::path{'lha'});
 
 	if ($cfg::compress =~ /^(gzip|bzip2|compress|zip)$/) {
 	    warn("Using type \"lha\" with compress=$cfg::compress makes no sense");
 	    warn("Setting compression to false");
-	    $main::unz = "";
-	    $main::z = "";
+	    $::unz = "";
+	    $::z = "";
 	    $cfg::compress = "false";
 	}
 
@@ -3248,203 +3295,183 @@ sub optioncheck {
 	if ($cfg::compress =~ /^(gzip|bzip2|compress|zip)$/) {
 	    warn("Using type \"filelist\" with compress=$cfg::compress makes no sense");
 	    warn("Setting compression to false");
-	    $main::unz = "";
-	    $main::z = "";
+	    $::unz = "";
+	    $::z = "";
 	    $cfg::compress = "false";
 	}
 
-    } # type-specific
+    }                                             # type-specific
 
 
     # Tmp dir
     $cfg::tmpdir = &nuke_trailing_slash($cfg::tmpdir);
     if ($cfg::tmpdir !~ m:^/:) {
-	push(@main::errors,"\$tmpdir must be absolute path: $cfg::tmpdir");
+	push(@::errors,"\$tmpdir must be absolute path: $cfg::tmpdir");
     }
     if (! -d "$cfg::tmpdir") {
-	push(@main::errors,"\$tmpdir $cfg::tmpdir is not a directory");
+	push(@::errors,"\$tmpdir $cfg::tmpdir is not a directory");
     }
     if (! -w "$cfg::tmpdir") {
-	push(@main::errors,"\$tmpdir $cfg::tmpdir is not writable");
+	push(@::errors,"\$tmpdir $cfg::tmpdir is not writable");
     }
 
     # Levels
-    if (defined($main::opt{'level'}) and
-	(defined($main::opt{'incremental'}) or
-	 defined($main::opt{'differential'}) or
-	 defined($main::opt{'full'}))) {
-	push(@main::errors,"Can't use -level AND -incremental/-differential/-full");
+    if (defined($::opt{'level'}) and
+	(defined($::opt{'incremental'}) or
+	 defined($::opt{'differential'}) or
+	 defined($::opt{'full'}))) {
+	push(@::errors,"Can't use -level AND -incremental/-differential/-full");
     }
 
-    if (!defined($main::opt{'level'})) {
-	if (defined($main::opt{'incremental'})) {
-	    $main::opt{'level'} = 'incremental';
-	} elsif (defined($main::opt{'differential'})) {
-	    $main::opt{'level'} = 'differential';
-	} elsif (defined($main::opt{'full'})) {
-	    $main::opt{'level'} = 'full';
+    if (!defined($::opt{'level'})) {
+	if (defined($::opt{'incremental'})) {
+	    $::opt{'level'} = 'incremental';
+	} elsif (defined($::opt{'differential'})) {
+	    $::opt{'level'} = 'differential';
+	} elsif (defined($::opt{'full'})) {
+	    $::opt{'level'} = 'full';
 	} else {
-	    $main::opt{'level'} = 0;
+	    $::opt{'level'} = 0;
 	}
     }
 
-    if (($main::opt{'level'} !~ m/^\d+$/) and
-	($main::opt{'level'} !~ m/^(full|differential|incremental)$/)) {
-	push(@main::errors,"-level must be numeric, or full/differential/incremental");
+    if (($::opt{'level'} !~ m/^\d+$/) and
+	($::opt{'level'} !~ m/^(full|differential|incremental)$/)) {
+	push(@::errors,"-level must be numeric, or full/differential/incremental");
     }
 
     # Check for digits or change full/diff to level number
     # Incremental + fs=all we have to handle later since it might be
     # different for each fs
-    if ($main::opt{'level'} =~ m/^\d+$/) {
+    if ($::opt{'level'} =~ m/^\d+$/) {
 	# Make string variable numeric
-	$main::level = POSIX::strtod($main::opt{'level'});
-	if (($cfg::type eq 'dump') and ($main::level > 9)) {
-	    push(@main::errors,"can't use level > 9 and type=dump");
+	$::level = POSIX::strtod($::opt{'level'});
+	if (($cfg::type eq 'dump') and ($::level > 9)) {
+	    push(@::errors,"can't use level > 9 and type=dump");
 	}
-    } elsif ($main::opt{'level'} eq "full") {
-	$main::level = 0;
-    } elsif ($main::opt{'level'} eq "differential") {
-	$main::level = 1;
-    } elsif ($main::opt{'level'} eq "incremental") {
+    } elsif ($::opt{'level'} eq "full") {
+	$::level = 0;
+    } elsif ($::opt{'level'} eq "differential") {
+	$::level = 1;
+    } elsif ($::opt{'level'} eq "incremental") {
 	# If incremental + one fs, we can find the level now.
-	if (defined($main::opt{'dir'})) {
-	    $main::level = &get_incremental_level($main::opt{'dir'});
-	    if (($cfg::type eq 'dump') and ($main::level > 9)) {
-		push(@main::errors,"can't use level > 9 and type=dump");
+	if (defined($::opt{'dir'})) {
+	    $::level = &get_incremental_level($::opt{'dir'});
+	    if (($cfg::type eq 'dump') and ($::level > 9)) {
+		push(@::errors,"can't use level > 9 and type=dump");
 	    }
 	} else {
 	    # If we are doing a set have to postpone till later; each
 	    # fs might have a different level...
-	    undef $main::level;
-	    $main::set_incremental = 1;
+	    undef $::level;
+	    $::set_incremental = 1;
 	}
     }
 
     # Package delta option
-    if (defined($main::opt{'pkgdelta'})) {
+    if (defined($::opt{'pkgdelta'})) {
 
 	&checkvar(\$cfg::pkgdelta_archive_list,'pkgdelta_archive_list','true false rootonly','rootonly');
 	&checkvar(\$cfg::pkgdelta_archive_unowned,'pkgdelta_archive_unowned','bool','true');
 	&checkvar(\$cfg::pkgdelta_archive_changed,'pkgdelta_archive_changed','bool','true');
 
-	if ($main::opt{'pkgdelta'} eq 'rpm') {
-	    $main::pkgdelta = 'rpm';
-	    $main::path{'rpm'} = &checkinpath('rpm');
+	if ($::opt{'pkgdelta'} eq 'rpm') {
+	    $::pkgdelta = 'rpm';
+	    $::path{'rpm'} = &checkinpath('rpm');
 
-	} elsif ($main::opt{'pkgdelta'} eq 'freebsd') {
+	} elsif ($::opt{'pkgdelta'} eq 'freebsd') {
 	    #
 	    # JR: FIXME FIXME FIXME
 	    # pkg_info doesn't have the '-g' flag before 4.3-RELEASE so we need to look
 	    # at the uname value and complain if pkgdelta is used on a FreeBSD box with a
 	    # release before that.
 	    #
-	    $main::pkgdelta = 'freebsd';
-	    $main::path{'pkg_info'} = &checkinpath('pkg_info');
+	    $::pkgdelta = 'freebsd';
+	    $::path{'pkg_info'} = &checkinpath('pkg_info');
 
 	} else {
-	    push(@main::errors,"$main::opt{pkgdelta} not a valid option for -pkgdelta");
+	    push(@::errors,"$::opt{pkgdelta} not a valid option for -pkgdelta");
 	}
     }
 
     # Check toc/rmindex/rmfile flags
-    if (defined($main::opt{'toc'}) or defined($main::opt{'rmindex'})) {
+    if (defined($::opt{'toc'}) or defined($::opt{'rmindex'})) {
 	if ($cfg::indexes eq "false") {
-	    push(@main::errors,"Can't do -toc/rmindex with \$indexes set to false");
+	    push(@::errors,"Can't do -toc/rmindex with \$indexes set to false");
 	}
     }
-    if (defined($main::opt{'rmindex'}) and (${$main::opt{'rmindex'}}[0] eq '')) {
-	    push(@main::errors,"-rmindex requires 'key:filenum', 'key' or 'all'");
+    if (defined($::opt{'rmindex'}) and (${$::opt{'rmindex'}}[0] eq '')) {
+	push(@::errors,"-rmindex requires 'key:filenum', 'key' or 'all'");
     }
-    if (defined($main::opt{'rmfile'}) and (${$main::opt{'rmfile'}}[0] eq '')) {
-	    push(@main::errors,"-rmfile requires a filename or 'all'");
-    }
-
-    # Mode
-    my (@modelist) = qw(set dir list extract compare restore toc newtape rmindex rmfile test-tape-drive);
-    my @modes;
-    my $modecount = 0;
-    $main::mode = '';
-    foreach my $mode (@modelist) {
-	if (defined($main::opt{$mode})) {
-	    $modecount++;
-	    $main::mode = $mode;
-	    push(@modes,$mode);
-	}
-    }
-    if ($modecount > 1) {
-	$_ = join(" -",@modes);
-	push(@main::errors,"Can't specify more than one mode (given \"-$_\")");
-    }
-    if ($modecount == 0) {
-	push(@main::errors,"Nothing to do (see -help)");
+    if (defined($::opt{'rmfile'}) and (${$::opt{'rmfile'}}[0] eq '')) {
+	push(@::errors,"-rmfile requires a filename or 'all'");
     }
 
     # Check log/stamp dirs (only if we are in a 'write' mode)
-    if ($main::mode =~ m/^(set|dir|newtape)$/) {
-	$main::path{$cfg::comp_log} = &checkinpath($cfg::comp_log) if ($cfg::comp_log ne "false");
+    if ($::mode =~ m/^(set|dir|newtape)$/) {
+	$::path{$cfg::comp_log} = &checkinpath($cfg::comp_log) if ($cfg::comp_log ne "false");
 	$cfg::logdir = &nuke_trailing_slash($cfg::logdir);
 	$cfg::stampdir = &nuke_trailing_slash($cfg::stampdir);
 	if ($cfg::logdir !~ m:^/:) {
-	    push(@main::errors,"\$logdir must be absolute path: $cfg::logdir");
+	    push(@::errors,"\$logdir must be absolute path: $cfg::logdir");
 	}
 	if ($cfg::stampdir !~ m:^/:) {
-	    push(@main::errors,"\$stampdir must be absolute path: $cfg::stampdir");
+	    push(@::errors,"\$stampdir must be absolute path: $cfg::stampdir");
 	}
 	if (! -d "$cfg::logdir") {
-	    mkdir("$cfg::logdir",0755) or push(@main::errors,"Can't mkdir $cfg::logdir: $OS_ERROR");
+	    mkdir("$cfg::logdir",0755) or push(@::errors,"Can't mkdir $cfg::logdir: $OS_ERROR");
 	}
 	if (! -w "$cfg::logdir") {
-	    push(@main::errors,"Can't write to $cfg::logdir");
+	    push(@::errors,"Can't write to $cfg::logdir");
 	}
 	if (! -d "$cfg::stampdir") {
-	    mkdir("$cfg::stampdir",0755) or push(@main::errors,"Can't mkdir $cfg::stampdir: $OS_ERROR");
+	    mkdir("$cfg::stampdir",0755) or push(@::errors,"Can't mkdir $cfg::stampdir: $OS_ERROR");
 	}
 	if (! -w "$cfg::stampdir") {
-	    push(@main::errors,"Can't write to $cfg::stampdir: $OS_ERROR");
+	    push(@::errors,"Can't write to $cfg::stampdir: $OS_ERROR");
 	}
     }
 
     # Index database
-    if (($main::mode !~ m/^(list|extract|restore|compare|test-tape-drive)$/) and
+    if (($::mode !~ m/^(list|extract|restore|compare|test-tape-drive)$/) and
 	($cfg::indexes eq "true")) {
-	tie(%main::index,"AnyDBM_File",$cfg::index,O_CREAT|O_RDWR,0640) or
-	    push(@main::errors,"Can't tie DB $cfg::index");
+	tie(%::index,"AnyDBM_File",$cfg::index,O_CREAT|O_RDWR,0640) or
+	    push(@::errors,"Can't tie DB $cfg::index");
     }
 
     # Test
-    if (defined($main::debug)) {
+    if (defined($::debug)) {
 	&log('(debug) no backup or mt commands will be executed');
 	&log('(debug) no old stamps or old log files will be removed');
     }
 
     # Check extract list
-    if (defined($main::opt{'flist'})) {
-	if (defined($main::opt{'extract'})) {
-	    if (! -r $main::opt{'flist'}) {
-		push(@main::errors,"list of files $main::opt{flist} not readable: $OS_ERROR");
+    if (defined($::opt{'flist'})) {
+	if (defined($::opt{'extract'})) {
+	    if (! -r $::opt{'flist'}) {
+		push(@::errors,"list of files $::opt{flist} not readable: $OS_ERROR");
 	    }
 	} else {
-	    push(@main::errors,"-flist can only be used with -extract");
+	    push(@::errors,"-flist can only be used with -extract");
 	}
     }
-    if (defined($main::opt{'onefile'}) and !defined($main::opt{'extract'})) {
-	push(@main::errors,"-onefile can only be used with -extract");
+    if (defined($::opt{'onefile'}) and !defined($::opt{'extract'})) {
+	push(@::errors,"-onefile can only be used with -extract");
     }
 
     # Requirements for testing
-    if (defined($main::opt{'test-tape-drive'})) {
-	if (defined($main::use_file)) {
-	    push(@main::errors,"No use trying tape drive tests on directories!");
+    if (defined($::opt{'test-tape-drive'})) {
+	if (defined($::use_file)) {
+	    push(@::errors,"No use trying tape drive tests on directories!");
 	}
-	$main::path{'diff'} = &checkinpath('diff');
-	$main::path{'tr'} = &checkinpath('tr');
+	$::path{'diff'} = &checkinpath('diff');
+	$::path{'tr'} = &checkinpath('tr');
     }
 
-    if (@main::errors) {
-	print $main::msg "\nErrors:\n";
-	while(@main::errors) {
-	    print $main::msg " " . shift(@main::errors) . "\n";
+    if (@::errors) {
+	print $::msg "\nErrors:\n";
+	while(@::errors) {
+	    print $::msg " " . shift(@::errors) . "\n";
 	}
 	exit(1);
     }
@@ -3457,17 +3484,17 @@ sub optioncheck {
 sub test_before_run {
 
     if ($cfg::buffer ne 'false') {
-	&test_bufferprog($main::buffer_cmd, 'localhost');
+	&test_bufferprog($::buffer_cmd, 'localhost');
     }
 
     &check_shell('localhost');
 
-    &check_remote_progs(\%main::remotehosts, \@main::remoteprogs);
+    &check_remote_progs(\%::remotehosts, \@::remoteprogs);
 
-    if (@main::errors) {
-	print $main::msg "\nErrors:\n";
-	while(@main::errors) {
-	    print $main::msg " " . shift(@main::errors) . "\n";
+    if (@::errors) {
+	print $::msg "\nErrors:\n";
+	while(@::errors) {
+	    print $::msg " " . shift(@::errors) . "\n";
 	}
 	exit(1);
     }
@@ -3546,18 +3573,18 @@ sub maybe_get_filename {
     # grab filename from option argument
     # optionscheck already guarantees only one is set
     foreach my $mode (@modes) {
-	if (defined($main::opt{$mode})) {
-	    $arg = $main::opt{$mode};
+	if (defined($::opt{$mode})) {
+	    $arg = $::opt{$mode};
 	}
     }
 
     # if the flag given but null, and $device was not set to a dir, just return
-    if (($arg eq '') and (!defined($main::use_file))) {
-	return($main::device);
+    if (($arg eq '') and (!defined($::use_file))) {
+	return($::device);
     }
 
     # if the flag given but null, and $device is a dir, spew
-    if (($arg eq '') and (defined($main::use_file))) {
+    if (($arg eq '') and (defined($::use_file))) {
 	print STDERR "Error: when extracting from a file, you must specify file name.\n";
 	print STDERR "(like \"-list file.tar.bz2\")\n";
 	die();
@@ -3567,32 +3594,32 @@ sub maybe_get_filename {
     # Then in $device dir (if conf file set to backup to files)
     if (-f "$arg") {
 	$file = $arg;
-	$main::use_file = 1;
+	$::use_file = 1;
 	$cfg::device = $cfg::tmpdir; # Just so optioncheck doesn't assume tape
-	undef $main::tapedevice;
-	undef $main::remotetapehost;
+	undef $::tapedevice;
+	undef $::remotetapehost;
 
-    } elsif (defined($main::use_file) and (-f "$cfg::device/$arg")) {
+    } elsif (defined($::use_file) and (-f "$cfg::device/$arg")) {
 	$file = $cfg::device . "/" . $arg;
 	$cfg::device = $cfg::tmpdir; # Just so optioncheck doesn't assume tape
-	undef $main::tapedevice;
-	undef $main::remotetapehost;
+	undef $::tapedevice;
+	undef $::remotetapehost;
 
     } elsif (-d "$arg") {
 	$file = $arg;
-	$main::use_file = 1;
+	$::use_file = 1;
 	$cfg::device = $cfg::tmpdir; # Just so optioncheck doesn't assume tape
-	undef $main::tapedevice;
-	undef $main::remotetapehost;
+	undef $::tapedevice;
+	undef $::remotetapehost;
 
-    } elsif (defined($main::use_file) and (-d "$cfg::device/$arg")) {
+    } elsif (defined($::use_file) and (-d "$cfg::device/$arg")) {
 	$file = $cfg::device . "/" . $arg;
 	$cfg::device = $cfg::tmpdir; # Just so optioncheck doesn't assume tape
-	undef $main::tapedevice;
-	undef $main::remotetapehost;
+	undef $::tapedevice;
+	undef $::remotetapehost;
 
     } else {
-	if (defined($main::use_file)) {
+	if (defined($::use_file)) {
 	    print STDERR "Error: file \"$arg\" or \"$cfg::device/$arg\" not found\n";
 	    print STDERR "(like \"-list file.tar.bz2\")\n";
 	    die();
@@ -3700,11 +3727,11 @@ sub checkvar {
     }
 
     if (!defined($$ref)) {
-	if (!defined($main::opt{'nodefaults'}) and defined($default)) {
-	    print $main::msg " \$$varname not found in config: default=$default\n";
+	if (!defined($::opt{'nodefaults'}) and defined($default)) {
+	    print $::msg " \$$varname not found in config: default=$default\n";
 	    $$ref = $default;
 	} else {
-	    push(@main::errors,"\$$varname not defined");
+	    push(@::errors,"\$$varname not defined");
 	}
     } else {
 	if ($ok[0] ne "exist") {
@@ -3715,7 +3742,7 @@ sub checkvar {
 	    }
 	    if ($found == 0 ) {
 		$_ = join(", ",@ok);
-		push(@main::errors,"\$$varname must be one of $_");
+		push(@::errors,"\$$varname must be one of $_");
 	    }
 	}
     }
@@ -3737,10 +3764,10 @@ sub checkinpath {
 
 	    # Starts with /; full path override
 	    if (-e $cfg::path{$file} && -x _) {
-		print $main::msg "path $file = $cfg::path{$file}\n";
+		print $::msg "path $file = $cfg::path{$file}\n";
 		return "$cfg::path{$file}";
 	    } else {
-		push(@main::errors,"$cfg::path{$file} not found");
+		push(@::errors,"$cfg::path{$file} not found");
 		return(0);
 	    }
 
@@ -3754,7 +3781,7 @@ sub checkinpath {
 
 	    # sudo with full pathname
 	    if (($prog =~ m:^/:) and (-e $prog) and (-x _)) {
-		print $main::msg "path $file = $cfg::path{$file}\n";
+		print $::msg "path $file = $cfg::path{$file}\n";
 		return "$cfg::path{$file}";
 	    }
 	    # sudo with just command name
@@ -3765,7 +3792,7 @@ sub checkinpath {
 		}
 	    }
 
-	    push(@main::errors,"sudo $prog not found in \$PATH");
+	    push(@::errors,"sudo $prog not found in \$PATH");
 	    return(0);
 
 	} else {
@@ -3779,7 +3806,7 @@ sub checkinpath {
 		}
 	    }
 
-	    push(@main::errors,"$cfg::path{$file} not found in \$PATH");
+	    push(@::errors,"$cfg::path{$file} not found in \$PATH");
 	    return(0);
 
 	}
@@ -3794,7 +3821,7 @@ sub checkinpath {
 	    }
 	}
 
-	push(@main::errors,"$file not found in \$PATH");
+	push(@::errors,"$file not found in \$PATH");
 	return(0);
     }
 
@@ -3811,13 +3838,13 @@ sub run_or_echo_then_query {
     &split_and_echo($cmd);
     &line();
 
-    if (!defined($main::debug)) {
-	system("($cmd) 2>&1 | $main::path{tee} -a $main::log");
+    if (!defined($::debug)) {
+	system("($cmd) 2>&1 | $::path{tee} -a $::log");
     } else {
 	&log("(debug) command output would be here");
     }
 
-    if (!defined($main::use_file)) {
+    if (!defined($::use_file)) {
 	&line();
 	&mt('generic-query');
     }
@@ -3825,7 +3852,7 @@ sub run_or_echo_then_query {
     &line();
 
     # Maybe rewind (usually false for reads)
-    if (($main::do_rewind_after == 1) and !defined($main::use_file)) {
+    if (($::do_rewind_after == 1) and !defined($::use_file)) {
 	&log("| Rewinding...");
 	&mt('rewind');
 	&line();
@@ -3854,12 +3881,12 @@ sub maybe_remote_cmd {
     if (defined($host) and ($host ne '')) {
 
 	# If remote shell is smart enough use pipeline exit detectors
-	if (($is_pipeline == 1) and ($main::shelltype{$host} eq 'bash2')) {
-	    $cmd  = "$main::remoteshell $host " . $quote . $cmd . $main::bash_pipe_exit . $quote;
-	} elsif (($is_pipeline == 1) and ($main::shelltype{$host} eq 'zsh')) {
-	    $cmd  = "$main::remoteshell $host " . $quote . $cmd . $main::zsh_pipe_exit . $quote;
+	if (($is_pipeline == 1) and ($::shelltype{$host} eq 'bash2')) {
+	    $cmd  = "$::remoteshell $host " . $quote . $cmd . $::bash_pipe_exit . $quote;
+	} elsif (($is_pipeline == 1) and ($::shelltype{$host} eq 'zsh')) {
+	    $cmd  = "$::remoteshell $host " . $quote . $cmd . $::zsh_pipe_exit . $quote;
 	} else {
-	    $cmd  = "$main::remoteshell $host " . $quote . $cmd . $quote;
+	    $cmd  = "$::remoteshell $host " . $quote . $cmd . $quote;
 	}
 
     } else {
@@ -3879,21 +3906,21 @@ sub append_writer_cmd {
 
     # Possibly override device
     if (!defined($dev)) {
-	$dev = $main::device;
+	$dev = $::device;
     }
 
-    if (defined($main::use_stdout)) {
+    if (defined($::use_stdout)) {
 
-	$cmd .= $main::buffer_cmd;
+	$cmd .= $::buffer_cmd;
 
-    } elsif (!defined($main::remotetapehost)) {
+    } elsif (!defined($::remotetapehost)) {
 
-	$cmd .= " | " . $main::write_cmd . '"' . $dev . '"' ;
+	$cmd .= " | " . $::write_cmd . '"' . $dev . '"' ;
 
     } else {
 
-	$cmd .= "$main::buffer_cmd | ";
-	$cmd .= &maybe_remote_cmd($main::write_cmd . '"' . $dev . '"', $main::remotetapehost);
+	$cmd .= "$::buffer_cmd | ";
+	$cmd .= &maybe_remote_cmd($::write_cmd . '"' . $dev . '"', $::remotetapehost);
     }
 
     return($cmd);
@@ -3911,43 +3938,43 @@ sub setup_before_read {
     &line();
 
     if (($cfg::staticlogs eq 'false') and ($cfg::staticfiles eq 'false')) {
-	$main::log = "flexbackup.$op." . &current_time('numeric') . ".log";
+	$::log = "flexbackup.$op." . &current_time('numeric') . ".log";
     } else {
-	$main::log = "flexbackup.$op.log";
+	$::log = "flexbackup.$op.log";
     }
 
-    if (! open(LOG,">$main::log")) {
-	$main::log = "$cfg::tmpdir/$main::log";
-	if (! open(LOG,">$main::log")) {
-	    die "Can't write to $main::log: $OS_ERROR";
+    if (! open(LOG,">$::log")) {
+	$::log = "$cfg::tmpdir/$::log";
+	if (! open(LOG,">$::log")) {
+	    die "Can't write to $::log: $OS_ERROR";
 	}
     }
     close(LOG);
 
-    &log("| Logging output to \"$main::log\"");
+    &log("| Logging output to \"$::log\"");
 
-    $main::device = &maybe_get_filename();
+    $::device = &maybe_get_filename();
 
-    &mt("generic-blocksize $main::mt_blksize");
+    &mt("generic-blocksize $::mt_blksize");
 
     # Maybe retension
-    if (($main::do_reten == 1) and !defined($main::use_file)) {
+    if (($::do_reten == 1) and !defined($::use_file)) {
 	&log('| Retensioning tape...');
 	&mt('retension');
     }
 
-    if (defined($main::opt{'num'})) {
-	if (defined($main::use_file)) {
+    if (defined($::opt{'num'})) {
+	if (defined($::use_file)) {
 	    die("Can't use -num unless reading from tape");
 	} else {
-	    &log("| Positioning tape at file number $main::opt{num}");
-	    &mt("rewind","fsf $main::opt{num}");
+	    &log("| Positioning tape at file number $::opt{num}");
+	    &mt("rewind","fsf $::opt{num}");
 	}
     } else {
-	if (defined($main::use_file)) {
-	    &log("| Reading from on-disk file $main::device");
-	} elsif (defined($main::blockdevice)) {
-	    &log("| Reading from block device $main::device");
+	if (defined($::use_file)) {
+	    &log("| Reading from on-disk file $::device");
+	} elsif (defined($::blockdevice)) {
+	    &log("| Reading from block device $::device");
 	} else {
 	    &log("| Reading from CURRENT TAPE POSITION");
 	}
@@ -3955,22 +3982,22 @@ sub setup_before_read {
 
     &line();
 
-    if (!defined($main::use_file)) {
+    if (!defined($::use_file)) {
 	&mt('generic-query');
 	&line();
     }
 
-    $cmd = &read_function($main::device);
+    $cmd = &read_function($::device);
 
-    if (defined($main::remotetapehost)) {
-	$cmd = &maybe_remote_cmd($cmd, $main::remotetapehost);
+    if (defined($::remotetapehost)) {
+	$cmd = &maybe_remote_cmd($cmd, $::remotetapehost);
 	# Buffer both sides if remote
-	$cmd .= $main::buffer_cmd;
+	$cmd .= $::buffer_cmd;
     }
 
-    $cmd .= " | $main::unz ";
+    $cmd .= " | $::unz ";
 
-    if ($main::device =~ m/\.rpm$/) {
+    if ($::device =~ m/\.rpm$/) {
 	$cmd .= "rpm2cpio | ";
     }
 
@@ -3991,9 +4018,9 @@ sub read_function {
 
     # bfr/mbuffer need a blocking dd read ahead of them
     if ($cfg::buffer =~ m/^(bfr|mbuffer)$/) {
-	$cmd = $main::read_cmd . '"' . $file . '"' . $main::buffer_cmd;
+	$cmd = $::read_cmd . '"' . $file . '"' . $::buffer_cmd;
     } else {
-	$cmd = $main::read_cmd . '"' . $file . '"';
+	$cmd = $::read_cmd . '"' . $file . '"';
     }
     return($cmd);
 
@@ -4029,7 +4056,7 @@ sub nuke_trailing_slash {
 ######################################################################
 sub print_afio_volume_header {
     # for now just echo our stdin
-    print $main::msg "\n";
+    print $::msg "\n";
     while(<STDIN>) {
 	print;
     }
@@ -4042,48 +4069,48 @@ sub print_afio_volume_header {
 sub set_tape_operation_defaults {
 
     # Assume stuff based on how we are called first
-    if (defined($main::opt{'set'})) {
-	if (!defined($main::set_incremental) and
-	    ($main::level == 0) and
-	    !defined($main::use_file)) {
+    if (defined($::opt{'set'})) {
+	if (!defined($::set_incremental) and
+	    ($::level == 0) and
+	    !defined($::use_file)) {
 	    # Set level zero, using device. Retension & erase a new tape
 	    # (config file may tell us not to erase)
 	    if ($cfg::erase_tape_set_level_zero eq "true") {
-		$main::do_reten = 1;
-		$main::do_erase = 1;
+		$::do_reten = 1;
+		$::do_erase = 1;
 	    } else {
-		$main::do_reten = 0;
-		$main::do_erase = 0;
+		$::do_reten = 0;
+		$::do_erase = 0;
 	    }
-	    $main::do_rewind_after = 1;
+	    $::do_rewind_after = 1;
 	} else {
 	    # Using files, set incremental backup, or set non-zero
 	    # don't erase + go to end of tape
-	    $main::do_reten = 0;
-	    $main::do_erase = 0;
-	    $main::do_rewind_after = 1;
+	    $::do_reten = 0;
+	    $::do_erase = 0;
+	    $::do_rewind_after = 1;
 	}
-    } elsif (defined($main::opt{'dir'})) {
+    } elsif (defined($::opt{'dir'})) {
 	# Just one filesystem - assume we append to tape
-	$main::do_reten = 0;
-	$main::do_erase = 0;
-	$main::do_rewind_after = 1;
+	$::do_reten = 0;
+	$::do_erase = 0;
+	$::do_rewind_after = 1;
     } else {
 	# We're doing a read of some sort
-	$main::do_reten = 0;
-	$main::do_erase = 0; # -erase has no effect anyway here
-	$main::do_rewind_after = 0;
+	$::do_reten = 0;
+	$::do_erase = 0; # -erase has no effect anyway here
+	$::do_rewind_after = 0;
     }
 
     # Then see if commandline flags override anything
-    if (defined($main::opt{'reten'})) {
-	$main::do_reten = $main::opt{'reten'};
+    if (defined($::opt{'reten'})) {
+	$::do_reten = $::opt{'reten'};
     }
-    if (defined($main::opt{'erase'})) {
-	$main::do_erase = $main::opt{'erase'};
+    if (defined($::opt{'erase'})) {
+	$::do_erase = $::opt{'erase'};
     }
-    if (defined($main::opt{'rewind'})) {
-	$main::do_rewind_after = $main::opt{'rewind'};
+    if (defined($::opt{'rewind'})) {
+	$::do_rewind_after = $::opt{'rewind'};
     }
 }
 
@@ -4104,7 +4131,7 @@ sub split_and_echo {
     local($Text::Wrap::separator) = " \\\n";
 
     # This make it easier to cut-n-paste for debugging commands manually
-    if (defined($main::debug)) {
+    if (defined($::debug)) {
 	$initial_tab = " ";
 	$subsequent_tab = "   ";
     } else {
@@ -4121,7 +4148,7 @@ sub split_and_echo {
 
 ######################################################################
 # Create new tape "key" and return it
-# Also sets main::nextfile
+# Also sets ::nextfile
 ######################################################################
 sub new_tape_key {
 
@@ -4135,7 +4162,7 @@ sub new_tape_key {
     $key = &current_time('numeric');
 
     # If writing to a file see if there is already an index key and use it
-    if (defined($main::use_file)) {
+    if (defined($::use_file)) {
 	$dev .= "/$cfg::keyfile";
 	if (-r $dev) {
 	    open(KEY,$dev) or die("Can't open existing key $dev: $OS_ERROR");
@@ -4145,52 +4172,52 @@ sub new_tape_key {
 	    &log("| Directory's existing key is $key");
 
 	    # Make sure keyfile entry is there
-	    if (!defined($main::index{"$key|$cfg::keyfile"})) {
+	    if (!defined($::index{"$key|$cfg::keyfile"})) {
 		my $label = "<index keyfile, dir=$cfg::device>";
-		if (defined($main::debug)) {
-		    &log("(debug) \$main::index{$key|$cfg::keyfile} = $label");
+		if (defined($::debug)) {
+		    &log("(debug) \$::index{$key|$cfg::keyfile} = $label");
 		} else {
-		    $main::index{"$key|$cfg::keyfile"} = $label;
+		    $::index{"$key|$cfg::keyfile"} = $label;
 		}
 	    }
 
 	    # Figure out the existing files
-	    foreach (sort keys %main::index) {
+	    foreach (sort keys %::index) {
 		my ($tape,$filenum) = split(/\|/,$_);
 		if ($tape eq $key) {
-		    $main::nextfile = $filenum;
+		    $::nextfile = $filenum;
 		}
 	    }
 	    # Set for the next file
-	    $main::nextfile++;
+	    $::nextfile++;
 	    return($key);
 	}
     }
 
     &log("| Creating index key $key");
-    $string = "$main::path{printf} \'$key\\nThis is a flexbackup index key\\n\' ";
+    $string = "$::path{printf} \'$key\\nThis is a flexbackup index key\\n\' ";
     $string = &append_writer_cmd($string, $dev);
-    if (defined($main::debug)) {
+    if (defined($::debug)) {
 	&log("(debug) $string");
     } else {
 	`$string 2> /dev/null`;
     }
 
-    $main::nextfile = 1;
+    $::nextfile = 1;
 
-    if (defined($main::use_file)) {
+    if (defined($::use_file)) {
 	my $label = "<index keyfile, dir=$cfg::device>";
-	if (defined($main::debug)) {
-	    &log("(debug) \$main::index{$key|$cfg::keyfile} = $label");
+	if (defined($::debug)) {
+	    &log("(debug) \$::index{$key|$cfg::keyfile} = $label");
 	} else {
-	    $main::index{"$key|$cfg::keyfile"} = $label;
+	    $::index{"$key|$cfg::keyfile"} = $label;
 	}
     } else {
 	my $label = "<tape index key>";
-	if (defined($main::debug)) {
-	    &log("(debug) \$main::index{$key|0} = $label");
+	if (defined($::debug)) {
+	    &log("(debug) \$::index{$key|0} = $label");
 	} else {
-	    $main::index{"$key|0"} = $label;
+	    $::index{"$key|0"} = $label;
 	}
     }
 
@@ -4200,7 +4227,7 @@ sub new_tape_key {
 
 ######################################################################
 # Get existing index key
-# Also sets main::nextfile
+# Also sets ::nextfile
 ######################################################################
 sub get_tape_key {
 
@@ -4210,7 +4237,7 @@ sub get_tape_key {
     return('') if $cfg::indexes eq "false";
 
     # If writing to a file see if there is already an index key and use it
-    if (defined($main::use_file)) {
+    if (defined($::use_file)) {
 	my $dev = "$cfg::device/$cfg::keyfile";
 	if (-r $dev) {
 	    open(KEY,$dev) or die("Can't open existing key $dev: $OS_ERROR");
@@ -4222,12 +4249,12 @@ sub get_tape_key {
 
     } else {
 
-	my $string = "$main::path{dd} $main::dd_blk_flag $main::dd_write_pad_flag count=1 if=$main::device";
-	if (defined($main::remotetapehost)) {
-	    $string = &maybe_remote_cmd($string, $main::remotetapehost);
+	my $string = "$::path{dd} $::dd_blk_flag $::dd_write_pad_flag count=1 if=$::device";
+	if (defined($::remotetapehost)) {
+	    $string = &maybe_remote_cmd($string, $::remotetapehost);
 	}
 
-	if (defined($main::debug)) {
+	if (defined($::debug)) {
 	    &log("(debug) $string");
 	    $key = '';
 	} else {
@@ -4242,34 +4269,34 @@ sub get_tape_key {
 		if (!defined($quiet)) {
 		    &log("| ERROR: Tape doesn't have an index! (use -newtape?)");
 		}
-		$main::nextfile = 0;
+		$::nextfile = 0;
 		return('');
 	    }
 	} else {
 	    if (!defined($quiet)) {
 		&log("| ERROR: Tape doesn't have an index! (use -newtape?)");
 	    }
-	    $main::nextfile = 0;
+	    $::nextfile = 0;
 	    return('');
 	}
 
     }
 
     # Find the number of existing files
-    $main::nextfile = 0;
+    $::nextfile = 0;
 
-    unless (defined($main::use_file)) {
-	foreach (sort keys %main::index) {
+    unless (defined($::use_file)) {
+	foreach (sort keys %::index) {
 	    my ($tape,$filenum) = split(/\|/,$_);
 	    if ($tape eq $key) {
-		if ($filenum > $main::nextfile) {
-		    $main::nextfile = $filenum;
+		if ($filenum > $::nextfile) {
+		    $::nextfile = $filenum;
 		}
 	    }
 	}
 	# Set for the next file
-	$main::nextfile++;
-	&log("| Found index key $key, next file is $main::nextfile");
+	$::nextfile++;
+	&log("| Found index key $key, next file is $::nextfile");
     } else {
 	&log("| Found directory index key $key");
     }
@@ -4302,14 +4329,14 @@ sub toc_routine {
 	# Print toc for current tape if given argument
 	$desired_keys{$arg} = 1;
 
-    } elsif ($main::opt{'toc'} =~ m/^\d+$/) {
+    } elsif ($::opt{'toc'} =~ m/^\d+$/) {
 
 	# Print toc for a specific tape
 	&log("| Listing specific index");
-	$desired_keys{"$main::opt{toc}"} = 1;
+	$desired_keys{"$::opt{toc}"} = 1;
 	&line();
 
-    } elsif ($main::opt{'toc'} eq '') {
+    } elsif ($::opt{'toc'} eq '') {
 
 	# Print toc for current tape/device
 	&mt('rewind');
@@ -4320,27 +4347,27 @@ sub toc_routine {
 	}
 	&line();
 
-    } elsif ($main::opt{'toc'} eq "all") {
+    } elsif ($::opt{'toc'} eq "all") {
 
 	# Print everything we know about
 	&log("| Listing all in database");
-	foreach (keys %main::index) {
+	foreach (keys %::index) {
 	    ($tape,$file) = split(/\|/,$_);
 	    $desired_keys{$tape} = 1;
 	}
 	&line();
 
     } else {
-	die("Invalid key spec $main::opt{toc}");
+	die("Invalid key spec $::opt{toc}");
     }
 
     # Go through the index and fill hashes
-    foreach my $key (keys %main::index) {
+    foreach my $key (keys %::index) {
 	($tape,$file) = split(/\|/,$key);
 	if ($file =~ m/^\d+$/) {
-	    $tape_files{$tape}{$file} = $main::index{$key};
+	    $tape_files{$tape}{$file} = $::index{$key};
 	} else {
-	    $disk_files{$tape}{$file} = $main::index{$key};
+	    $disk_files{$tape}{$file} = $::index{$key};
 	}
     }
 
@@ -4369,7 +4396,7 @@ sub toc_routine {
 		$found = 1;
 		foreach $file (sort keys %{$disk_files{$dir}}) {
 		    if ((! -e "$cfg::device/$file") and
-			(!defined($main::opt{'toc'}) or ($main::opt{'toc'} eq ''))) {
+			(!defined($::opt{'toc'}) or ($::opt{'toc'} eq ''))) {
 			&log("| Bogus index entry - $file does not exist");
 			&rmindex("$dir:$file");
 			delete $disk_files{$dir}{$file};
@@ -4423,8 +4450,8 @@ sub rmindex {
 	&log("| Hit CTRL-C to abort within 5 seconds..");
 	&line();
 	sleep(5);
-	foreach (keys %main::index) {
-	    delete $main::index{$_};
+	foreach (keys %::index) {
+	    delete $::index{$_};
 	}
 	return;
     } else {
@@ -4436,22 +4463,22 @@ sub rmindex {
 
 	# This section deletes a whole index record, or maybe just
 	# individual file records
-	foreach (sort keys %main::index) {
+	foreach (sort keys %::index) {
 	    ($tape,$filenum) = split(/\|/,$_);
 
 	    if (defined($file)) {
 		# One file entry
 		if (($tape eq $key)
 		    and
-		    (defined($main::use_file) or ($filenum != 0))
+		    (defined($::use_file) or ($filenum != 0))
 		    and
 		    ($filenum eq $file)) {
 		    &log("| Deleting record for $tape file $filenum");
 		    $found++;
-		    if (defined($main::debug)) {
-			&log("(debug) delete \$main::index{$tape|$filenum}");
+		    if (defined($::debug)) {
+			&log("(debug) delete \$::index{$tape|$filenum}");
 		    } else {
-			delete $main::index{"$tape|$filenum"};
+			delete $::index{"$tape|$filenum"};
 		    }
 		}
 
@@ -4461,10 +4488,10 @@ sub rmindex {
 		if ($tape eq $key) {
 		    &log("| Deleting record for $tape file $filenum");
 		    $found++;
-		    if (defined($main::debug)) {
-			&log("(debug) delete \$main::index{$tape|$filenum}");
+		    if (defined($::debug)) {
+			&log("(debug) delete \$::index{$tape|$filenum}");
 		    } else {
-			delete $main::index{"$tape|$filenum"};
+			delete $::index{"$tape|$filenum"};
 		    }
 		}
 	    }
@@ -4488,11 +4515,11 @@ sub rmfile {
     my $tape;
     my $filenum;
 
-    return if !defined($main::use_file);
+    return if !defined($::use_file);
 
     $key = &get_tape_key('quiet');
 
-    foreach my $arg (@{$main::opt{'rmfile'}}) {
+    foreach my $arg (@{$::opt{'rmfile'}}) {
 
 	my $file = "$cfg::device/$arg";
 
@@ -4545,7 +4572,7 @@ sub maybe_delete_old_index {
 
     return if $cfg::indexes eq "false";
 
-    return if (defined($main::use_file));
+    return if (defined($::use_file));
 
     $key = &get_tape_key('quiet');
     if ($key ne '') {
@@ -4635,7 +4662,7 @@ sub file_list_cmd {
     }
 
     my $cmd = '';
-    $cmd .= "$main::path{find} . ";
+    $cmd .= "$::path{find} . ";
 
     my $prunekey;
     if (defined($remote)) {
@@ -4644,11 +4671,11 @@ sub file_list_cmd {
 	$prunekey = $dir;
     }
 
-    if (defined(%{$main::prune{$prunekey}})) {
+    if (defined(%{$::prune{$prunekey}})) {
 	# FIXME don't join , use separate -regex -o flags
 	# So freebsd find will work?  Bug john.
 	$cmd .= '-regex "\./\(';
-	$cmd .= join('\|', keys %{$main::prune{$prunekey}});
+	$cmd .= join('\|', keys %{$::prune{$prunekey}});
 	$cmd .= '\)/.*" -prune -o ';
     } else {
 	# Can't use find -depth with -prune (see single unix spec etc)
@@ -4657,7 +4684,7 @@ sub file_list_cmd {
 	$cmd .= "-depth ";
     }
 
-    $cmd .= "$main::mountpoint_flag ";
+    $cmd .= "$::mountpoint_flag ";
     $cmd .= "! -type s ";
 
     if (defined($otherarg)) {
@@ -4684,9 +4711,9 @@ sub file_list_cmd {
 	}
     }
 
-    $cmd .= "$main::exclude_expr ";
+    $cmd .= "$::exclude_expr ";
 
-    if (!defined($main::pkgdelta)) {
+    if (!defined($::pkgdelta)) {
 	if ($separator eq 'newline') {
 	    $cmd .= "-print ";
 	} else {
@@ -4700,10 +4727,10 @@ sub file_list_cmd {
 
 	my $host;
 	my $find = &maybe_remote_cmd("cd \"$dir\"; $cmd -print", $remote);
-	my $write = "> $main::pkgdelta_filelist";
+	my $write = "> $::pkgdelta_filelist";
 	if(defined($remote)) {
 	    &log("| Listing level $level to-be-archived files for $remote:$dir");
-	    $write = &maybe_remote_cmd("$main::path{cat} $write", $remote);
+	    $write = &maybe_remote_cmd("$::path{cat} $write", $remote);
 	    $write = "| $write";
 	    $host = $remote;
 	} else {
@@ -4711,7 +4738,7 @@ sub file_list_cmd {
 	    $host = 'localhost';
 	}
 	&log("| Finding subset of files based on packaging system delta");
-	if (!defined($main::debug)) {
+	if (!defined($::debug)) {
 	    open(LIST,"$find |") || die;
 	    open(NEWLIST,"$write") || die;
 	    while(<LIST>) {
@@ -4733,12 +4760,12 @@ sub file_list_cmd {
 			}
 
 		if (($cfg::pkgdelta_archive_unowned eq 'true') and
-		    !defined($main::packaged{$host}{$key})) {
+		    !defined($::packaged{$host}{$key})) {
 		    $archive = 1;
 		}
 
 		if (($cfg::pkgdelta_archive_changed eq 'true') and
-		    defined($main::changed{$host}{$key})) {
+		    defined($::changed{$host}{$key})) {
 		    $archive = 1;
 		}
 
@@ -4757,7 +4784,7 @@ sub file_list_cmd {
 
 	&line();
 
-	$cmd = "$main::path{cat} $main::pkgdelta_filelist ";
+	$cmd = "$::path{cat} $::pkgdelta_filelist ";
     }
 
     return($cmd);
@@ -4771,9 +4798,9 @@ sub list_packages {
 
     my $host = shift (@_);
 
-    if ($main::pkgdelta eq 'rpm') {
+    if ($::pkgdelta eq 'rpm') {
 
-	my $cmd = "$main::path{rpm} -q -a --queryformat '%{name}-%{version}-%{release}.%{arch}.rpm\\n'";
+	my $cmd = "$::path{rpm} -q -a --queryformat '%{name}-%{version}-%{release}.%{arch}.rpm\\n'";
 
 	if ($host ne 'localhost') {
 	    &log("| Listing all RPM packages on host $host...");
@@ -4781,21 +4808,21 @@ sub list_packages {
 	} else {
 	    &log("| Listing all RPM packages...");
 	}
-	if (defined($main::debug)) {
+	if (defined($::debug)) {
 	    &log("(debug) $cmd");
 	} else {
 	    open(LIST,"$cmd |") || die;
 	    while(<LIST>) {
 		if (m:^(.*)$:) {
-		    $main::package_list{$host}{$1} = 1;
+		    $::package_list{$host}{$1} = 1;
 		}
 	    }
 	    close(LIST);
 	}
 
-    } elsif ($main::pkgdelta eq 'freebsd') {
+    } elsif ($::pkgdelta eq 'freebsd') {
 
-	my $cmd = "$main::path{pkg_info}";
+	my $cmd = "$::path{pkg_info}";
 
 	if ($host ne 'localhost') {
 	    &log("| Listing all FreeBSD packages on host $host...");
@@ -4803,14 +4830,14 @@ sub list_packages {
 	} else {
 	    &log("| Listing all FreeBSD packages...");
 	}
-	if (defined($main::debug)) {
+	if (defined($::debug)) {
 	    &log("(debug) $cmd");
 	} else {
 	    my (@junk, $pkg);
 	    open(LIST,"$cmd |") || die;
 	    while(<LIST>) {
 		($pkg, @junk) = split (/\s+/, $_);
-		$main::package_list{$host}{$pkg} = 1;
+		$::package_list{$host}{$pkg} = 1;
 	    }
 	    close(LIST);
 	}
@@ -4828,9 +4855,9 @@ sub find_packaged_files {
 
     return if ($cfg::pkgdelta_archive_unowned eq 'false');
 
-    if ($main::pkgdelta eq 'rpm') {
+    if ($::pkgdelta eq 'rpm') {
 
-	my $cmd = "$main::path{rpm} -q -a -l";
+	my $cmd = "$::path{rpm} -q -a -l";
 
 	if ($host ne 'localhost') {
 	    &log("| Finding all files owned by RPM packages on host $host...");
@@ -4838,21 +4865,21 @@ sub find_packaged_files {
 	} else {
 	    &log("| Finding all files owned by RPM packages...");
 	}
-	if (defined($main::debug)) {
+	if (defined($::debug)) {
 	    &log("(debug) $cmd");
 	} else {
 	    open(LIST,"$cmd |") || die;
 	    while(<LIST>) {
 		if (m:^(/.*)$:) {
-		    $main::packaged{$host}{$1} = 1;
+		    $::packaged{$host}{$1} = 1;
 		}
 	    }
 	    close(LIST);
 	}
 
-    } elsif ($main::pkgdelta eq 'freebsd') {
+    } elsif ($::pkgdelta eq 'freebsd') {
 
-	my $cmd = "$main::path{pkg_info} -q -a -L";
+	my $cmd = "$::path{pkg_info} -q -a -L";
 
 	if ($host ne 'localhost') {
 	    &log("| Finding all files owned by FreeBSD packages on host $host...");
@@ -4860,13 +4887,13 @@ sub find_packaged_files {
 	} else {
 	    &log("| Finding all files owned by FreeBSD packages...");
 	}
-	if (defined($main::debug)) {
+	if (defined($::debug)) {
 	    &log("(debug) $cmd");
 	} else {
 	    open(LIST,"$cmd |") || die;
 	    while(<LIST>) {
 		if (m:^(/.*)$:) {
-		    $main::packaged{$host}{$1} = 1;
+		    $::packaged{$host}{$1} = 1;
 		}
 	    }
 	    close(LIST);
@@ -4886,9 +4913,9 @@ sub find_changed_files {
 
     return if ($cfg::pkgdelta_archive_changed eq 'false');
 
-    if ($main::pkgdelta eq 'rpm') {
+    if ($::pkgdelta eq 'rpm') {
 
-	my $cmd = "$main::path{rpm} -V -a";
+	my $cmd = "$::path{rpm} -V -a";
 
 	if ($host ne 'localhost') {
 	    &log("| Finding changed package files on host $host...");
@@ -4897,7 +4924,7 @@ sub find_changed_files {
 	    &log("| Finding changed package files...");
 	}
 	&log("| May take quite a while, please be patient");
-	if (defined($main::debug)) {
+	if (defined($::debug)) {
 	    &log("(debug) $cmd");
 	} else {
 	    open(LIST,"$cmd |") || die;
@@ -4905,15 +4932,15 @@ sub find_changed_files {
 		# ex: if size, md5sum, and timestamp changed on a config file
 		# S.5....T c /etc/ntp.conf
 		if (m:^([\.S][\.M][\.5][\.D][\.L][\.U][\.G][\.T]) [dgc ] (.*)$:) {
-		    $main::changed{$host}{$2} = 1;
+		    $::changed{$host}{$2} = 1;
 		}
 	    }
 	    close(LIST);
 	}
 
-    } elsif ($main::pkgdelta eq 'freebsd') {
+    } elsif ($::pkgdelta eq 'freebsd') {
 
-	my $cmd = "$main::path{pkg_info} -g -a -q";
+	my $cmd = "$::path{pkg_info} -g -a -q";
 
 	if ($host ne 'localhost') {
 	    &log("| Finding changed package files on host $host...");
@@ -4922,13 +4949,13 @@ sub find_changed_files {
 	    &log("| Finding changed package files...");
 	}
 	&log("| May take quite a while, please be patient");
-	if (defined($main::debug)) {
+	if (defined($::debug)) {
 	    &log("(debug) $cmd");
 	} else {
 	    open(LIST,"$cmd |") || die;
 	    while(<LIST>) {
 		if (/^(\S+)\s+fails.*MD5.*checksum$/) {
-		    $main::changed{$host}{$1} = 1;
+		    $::changed{$host}{$1} = 1;
 		}
 	    }
 	    close(LIST);
@@ -4971,14 +4998,14 @@ sub test_bufferprog {
     close(SCR);
 
     if ($host eq 'localhost') {
-	print $main::msg "| Checking '$cfg::buffer' on this machine... ";
+	print $::msg "| Checking '$cfg::buffer' on this machine... ";
 	$pipecmd = "sh $tmp_script ";
     } else {
-	print $main::msg "| Checking '$cfg::buffer' on host $host... ";
-	$pipecmd =  "cat $tmp_script | ($main::remoteshell $host 'cat > $tmp_script; sh $tmp_script; rm -f $tmp_script')";
+	print $::msg "| Checking '$cfg::buffer' on host $host... ";
+	$pipecmd =  "cat $tmp_script | ($::remoteshell $host 'cat > $tmp_script; sh $tmp_script; rm -f $tmp_script')";
     }
 
-    if (!defined($main::debug)) {
+    if (!defined($::debug)) {
 
 	open(PIPE,"$pipecmd |") || die;
 	while (<PIPE>) {
@@ -4986,20 +5013,20 @@ sub test_bufferprog {
 		$retval = $1;
 		my $out = $2;
 		if ($retval != 0) {
-		    push(@main::errors, "Problems encountered testing '$cfg::buffer' on host '$host':");
+		    push(@::errors, "Problems encountered testing '$cfg::buffer' on host '$host':");
 
 		    if ($out ne '') {
-			push(@main::errors, "  --> " . $out);
+			push(@::errors, "  --> " . $out);
 		    }
 
 		    if (($cfg::buffer eq 'buffer') and ($retval == 255)) {
-			push(@main::errors, "  You don't have enough shared memory to run '$cfg::buffer' on $host, or");
-			push(@main::errors, "  have exceeded buffering limits. Try lowering the amount specified in");
-			push(@main::errors, "  \$buffer_megs in your flexbackup.conf file, or reconfigure your");
-			push(@main::errors, "  kernel to include more SysV shared memory pages if using *BSD.");
+			push(@::errors, "  You don't have enough shared memory to run '$cfg::buffer' on $host, or");
+			push(@::errors, "  have exceeded buffering limits. Try lowering the amount specified in");
+			push(@::errors, "  \$buffer_megs in your flexbackup.conf file, or reconfigure your");
+			push(@::errors, "  kernel to include more SysV shared memory pages if using *BSD.");
 		    } else {
-			push(@main::errors, "  Unknown problem trying to run '$cfg::buffer' (exit code $retval). Try disabling it");
-			push(@main::errors, "  or lowering \$buffer_megs.");
+			push(@::errors, "  Unknown problem trying to run '$cfg::buffer' (exit code $retval). Try disabling it");
+			push(@::errors, "  or lowering \$buffer_megs.");
 		    }
 		}
 	    }
@@ -5007,13 +5034,13 @@ sub test_bufferprog {
 	close (PIPE);
 
     } else {
-	print $main::msg "\n(debug) $pipecmd\n";
+	print $::msg "\n(debug) $pipecmd\n";
     }
 
     if ($retval == 0) {
-	print $main::msg "Ok\n";
+	print $::msg "Ok\n";
     }  else {
-	print $main::msg "Failed!\n";
+	print $::msg "Failed!\n";
     }
     unlink("$tmp_script");
 
@@ -5046,37 +5073,37 @@ sub check_remote_progs {
     }
     my $string = join ('; ',@progs);
     foreach my $host (keys %$remotehost_ref) {
-	print $main::msg "| Checking for required programs on host $host... ";
-	my $cmd = "$main::remoteshell $host sh -c '$string'";
-	if (defined($main::debug)) {
-	    print $main::msg "\n(debug) $cmd\n";
+	print $::msg "| Checking for required programs on host $host... ";
+	my $cmd = "$::remoteshell $host sh -c '$string'";
+	if (defined($::debug)) {
+	    print $::msg "\n(debug) $cmd\n";
 	    next;
 	}
 	if (!(open(PIPE,"$cmd |"))) {
-	    push (@main::errors, "Could not open pipe to remote shell - $!");
+	    push (@::errors, "Could not open pipe to remote shell - $!");
 	    $err++;
 	    last;
 	}
 
 	while (<PIPE>) {
 	    if (m/(\S+) not found/) {
-		push(@main::errors, "Could not find program '$1' on remote machine '$host'");
+		push(@::errors, "Could not find program '$1' on remote machine '$host'");
 		$err++;
 	    }
 	}
 	close (PIPE);
 
 	if ($err == 0) {
-	    print $main::msg "Ok\n";
+	    print $::msg "Ok\n";
 	} else {
-	    print $main::msg "Failed!\n";
+	    print $::msg "Failed!\n";
 	}
 
     }
 
     if ($cfg::buffer ne 'false') {
 	foreach my $host (keys %$remotehost_ref) {
-	    &test_bufferprog($main::buffer_cmd, $host);
+	    &test_bufferprog($::buffer_cmd, $host);
 	}
     }
 
@@ -5094,16 +5121,16 @@ sub check_shell {
     $pipecmd = 'set x = 1 && test $x && echo csh:yes; echo tcsh:$tcsh; echo bash:$BASH_VERSION; echo zsh:$ZSH_VERSION; echo ksh:$KSH_VERSION';
 
     if ($host eq 'localhost') {
-	print $main::msg "| Checking /bin/sh on this machine... ";
+	print $::msg "| Checking /bin/sh on this machine... ";
     } else {
-	print $main::msg "| Checking shell on $host... ";
-	$pipecmd = "$main::remoteshell $host '" . $pipecmd . "'";
+	print $::msg "| Checking shell on $host... ";
+	$pipecmd = "$::remoteshell $host '" . $pipecmd . "'";
     }
 
-    $main::shelltype{$host} = 'unknown';
+    $::shelltype{$host} = 'unknown';
 
-    if (defined($main::debug)) {
-	print $main::msg "\n(debug) $pipecmd\n";
+    if (defined($::debug)) {
+	print $::msg "\n(debug) $pipecmd\n";
     }
 
     if (!(open(PIPE,"$pipecmd 2>&1 |"))) {
@@ -5117,21 +5144,21 @@ sub check_shell {
 	    my $ver = $2;
 	    if ($shell eq 'bash') {
 		if ($ver =~ m/^2/) {
-		    $main::shelltype{$host} = 'bash2';
+		    $::shelltype{$host} = 'bash2';
 		} else {
-		    $main::shelltype{$host} = 'bash1';
+		    $::shelltype{$host} = 'bash1';
 		}
 	    } else {
-		$main::shelltype{$host} = $shell;
+		$::shelltype{$host} = $shell;
 	    }
 	}
     }
     close (PIPE);
 
-    if (($main::shelltype{$host} eq 'unknown') and ($main::uname !~ m/Linux/)) {
-	print $main::msg "$main::shelltype{$host} (probably Bourne Shell)\n";
+    if (($::shelltype{$host} eq 'unknown') and ($::uname !~ m/Linux/)) {
+	print $::msg "$::shelltype{$host} (probably Bourne Shell)\n";
     } else {
-	print $main::msg "$main::shelltype{$host}\n";
+	print $::msg "$::shelltype{$host}\n";
     }
 }
 
@@ -5143,7 +5170,7 @@ sub newtape () {
 
     my $retval;
 
-    if (defined($main::tapedevice)) {
+    if (defined($::tapedevice)) {
 	&log('| Rewinding & erasing tape...');
     }
     &mt('rewind');
@@ -5169,13 +5196,13 @@ sub test_tape_drive {
     my $fail = 0;
     my $configfile;
 
-    if (defined($main::opt{'c'})) {
-	$configfile = $main::opt{'c'};
+    if (defined($::opt{'c'})) {
+	$configfile = $::opt{'c'};
     } else {
-	$configfile = $main::CONFFILE;
+	$configfile = $::CONFFILE;
     }
 
-    &mt("generic-blocksize $main::mt_blksize");
+    &mt("generic-blocksize $::mt_blksize");
 
     &log("| Testing will *erase* the tape currently in the drive!");
     &log("| Hit CTRL-C to abort within 10 seconds...");
@@ -5191,9 +5218,9 @@ sub test_tape_drive {
     &mt('generic-query');
     &log('');
     &log("Writing test file \#1");
-    $cmd = "$main::path{cat} $0";
+    $cmd = "$::path{cat} $0";
     $cmd = &append_writer_cmd($cmd);
-    if (!defined($main::debug)) {
+    if (!defined($::debug)) {
 	system($cmd);
 	if ($CHILD_ERROR) {
 	    $fail++;
@@ -5204,9 +5231,9 @@ sub test_tape_drive {
 
     &mt('generic-query');
     &log("Writing test file \#2");
-    $cmd = "$main::path{cat} $configfile";
+    $cmd = "$::path{cat} $configfile";
     $cmd = &append_writer_cmd($cmd);
-    if (!defined($main::debug)) {
+    if (!defined($::debug)) {
 	system($cmd);
 	if ($CHILD_ERROR) {
 	    $fail++;
@@ -5217,9 +5244,9 @@ sub test_tape_drive {
 
     &mt('generic-query');
     &log("Writing test file \#3");
-    $cmd = "$main::path{cat} $0";
+    $cmd = "$::path{cat} $0";
     $cmd = &append_writer_cmd($cmd);
-    if (!defined($main::debug)) {
+    if (!defined($::debug)) {
 	system($cmd);
 	if ($CHILD_ERROR) {
 	    $fail++;
@@ -5240,19 +5267,19 @@ sub test_tape_drive {
     &log('');
 
     &log("Reading test file \#1");
-    $cmd = &read_function($main::device);
-    if (defined($main::remotetapehost)) {
-	$cmd = &maybe_remote_cmd($cmd, $main::remotetapehost);
+    $cmd = &read_function($::device);
+    if (defined($::remotetapehost)) {
+	$cmd = &maybe_remote_cmd($cmd, $::remotetapehost);
 	# Buffer both sides if remote
-	$cmd .= $main::buffer_cmd;
+	$cmd .= $::buffer_cmd;
     }
     # if pad blocks was true we have nulls at the end (won't be in this script otherwise)
     if ($cfg::pad_blocks eq 'true') {
-	$cmd .= " | $main::path{tr} -d '\\0' > $tmp1";
+	$cmd .= " | $::path{tr} -d '\\0' > $tmp1";
     } else {
 	$cmd .= "> $tmp1";
     }
-    if (!defined($main::debug)) {
+    if (!defined($::debug)) {
 	system($cmd);
 	if ($CHILD_ERROR) {
 	    $fail++;
@@ -5263,19 +5290,19 @@ sub test_tape_drive {
 
     &mt('generic-query');
     &log("Reading test file \#2");
-    $cmd = &read_function($main::device);
-    if (defined($main::remotetapehost)) {
-	$cmd = &maybe_remote_cmd($cmd, $main::remotetapehost);
+    $cmd = &read_function($::device);
+    if (defined($::remotetapehost)) {
+	$cmd = &maybe_remote_cmd($cmd, $::remotetapehost);
 	# Buffer both sides if remote
-	$cmd .= $main::buffer_cmd;
+	$cmd .= $::buffer_cmd;
     }
     # if pad blocks was true we have nulls at the end (won't be in config file otherwise)
     if ($cfg::pad_blocks eq 'true') {
-	$cmd .= " | $main::path{tr} -d '\\0' > $tmp2";
+	$cmd .= " | $::path{tr} -d '\\0' > $tmp2";
     } else {
 	$cmd .= "> $tmp2";
     }
-    if (!defined($main::debug)) {
+    if (!defined($::debug)) {
 	system($cmd);
 	if ($CHILD_ERROR) {
 	    $fail++;
@@ -5286,19 +5313,19 @@ sub test_tape_drive {
 
     &mt('generic-query');
     &log("Reading test file \#3");
-    $cmd = &read_function($main::device);
-    if (defined($main::remotetapehost)) {
-	$cmd = &maybe_remote_cmd($cmd, $main::remotetapehost);
+    $cmd = &read_function($::device);
+    if (defined($::remotetapehost)) {
+	$cmd = &maybe_remote_cmd($cmd, $::remotetapehost);
 	# Buffer both sides if remote
-	$cmd .= $main::buffer_cmd;
+	$cmd .= $::buffer_cmd;
     }
     # if pad blocks was true we have nulls at the end (won't be in this script otherwise)
     if ($cfg::pad_blocks eq 'true') {
-	$cmd .= " | $main::path{tr} -d '\\0' > $tmp3";
+	$cmd .= " | $::path{tr} -d '\\0' > $tmp3";
     } else {
 	$cmd .= "> $tmp3";
     }
-    if (!defined($main::debug)) {
+    if (!defined($::debug)) {
 	system($cmd);
 	if ($CHILD_ERROR) {
 	    $fail++;
@@ -5311,23 +5338,23 @@ sub test_tape_drive {
     &log('');
     &mt('rewind');
     &log("Comparing...");
-    if (!defined($main::debug)) {
-	system("$main::path{diff} -q $0 $tmp1");
+    if (!defined($::debug)) {
+	system("$::path{diff} -q $0 $tmp1");
 	if ($CHILD_ERROR) {
 	    $fail++;
 	}
-	system("$main::path{diff} -q $configfile $tmp2");
+	system("$::path{diff} -q $configfile $tmp2");
 	if ($CHILD_ERROR) {
 	    $fail++;
 	}
-	system("$main::path{diff} -q $0 $tmp3");
+	system("$::path{diff} -q $0 $tmp3");
 	if ($CHILD_ERROR) {
 	    $fail++;
 	}
     } else {
-	&log("(debug) $main::path{diff} -q $0 $tmp1");
-	&log("(debug) $main::path{diff} -q $configfile $tmp2");
-	&log("(debug) $main::path{diff} -q $0 $tmp3");
+	&log("(debug) $::path{diff} -q $0 $tmp1");
+	&log("(debug) $::path{diff} -q $configfile $tmp2");
+	&log("(debug) $::path{diff} -q $0 $tmp3");
     }
 
     unlink $tmp1;
@@ -5335,11 +5362,11 @@ sub test_tape_drive {
     unlink $tmp3;
 
     if ($fail != 0) {
-	print $main::msg "\nFAILURE! Problem with tape driver or parameters.  Please see the FAQ\n";
-	print $main::msg "or try changing the \$blksize, \$pad_blocks, or \$mt_blksize settings.\n";
+	print $::msg "\nFAILURE! Problem with tape driver or parameters.  Please see the FAQ\n";
+	print $::msg "or try changing the \$blksize, \$pad_blocks, or \$mt_blksize settings.\n";
 	exit(1);
     } else {
-	print $main::msg "SUCCESS! Tape drive parameters seem to work just fine\n";
+	print $::msg "SUCCESS! Tape drive parameters seem to work just fine\n";
     }
 
 }
@@ -5350,19 +5377,19 @@ sub test_tape_drive {
 ######################################################################
 sub check_wday {
 
-    if (defined($main::opt{'wday'})) {
+    if (defined($::opt{'wday'})) {
 	my @now = localtime;
 	my $wday_now = $now[6];
 
 	# Just silently hard-limit these to valid set
-	if ($main::opt{'wday'} >= 7) {
-	    $main::opt{'wday'} = 0;
+	if ($::opt{'wday'} >= 7) {
+	    $::opt{'wday'} = 0;
 	}
-	if ($main::opt{'wday'} < 0) {
-	    $main::opt{'wday'} = 0;
+	if ($::opt{'wday'} < 0) {
+	    $::opt{'wday'} = 0;
 	}
 
-	if ($wday_now != $main::opt{'wday'}) {
+	if ($wday_now != $::opt{'wday'}) {
 	    exit(0);
 	}
     }
