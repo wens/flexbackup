@@ -22,6 +22,8 @@
 #  flexbackup [...] -wday <n>      : backup only if the week day matches
 #                                    the input number.  Sunday is 0 or 7.
 #  flexbackup [...] -pipe          : write to stdout rather than file/device
+#  flexbackup [...] -ignore-errors : continue backups even if commands return error
+#                                    status
 #
 # READING ARCHIVES:
 #  flexbackup -list                : list files in archive
@@ -148,6 +150,7 @@ if (! &::GetOptions(\%::opt,
 			"full",
 			"help",
 			"incremental",
+			"ignore-errors",
 			"level=s",
 			"list:s",
 			"onefile=s",
@@ -906,30 +909,36 @@ sub backup {
 
 	    if ($CHILD_ERROR) {
 		&log('');
-		&log("ERROR from backup, exiting");
 
-		# If using exit trick, cat the result file; otherwise use normal output
-		if (defined($catchexit)) {
-		    my $out = `cat $result`;
-		    &log("offending command(s):\n$out");
+		if (defined($::opt{'ignore-errors')) {
+		    &log("returned ERROR from backup; will continue anyway");
 		} else {
-		    &log("offending command(s):\n$cmd");
-		}
 
-		# Put ERROR in the index if tapedevice, or nuke index if file
-		if (defined($indexkey)) {
-		    if (defined($::use_file)) {
-			delete $::index{$indexkey};
+		    &log("ERROR from backup, exiting");
+
+		    # If using exit trick, cat the result file; otherwise use normal output
+		    if (defined($catchexit)) {
+			my $out = `cat $result`;
+			&log("offending command(s):\n$out");
 		    } else {
-			$::index{$indexkey} .= "\n\t---> ERROR occurred during write, above may not be valid";
+			&log("offending command(s):\n$cmd");
 		    }
-		}
-		# If file, rm botched file regardless of index
-		if (defined($::use_file)) {
-		    if ($cfg::type =~ m/^(copy|rsync)$/) {
-			system("rm -rf $::device");
-		    } else {
-			unlink($::device);
+
+		    # Put ERROR in the index if tapedevice, or nuke index if file
+		    if (defined($indexkey)) {
+			if (defined($::use_file)) {
+			    delete $::index{$indexkey};
+			} else {
+			    $::index{$indexkey} .= "\n\t---> ERROR occurred during write, above may not be valid";
+			}
+		    }
+		    # If file, rm botched file regardless of index
+		    if (defined($::use_file)) {
+			if ($cfg::type =~ m/^(copy|rsync)$/) {
+			    system("rm -rf $::device");
+			} else {
+			    unlink($::device);
+			}
 		    }
 		}
 
@@ -938,7 +947,9 @@ sub backup {
 		    unlink($exitscript);
 		}
 
-		exit(1);
+		if (!defined($::opt{'ignore-errors')) {
+		    exit(1);
+		}
 	    }
 	    close(LOG);
 
