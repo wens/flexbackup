@@ -145,6 +145,10 @@ Features to add:
    would print you out when the last level 0 backup was done and what the key
    index was.
 
+ - Exclude subtrees that have a ".nobackup" file in them?  Users can control
+   themselves that way.  Suggestion from someone based on dobackup.pl
+   probably.
+
 -------------------------------------------------------------
 
 Notes for cloning restore shell for afio/tar/cpio types)
