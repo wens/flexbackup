@@ -11,6 +11,7 @@ Changes:
   - Compare works for copy type (just diff -r -q) 
 
 Bugfixes/cleanup:
+  - $pkgdelta_archive_changed = false didn't work.
   - README updated; example for filesystem setup & cron.
   - find -depth w/ -prune isn't supposed to work, no bug. (see single unix
     spec and various manpages).

@@ -4723,8 +4723,6 @@ sub list_packages {
 
     my $host = shift (@_);
 
-    return if ($cfg::pkgdelta_archive_unowned eq 'false');
-
     if ($main::pkgdelta eq 'rpm') {
 
 	my $cmd = "$main::path{rpm} -q -a --queryformat '%{name}-%{version}-%{release}.%{arch}.rpm\\n'";
@@ -4780,7 +4778,7 @@ sub find_packaged_files {
 
     my $host = shift (@_);
 
-    return if ($cfg::pkgdelta_archive_changed eq 'false');
+    return if ($cfg::pkgdelta_archive_unowned eq 'false');
 
     if ($main::pkgdelta eq 'rpm') {
 
