@@ -15,8 +15,7 @@
 #  flexbackup -fs <x>              : backup directory <x>, level 0
 #  flexbackup -fs all -level <n>   : backup all (defined in config file), level n
 #  flexbackup -fs <x> -level <n>   : backup directory <x>, level n
-#        -level can be an integer, or full/differential/incremental
-#
+#     level can be an integer, or full/differential/incremental
 #  flexbackup [...] -pkgdelta rpm  : prune backup to files not part of an RPM
 #                                    or changed from distributed version
 #  flexbackup [...] -wday <n>      : backup only if the week day matches
@@ -31,9 +30,8 @@
 #                                    current working directory
 #  flexbackup -compare             : compare archive at current tape position
 #                                    with the files in your current directory
-#  flexbackup -restore             : as above, but interactive restore
-#                                    (dump type only for now)
-#  flexbackup [operation] -num <n> : read file number n
+#  flexbackup -restore             : interactive restore (dump type only for now)
+#  flexbackup [operation] -num <n> : read file number n from tape
 #  flexbackup [operation] <file>   : if archiving to files rather than a device,
 #                                    list/extract/compare/restore options take
 #                                    a filename argument
@@ -48,19 +46,19 @@
 # TESTING/DEBUG:
 #  flexbackup -test-tape-drive     : tries writing/reading files to make sure you
 #                                    have tape driver & parameters set up correctly
-#  flexbackup [opt] -n             : don't run actual dump or mt commands, just echo
-#  flexbackup [opt] -type filelist : special backup type that just saves list of files
+#  flexbackup [...] -n             : don't run actual dump or mt commands, just echo
+#  flexbackup [...] -type filelist : special backup type that just saves list of files
 #                                    that would have been archived
 # MISC:
 #  flexbackup -newtape             : erase & create new index key (but no backup)
 #  flexbackup -rmfile <file>       : if backups to disk, rm specific file & index info
 #  flexbackup -rmfile all          : if backups to disk, rm all files & index for dir
-#  flexbackup [opt] -c <file>      : use <file> instead of /etc/flexbackup.conf
+#  flexbackup [...] -c <file>      : use <file> instead of /etc/flexbackup.conf
 #                                    for configuration
-#  flexbackup [opt] -type <x>      : override $type from config file
-#  flexbackup [opt] -compress <x>  : override $compress from config file
-#  flexbackup [opt] -device <dev>  : override $device from config file
-#  flexbackup [opt] -d 'var=val'   : override config file setting of $var
+#  flexbackup [...] -type <x>      : override $type from config file
+#  flexbackup [...] -compress <x>  : override $compress from config file
+#  flexbackup [...] -device <dev>  : override $device from config file
+#  flexbackup [...] -d 'var=val'   : override config file setting of $var
 #  flexbackup -fs all -noreten     : don't retension for level 0 "all" backups
 #  flexbackup -fs all -noerase     : don't rewind/erase for level 0 "all" backups
 #  flexbackup -fs <x> -erase       : force a rewind/erase before backup
@@ -3095,6 +3093,7 @@ sub optioncheck {
     my (@modelist) = qw(fs list extract compare restore toc newtape rmindex rmfile test-tape-drive);
     my @modes;
     my $modecount = 0;
+    $main::mode = '';
     foreach my $mode (@modelist) {
 	if (defined($main::opt{$mode})) {
 	    $modecount++;
