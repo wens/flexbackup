@@ -2,9 +2,12 @@ Flexbackup todo list as of version $Name$
 
 Some of these might not happen, but I write them down anyway
 
- - blksize for tar
- - cpio (see news saved msg)
  - finish incremental support for non-dump types
+     find -newer <file>
+     tar : -N "`date -r <file>`"
+     deal w/timestamps for remote files
+ - finish testing list, extract, compare for non-dump types
+ - test ftape stuff again
  - package up nicely
  - FreeBSD checks out ok (hi john)
  - RPM spec file & LSM file
@@ -12,14 +15,16 @@ Some of these might not happen, but I write them down anyway
  - announce
      freshmeat, linux-tape, comp.os.linux.announce
      submit to metalab & redhat-contrib
- - finish list, restore, compare, etc for non-dump types
+ - log files for extract?
+ - does restore compare subdirectories of mountpoints correctly?
  - exclude regexp's
- - full restore vs interactive restore for all types
+ - interactive restore-like shell for types besides dump
      maybe also a "list of files" restore
- - interactive restore-like shell for other dump types
+ - extract of remote volumes
+ - compare for remote volumes
  - restore of remote volumes
- - add disk-file based method rather than device
- - suport multiple tapes for "all"
- - GUI Driver/Configurator utility
-      gtk-perl
+ - add disk-file based method in addiation to tape device
+ - support multiple tapes for "all"
+ - support multiple tapes for a single archive
+ - GUI driver/configurator utility
  - cd-rom burning for full backups
