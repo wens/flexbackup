@@ -13,9 +13,14 @@ BuildArch: noarch
 Requires: mt-st
 Requires: gzip
 Requires: bzip2
-Requires: buffer
-Requires: fileutils >= 4.0
+Requires: ncompress
+Requires: fileutils
 Requires: findutils
+Requires: cpio
+Requires: tar
+Requires: dump
+Requires: afio
+Requires: buffer
 
 
 %description
@@ -61,9 +66,6 @@ rm -rf $RPM_BUILD_ROOT
 %config /etc/flexbackup.conf
 
 %changelog
-* Tue Sep 28 1999 Edwin Huffstutler <edwinh@computer.org>
-- need fileutils at least 4.0.  3.16 had touch -t bug...
-
 * Sat Sep 25 1999 Edwin Huffstutler <edwinh@computer.org>
 - add more requires, update description, email address.
 - really goes in /usr/bin since it needs perl anyway --
