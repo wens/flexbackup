@@ -24,7 +24,6 @@ Cleanup/fix:
     - How to handle (use lowest common denominator flags?  sorta what's tried now)
 
 Misc:
- - put faq in devel/stable trees so I can have two versions
  - Add faq on files changing underneath tar
  - Add faq on sql db dump
  - re-word faq re trying by hand.
