@@ -1,0 +1,158 @@
+.TH "FLEXBACKUP" "1" "Jul 2003" "Flexbackup"
+.SH "NAME"
+flexbackup \- a flexible backup/archiving tool
+.SH "SYNOPSIS"
+\fBflexbackup\fR [\fIOPTION\fR]
+.SH "DESCRIPTION"
+Flexbackup is a perl script front-end to various low-level archiving
+utilities such as \fBtar\fR, \fBdump\fR/\fBrestore\fR, \fBcpio\fR,
+and others.
+.SH "BACKUP OPTIONS"
+.TP
+\fBflexbackup\fR \fI-dir\fR <\fIdir\fR>
+Backup a directory tree starting from path \(dqpath\(dq using level 0 (full).
+.TP
+\fBflexbackup\fR \fI-set\fR \fIall\fR
+Backup all sets defined in \fBflexbackup.conf(5)\fR using level 0 (full).
+.TP
+\fBflexbackup\fR \fI-set\fR <\fItag\fR>
+Backup a set named \(dqtag\(dq using level 0 (full). The set name is defined
+in \fIflexbackup.conf(5)\fR.
+.TP
+\fBflexbackup\fR [...] \fI-level\fR <\fI0-9\fR | \fIfull\fR | \fIdifferential\fR | \fIincremental\fR>
+Change backup level to a number \(dq0-9\(dq, or one of the symbolic names:
+\(dqfull\(dq (level 0); \(dqdifferential\(dq (level 1); \(dqincremental\(dq
+(previous backup level + 1).
+.TP
+\fBflexbackup\fR [...] \fI-pkgdelta\fR <\fIrpm\fR | \fIfreebsd\fR>
+prune backup to files not part of a package or changed from distributed version.
+.TP
+\fBflexbackup\fR [...] \fI-wday\fR <\fI0-7\fR>
+Prune backup to files not part of a package or changed from distributed version.
+backup only if the week day matches the input number. Sunday is 0 or 7.
+.TP
+\fBflexbackup\fR [...] \fI-pipe\fR
+Write backup data to stdout rather than file/device.
+.SH "RESTORE OPTIONS"
+.TP
+\fBflexbackup\fR \fI-list\fR
+List files in archive.
+.TP
+\fBflexbackup\fR \fI-extract\fR
+Extract (restore) all files from archive into your current working directory.
+.TP
+\fBflexbackup\fR \fI-extract\fR \fI-flist\fR <\fIfilelist\fR>
+Extract (restore) the files listed in text file \(dqfilelist\(dq into your
+current working directory.
+.TP
+\fBflexbackup\fR \fI-extract\fR \fI-flist\fR <\fIfilename\fR>
+Extract (restore) the single file named \(dqfilename\(dq into your current
+working directory.
+.TP
+\fBflexbackup\fR \fI-compare\fR
+Compare the archive with the files in your current working directory.
+.TP
+\fBflexbackup\fR \fI-restore\fR
+Interactive restore (\fBdump\fR type only for now).
+.TP
+\fBflexbackup\fR [...] \fI-num\fR <\fIn\fR>
+Read file number \(dqn\(dq from tape. If not given uses current tape position.
+.TP
+\fBflexbackup\fR [...] <\fIarchive\fR>
+If archiving to files rather than a device, use file named \(dqarchive\(dq for
+the \fIlist\fR/\fIextract\fR/\fIcompare\fR/\fIrestore\fR operations.
+.TP
+\fBflexbackup\fR [...] \fI-pipe\fR
+Read backup data from stdin rather than file/device.
+.SH "INDEXING OPTIONS"
+.TP
+\fBflexbackup\fR \fI-toc\fR
+List current device's table of contents.
+.TP
+\fBflexbackup\fR \fI-toc\fR \fIall\fR
+List all known table of contents.
+.TP
+\fBflexbackup\fR \fI-toc\fR <\fIkey\fR>
+List table of contents for specific database index key named \(dqkey\(dq.
+.TP
+\fBflexbackup\fR \fI-rmindex\fR \fIall\fR
+Force delete all database index info.
+.TP
+\fBflexbackup\fR \fI-toc\fR <\fIkey\fR>
+Force delete specified database tape/dir index key named \(dqkey\(dq.
+.TP
+\fBflexbackup\fR \fI-toc\fR <\fIkey\fR:\fIfile\fR>
+Force delete specified database tape/dir index key named \(dqkey\(dq,
+file number \(dqfile\(dq.
+.SH "MISCELLENEOUS OPTIONS"
+.TP
+\fBflexbackup\fR \fI-newtape\fR
+Erase and create new index key (but don't do any backups).
+.TP
+\fBflexbackup\fR \fI-rmfile\fR \fIall\fR
+If archiving to files rather than device, remove all files and index
+information.
+.TP
+\fBflexbackup\fR \fI-rmfile\fR <\fIfile\fR>
+If archiving to files rather than device, remove the file named \(dqfile\(dq
+and its index information.
+.TP
+\fBflexbackup\fR [...] \fI-c\fR <\fIfile.conf\fR>
+Use file named \(dqfile.conf\(dq for configuration information instead of
+\fB/etc/flexbackup.conf\fR(5).
+.TP
+\fBflexbackup\fR [...] \fI-type\fR <\fItype\fR>
+Override \fB$type\fR setting from config file with \(dqtype\(dq.
+.TP
+\fBflexbackup\fR [...] \fI-compress\fR <\fItype\fR>
+Override \fB$compress\fR setting from config file with \(dqtype\(dq.
+.TP
+\fBflexbackup\fR [...] \fI-device\fR <\fIdevice\fR>
+Override \fB$device\fR setting from config file with \(dqdevice\(dq.
+.TP
+\fBflexbackup\fR [...] \fI-d\fR <\fI'setting=value'\fR>
+Override \fB$setting\fR setting from config file with \(dqvalue\(dq.
+.TP
+\fBflexbackup\fR \fI-dir\fR <\fIdir\fR> \fI-erase\fR
+Force a rewind/erase before backup of directory named \(dqdir\(dq.
+.TP
+\fBflexbackup\fR \fI-dir\fR <\fIdir\fR> \fI-norewind\fR
+Do not rewind tape after a single backup of directory named \(dqdir\(dq.
+.TP
+\fBflexbackup\fR \fI-set\fR <\fItag\fR> \fI-noreten\fR
+Do not retension tape for level 0 (full) backups of set named \(dqtag\(dq.
+.TP
+\fBflexbackup\fR \fI-set\fR <\fItag\fR> \fI-noerase\fR
+Do not rewind/erase tape for level 0 (full) backups of set named \(dqtag\(dq.
+.TP
+\fBflexbackup\fR [...] \fI-reten\fR
+Force a retension of tape before reading.
+.TP
+\fBflexbackup\fR [...] \fI-defaults\fR
+Do not use any default values for config variables.
+.TP
+\fBflexbackup\fR \fI-version\fR
+Display version and exit.
+.SH "TESTING/DEBUGGING OPTIONS"
+.TP
+\fBflexbackup\fR \fI-test-tape-drive\fR
+Tries writing/reading files to make sure you have tape driver and parameters
+set up correctly in \fBflexbackup.conf\fR(5).
+.TP
+\fBflexbackup\fR [...] \fI-n\fR
+Don't run actual dump or mt commands, just print the steps that would be taken
+(dry run).
+.TP
+\fBflexbackup\fR [...] \fI-type\fR \fIfilelist\fR
+Run a special backup type that just saves a list of files that would have
+been archived.
+.SH "FILES"
+/etc/flexbackup.conf \- configuration settings
+.SH "REPORTING BUGS"
+Report bugs to (flexbackup-help@lists.sourceforge.net)
+.SH "AUTHOR"
+Written by Edwin Huffstutler (edwinh@computer.org)
+.SH "SEE ALSO"
+\fBflexbackup.conf\fR(5)
+\fBafio\fR(1) \fBmt\fR(1) \fBtar\fR(1) \fBstar\fR(1) \fBcpio\fR(1)
+\fBdump\fR(1) \fBrestore\fR(1) \fBbuffer\fR(1) \fBmbuffer\fR(1)

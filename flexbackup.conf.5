@@ -1,0 +1,304 @@
+..
+.de TQ
+.br
+.ns
+.TP \\$1
+..
+.TH "FLEXBACKUP.CONF" "5" "Jul 2003" "Flexbackup"
+.SH "NAME"
+/etc/flexbackup.conf \- a flexible backup/archiving tool configuration file
+.SH "DESCRIPTION"
+Flexbackup configuration file. Check \fBflexbackup\fR(1) or
+\(dq\fBflexbackup\fR \fI-help\fR\(dq for usage information.
+.SH "SETTINGS"
+.TP
+General Configuration Settings
+.RS
+.TP
+\fB$type\fR = \fI'afio'\fI;
+Which archive type to use.  Supported types are: \fBafio\fR(1), \fBdump\fR(1),
+\fBtar\fR(1), \fBcpio\fR(1), \fBstar\fR(1), \fBpax\fR(1), \fBzip\fR(1),
+\fBlha\fR(1), \fBar\fR(1), \fBshar\fR(1). \fI'copy'\fR is another option if
+running in archive-to-disk mode.  Use \fI'filelist'\fR to dump a list of files
+in your cwd - for debugging setup/exclusion.
+.TP
+\fB$set{\fI'tag'\fR}\fR = \fI'/dir'\fR;
+Configure backup \(dqsets\(dq. Not needed if \(dq-dir <dir>\(dq is used to
+backup one tree at a time.  Each set is a simple space-separated list of
+filesystems/directories. Remote filesystems should be denoted as
+\(dqhost:directory\(dq.  You can use anything (other than \fI'all'\fR) as set
+names. Using \(dq-set all\(dq will back up all defined sets. If you are doing
+a full backup using tapes, each \(dqset\(dq will go onto a different tape and
+you will be prompted for tape change in between. Examples:
+.RS
+.PP
+\fB$set{\fI'set1'\fI}\fR = \fI'/home /usr'\fR;
+.br
+\fB$set{\fI'set2'\fI}\fR = \fI'/dir3 machine2:/dir4 machine3:/dir5'\fR;
+.RE
+.TP
+\fB$prune{\fI'/'\fR}\fR = \fI'tmp proc'\fR;
+Configure subtree pruning. A space-separated list of directories to prune from
+each backup. Key is a filesystem/directory or \(dqhost:directory\(dq spec as
+outlined above regular expressions allowed (not shell-type wildcards!).
+.TP
+\fB$compress\fR = \fI'false|gzip|bzip2|zip|compress|hardware'\fR;
+.TQ
+\fB$compr_level\fR = \fI'4'\fR;
+Configure compression. Choose a type of compression to use and configure the
+level.  The compression level only applies to \fIgzip/bzip2/zip\fR compression
+types.
+.TP
+\fB$buffer\fR = \fI'false|buffer|mbuffer'\fR;
+.TQ
+\fB$buffer_megs\fR = \fI'10'\fR;
+.TQ
+\fB$buffer_fill_pct\fR = \fI'75'\fR;
+.TQ
+\fB$buffer_pause_usec\fR = \fI'100'\fR;
+Configure buffering program to help streaming to tapes. Specify the buffer
+memory size in \fB$buffer_megs\fR, how full buffer needs to be to start writing
+in \fB$buffer_fill_pct\fR, and how long to sleep after every write (which helps
+sustain stream bursts) in \fB$buffer_pause_usec\fR.
+.TP
+\fB$device\fR = \fI'/dev/tape'\fR;
+Configure device to backup to. \fBNon-rewinding version, please!\fR. If the
+target is a directory, \fBflexbackup\fR will archive to files in that directory
+rather than to a device.  If configured as \(dqhost:/dev/tapedevice\(dq, will
+use remote tape drive via rsh/ssha.  Examples:
+.TS
+afCW s l.
+_
+Linux SCSI w/devfs:	/dev/tapes/tape0/mtn
+Linux SCSI:	/dev/nst0
+Linux IDE:	/dev/nht0
+Linux ftape:	/dev/nqft0
+FreeBSD SCSI:	/dev/nrsa0
+_
+.TE
+.TP
+\fB$blksize\fR = \fI'10'\fR;
+Configure the block size (in kilobytes!) to use for archive programs and dd.
+Default is IfB10\fR for most things. Some tape drives need \fI32\fR or \fI64\fR.
+Set to \fI'0'\fR to disable all blocking.
+.TP
+\fB$mt_blksize\fR = \fI'0'\fR;
+Configure the block size (in bytes!) to use for the tape device, with
+\(dqmt setblk\(dq or equivalent. If set to \fI'0'\fR, will use \(dqvariable\(dq
+block size for the tape device (which is recommended). Comment out or set to
+\(dq\fB$blksize\fR * 1024\(dq to have it be the same as the archiver block size
+above.
+.TP
+\fB$pad_blocks\fR = \fI'true|false'\fR;
+Configure block padding.  True to pad blocks to blocksize (devices only, not
+used when archiving to files).
+.TP
+\fB$mt{\fI'command'\fR}\fR = \fI'other'\fR;
+Configure \fBmt\fR operation overrides. Set these if \fBflexbackup\fR doesn't
+know the right \fBmt\fR command(s) for your OS/tape device, or you want to
+override things. Example:
+.RS
+.TP
+Use \fB\(dqmt \fIstatus\fR\(dq\fR instead of \fB\(dqmt \fItell\fR\(dq\fR
+\fB$mt{\fI'tell'\fR}\fR = \fI'status'\fR;
+.RE
+.RE
+.TP
+Other Global Settings
+.RS
+.TP
+\fB$remoteshell\fR = \fI'rsh|ssh|ssh2'\fR;
+Configure the command to use for remote shell.
+.TP
+\fB$remoteuser\fR = \fI''\fR;
+If not empty (or not set), the secondary username for remote shells.
+.TP
+\fB$label\fR = \fI'true|false'\fR;
+Somehow store identifying label in archive?
+.TP
+\fB$verbose\fR = \fI'true|false'\fR;
+Print each file?
+.TP
+\fB$sparse\fR = \fI'true|false'\fR;
+Handle sparse files?
+.TP
+\fB$indexes\fR = \fI'true|false'\fR;
+Set to \fI'false'\fR to turn off all table-of-contents support.
+.TP
+\fB$staticfiles\fR = \fI'true|false'\fR;
+If backing up to files, use static filenames \- no date stamp (same level
+backup of same directory will overwrite old backups).
+.TP
+\fB$atime_preserve\fR = \fI'true|false'\fR;
+Set to true to try and preserve file access times during backup, if the
+selected archive program can do so. Note that if this is true, -cnewer checks
+(file permission/status changes only, not content) are turned off when deciding
+which files to archive on the local system.
+.TP
+\fB$traverse_fs\fR = \fI'false|local|all'\fR;
+Span across filesytems? (backups of type \fB'dump'\fR will ignore this option).
+Set to \fI'false'\fR (don't), \fI'local'\fR (all but nfs/smbfs), or \fI'all'\fR
+(everything)
+.TP
+\fB$exclude_expr[\fI0\fR]\fR = \fI'.*'\fR;
+Exclude files that match these \fBregular expressions\fR (not shell wildcards)
+from the backups (backups of type \fB'dump'\fR will ignore this option). You
+can list more than one, just keep incrementing the index in the brackets for
+each. Also, strip off leading directories (the filesystem specs above or the
+\(dq-dir\(dq flag).  Matches paths, not filenames, so put .* on the front/back
+as needed. Examples:
+.RS
+.PP
+\fB$exclude_expr[\fI0\fR]\fR = \fI'.*/[Cc]ache/.*'\fR;
+.br
+\fB$exclude_expr[\fI1\fR]\fR = \fI'.*~$'\fR;
+.RE
+.TP
+\fB$erase_tape_set_level_zero\fR = \fI'true|false'\fR;
+If set to true (default), and using a tape device, level 0 (full) \(dqset\(dq
+backup types assume you want to erase and use a new tape for each set. If
+set to false, level 0 (full) \(dqset\(dq backup types append to tapes. To force
+an erase for any backup, use \fI\(dq-erase\(dq\fR on the command-line.
+.TP
+\fB$erase_rewind_only\fR = \fI'true|false'\fR;
+Set this to \fB'true'\fR to make erase operations just call \fB\(dqmt
+\fIrewind\fR\(dq\fR - not \fB\(dqmt rewind\(dq\fR followed by \fB\(dqmt
+\fIerase\fR\(dq\fR.
+(For some tape drives, erase takes hours rather than seconds or is otherwise
+undesirable).
+.RE
+.TP
+Log, Stamps, and Binary Location Settings
+.RS
+.TP
+\fB$logdir\fR = \fI'/var/log/flexbackup'\fR;
+Directory for log files.
+.TP
+\fB$comp_log\fR = \fI'false|gzip|bzip2|compress|zip'\fR;
+Compress log?
+.TP
+\fB$staticlogs\fR = \fI'true|false'\fR;
+Use static log filenames with no date stamp?
+.TP
+\fB$prefix\fR = \fI''\fR;
+Log filenames will start with this prefix.
+.TP
+\fB$tmpdir\fR = \fI'/tmp'\fR;
+Used for temporary refdate files, etc.
+.TP
+\fB$stampdir\fR = \fI'/var/lib/flexbackup'\fR;
+Directory for backup timestamp files.
+.TP
+\fB$index\fR = \fI'/var/lib/flexbackup/index'\fR;
+Full path (without the .db extension) to the database filename for tape indexes.
+.TP
+\fB$keyfile\fR = \fI'00-index-key'\fR;
+Filename for keyfile if archiving to dir.
+.TP
+\fB$sprefix\fR = \fI''\fR;
+Stamp filenames will start with this prefix.
+.TP
+\fB$path{\fI'program'\fR}\fR = \fI'/path/to/program'\fR;
+Override paths to commands. By default \fBflexbackup\fR will look for them in
+\fI$PATH\fR. Use this if you want to set commands explicitly. You can use full
+paths or just change command names. Examples:
+.RS
+.TP
+If GNU \fBtar\fR is called \fB\(dqgtar\(dq\fR on your system:
+\fB$path{'tar'} = 'gtar';
+.TP
+Or it can be used to \fB\(dqsudo\(dq\fR certain commands:
+\fB$path{\fI'find'\fR}\fR = \fI'sudo find'\fR;
+.br
+\fB$path{\fI'dump'\fR}\fR = \fI'sudo dump'\fR;
+.br
+\fB$path{\fI'afio'\fR}\fR = \fI'sudo -u nonrootuser afio'\fR;
+.RE
+.RE
+.TP
+Specific Command Settings
+.RS
+.TP
+\fB$afio_nocompress_types\fR = \fI'ext1 ext2 ...'\fR;
+.TQ
+\fB$afio_echo_block\fR = \fI'true|false'\fR;
+.TQ
+\fB$afio_compress_threshold\fR = \fI'3'\fR;
+.TQ
+\fB$afio_compress_cache_size\fR = \fI'2'\fR;
+These settings apply to the \fB'afio'\fR backup types only. Files with
+extensions specified in \fB$afio_nocompress_types\fR will not be compressed.
+Define whether or not echo block numbers in \fB$afio_echo_block\fR. Configure
+the minimum file size (in kilobytes) required for compression in
+\fB$afio_compress_threshold\fR.  \fB$afio_compress_cache_size\fR setting is
+used to specify the maximum amount of memory (megabytes) to use for temporary
+storage of compression results. If a compressed file is bigger than this,
+compression will have to run twice on the file. See the \fBafio\fR(1) manpage
+for more information.
+.TP
+\fB$tar_echo_record_num\fR = \fI'true|false'\fR;
+These settings apply to the \fB'tar'\fR backup types only. Define whether
+or not echo record numbers in \fB$tar_echo_record_num\fR.
+.TP
+\fB$cpio_format\fR = \fI'newc'\fR;
+These settings apply to the \fB'cpio'\fR backup types only. Configure the
+format of the archive in \fB$cpio_format\fR. See the \fBcpio\fR(1) manpage for
+allowed formats.
+.TP
+\fB$dump_length\fR = \fI'0'\fR;
+.TQ
+\fB$dump_use_dumpdates\fR = \fI'true|false'\fR;
+These settings apply to the \fB'dump'\fR backup types only. Configure the
+estimated tape size (in kilobytes) using the \fB$dump_length\fR setting. This
+number doesn't really do much but help \fBdump\fR get size estimates if set to
+0, \fBflexbackup\fR uses \fB'dump \fI-a\fR'\fR to determine this. Set
+\fB$dump_use_dumpdates\fR setting to \fI'true\fR to use \fB/etc/dumpdates\fR
+(could mess things up if you dump subdirectories of mount points). Set it to
+\fI'false'\fR to use \fBflexbackup\fR's internal timestamps.
+.TP
+\fB$star_fifo\fR = \fI'true|false'\fR;
+.TQ
+\fB$star_acl\fR = \fI'true|false'\fR;
+.TQ
+\fB$star_echo_block_num\fR = \fI'true|false'\fR;
+.TQ
+\fB$star_format\fR = \fI'exustar'\fR;
+These settings apply to the \fB'star'\fR backup types only. Define whether
+or not use fifo (buffering) in \fB$star_fifo\fR.  If you set this to
+\fB'true'\fR you probably want to set \fB$buffer\fB = \fI'false'\fR (see above).
+Configure whether or not to handle ACLs in \fB$star_acl\fR.  Define whether or
+not echo record numbers in \fB$star_echo_block_num\fR. Configure the format of
+the archive in \fB$star_format\fR. See the \fBstar\fR(1) manpage for allowed
+formats.
+.TP
+\fB$pax_format\fR = \fI'ustar'\fR;
+These settings apply to the \fB'pax'\fR backup types only. Configure the
+format of the archive in \fB$pax_format\fR. See the \fBpax\fR(1) manpage for
+allowed formats.
+.TP
+\fB$zip_nocompress_types\fR = \fI'ext1 ext2 ...'\fR;
+These settings apply to the \fB'zip'\fR backup types only. Files with
+extensions specified in \fB$zip_nocompress_types\fR will not be compressed.
+.TP
+\fB$pkgdelta_archive_list\fR = \fI'true|false|rootonly'\fR;
+.TQ
+\fB$pkgdelta_archive_unowned\fR = \fI'true|false'\fR;
+.TQ
+\fB$pkgdelta_archive_changed\fR = \fI'true|false'\fR;
+These settings apply to the \fB'pkgdelta'\fR backup types only.
+Configure whether to archive a list of all installed packages in the top level
+of each backup in \fB$pkgdelta_archive_list\fR. Can be \fI'false'\fR (don't),
+\fI'true'\fR (save it for any backup), or \fI'rootonly'\fR (saves list only if
+the filesystem is \fI'/'\fR). Define whether or not to archive files not
+\(dqowned\(dq by any package in \fB$pkgdelta_archive_unowned\fR. Specify whether
+or not to archive any package-owned files which have been modified in
+\fB$pkgdelta_archive_changed\fR.
+.RE
+.SH "FILES"
+/etc/flexbackup.conf \- configuration settings
+.SH "REPORTING BUGS"
+Report bugs to (flexbackup-help@lists.sourceforge.net)
+.SH "AUTHOR"
+Written by Edwin Huffstutler (edwinh@computer.org)
+.SH "SEE ALSO"
+\fBflexbackup\fR(1)
