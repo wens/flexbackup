@@ -6,7 +6,9 @@ Some of these might not happen
 
 Cleanup/fix:
 
- - use -prune for subtree exclusion
+ - Use -prune for subtree exclusion
+ - If on-disk backups, and yous use -rmfile all, the index for the keyfile
+ - gets removed.
 
  - Better cleanup after error in backup
  - Clean up more $main:: vars, split into types or refactor code
@@ -23,7 +25,8 @@ Cleanup/fix:
 
 Misc:
  - put faq in devel/stable trees so I can have two versions
- - Add faq on files changing underneath tar 
+ - Add faq on files changing underneath tar
+ - Add faq on sql db dump
  - re-word faq re trying by hand.
  - Add faq on max size
  - Add faq on -erase -newtape taking forever / erase_rewind_only
@@ -36,13 +39,15 @@ Misc:
      pruning
      pkgdelta
      filelist
-     dircopy
+     copy
      mt_blksize
      example for -wday use
      onefile
      -files -> -flist
      spaces in dirs/prune
+     updating your conf file
  - Create mbuffer rpm
+
  - Make a manual page (AND other enchanced documentation, more than a README)
    someone made a good start or two:
      http://www.law.utulsa.edu:8080/users/bchapman/linuxnotes/flexbackup
@@ -56,9 +61,9 @@ Misc:
 
 
 Features to add:
- - configure buffer delay time
+ - Configure buffer delay time?
 
- - stdout output?
+ - Stdout output?
 
  - Handle multi-volume backups (original idea w/ 'multibuf' never panned out)
 
@@ -96,7 +101,7 @@ Features to add:
  - Interactive restore-like shell for types besides dump
       see notes below
 
- - Destdir option for compare /extract
+ - Destdir option for compare / extract
 
  - Umask spec for on-disk archives/logs/stamps.  check tmpfiles too.
 
@@ -125,6 +130,7 @@ Features to add:
       rewind->write loses the rest of the contents past the first file?
 
  - CD-ROM burning (or just .iso type?) for full backups? any?
+      just act like to-file archives, and take those files & write to CD?
 
  - gnuplot graphs of backup size/duration vs time (parse logfiles)
 
@@ -139,7 +145,7 @@ Features to add:
    would print you out when the last level 0 backup was done and what the key
    index was.
 
- - Multiple devices at once?  (tape +disk).
+ - Multiple devices at once?  (tape + disk)?
 
 -------------------------------------------------------------
 

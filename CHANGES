@@ -4,8 +4,10 @@ $Name$
 ----------------------------------------------------------------------
 Version TBD
 
-  - added "dircopy" type that just mirrors the files if archiving to disk
-  - inital support of "-pkgdelta" with FreeBSD packages
+  - added "copy" type that just mirrors the files into a directory tree
+    if archiving to disk
+
+  - initial support of "-pkgdelta" with FreeBSD packages
   - on FreeBSD, use mt to set 1-filemark behavior globally
   - ignore sockets
 

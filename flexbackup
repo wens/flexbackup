@@ -641,10 +641,14 @@ sub backup {
 	    $filename .= "." . $main::date . "." . $cfg::type;
 	}
 
+        # Some types need the filename modified
 	if ($cfg::type eq 'ar') {
 	    $filename =~ s/ar$/a/;
+	} elsif ($cfg::type eq 'copy') {
+	    $filename =~ s/\.copy$//;
 	}
 
+        # Note compression setting in filename
 	if ($cfg::type =~ m/^(tar|dump|cpio|star|pax|ar|shar|filelist)$/) {
 	    if ($cfg::compress eq "gzip") {
 		$filename .= ".gz";
@@ -668,7 +672,10 @@ sub backup {
 		$filename .= "-Z";
 	    }
 	}
+
+        # Overwirte device var to be the archive filename
 	$main::device = $cfg::device . "/" . $label . "." . $filename;
+
     }
 
     # Just get the date for now; don't write the timestamp
@@ -763,8 +770,8 @@ sub backup {
 	($remove, @cmds) = &backup_shar($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'lha') {
 	($remove, @cmds) = &backup_lha($label, $localdir, $title, $level, $remote);
-    } elsif ($cfg::type eq 'dircopy') {
-	($remove, @cmds) = &backup_dircopy($label, $localdir, $title, $level, $remote);
+    } elsif ($cfg::type eq 'copy') {
+	($remove, @cmds) = &backup_copy($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'filelist') {
 	($remove, @cmds) = &backup_filelist($label, $localdir, $title, $level, $remote);
     }
@@ -889,7 +896,11 @@ sub backup {
 		}
 		# If file, rm botched file regardless of index
 		if (defined($main::use_file)) {
-		    unlink($main::device);
+                    if ($cfg::type eq 'copy') {
+                        system("rm -rf $main::device");
+                    } else {
+                        unlink($main::device);
+                    }
 		}
 
 		if(defined($catchexit)) {
@@ -1164,9 +1175,9 @@ sub backup_cpio {
 }
 
 ######################################################################
-# Return command to copy directory tree, over cpio
+# Return command to copy directory tree
 ######################################################################
-sub backup_dircopy {
+sub backup_copy {
 
     my $label = shift(@_);
     my $dir = shift(@_);
@@ -1808,7 +1819,7 @@ sub list_routine {
 
 	$cmd .= "perl -pe 'last if (! m/^#/)'";
 
-    } elsif ($cfg::type eq 'dircopy') {
+    } elsif ($cfg::type eq 'copy') {
 
 	if ($cfg::verbose eq "true") {
 	    $cmd = "ls -laR $main::device";
@@ -1973,7 +1984,7 @@ sub extract_routine {
 	    &log("| NOTE: \"-flist/-onefile\" ignored for shar");
 	}
 
-    } elsif ($cfg::type eq 'dircopy') {
+    } elsif ($cfg::type eq 'copy') {
 
 	die("Ummm... just copy your files, you have the whole tree...");
 
@@ -2520,7 +2531,7 @@ sub optioncheck {
 
     # First check if things are defined in the config file
     # Checks exist, true/false, or one of options
-    &check(\$cfg::type,'type','dump afio cpio tar star pax zip ar shar lha dircopy filelist');
+    &check(\$cfg::type,'type','dump afio cpio tar star pax zip ar shar lha copy filelist');
     &check(\$cfg::compress,'compress','gzip bzip2 compress zip false hardware');
     &check(\$cfg::compr_level,'compr_level','exist');
     &check(\$cfg::verbose,'verbose');
@@ -3047,16 +3058,16 @@ sub optioncheck {
 	    }
 	}
 
-    } elsif (($cfg::type eq 'cpio') or ($cfg::type eq 'dircopy')) {
+    } elsif (($cfg::type eq 'cpio') or ($cfg::type eq 'copy')) {
 
 	&check(\$cfg::cpio_format,'cpio_format','bin odc newc crc tar ustar hpbin hpodc');
 
 	$main::path{'cpio'} = &checkinpath('cpio');
 	push(@main::remoteprogs, $main::path{'cpio'});
 
-	if ($cfg::type eq 'dircopy') {
+	if ($cfg::type eq 'copy') {
 	    if (!defined($main::use_file)) {
-		push(@main::errors,"Can't use dircopy unless archiving to disk!");
+		push(@main::errors,"Can't use copy unless archiving to disk!");
 	    }
 	}
 
@@ -3501,14 +3512,14 @@ sub maybe_get_filename {
 	undef $main::tapedevice;
 	undef $main::remotetapehost;
 
-    } elsif ((-d "$arg") and ($arg =~ m/dircopy/)) {
+    } elsif (-d "$arg") {
 	$file = $arg;
 	$main::use_file = 1;
 	$cfg::device = $cfg::tmpdir; # Just so optioncheck doesn't assume tape
 	undef $main::tapedevice;
 	undef $main::remotetapehost;
 
-    } elsif (defined($main::use_file) and (-d "$cfg::device/$arg") and ($arg =~ m/dircopy/)) {
+    } elsif (defined($main::use_file) and (-d "$cfg::device/$arg")) {
 	$file = $cfg::device . "/" . $arg;
 	$cfg::device = $cfg::tmpdir; # Just so optioncheck doesn't assume tape
 	undef $main::tapedevice;
@@ -3545,9 +3556,15 @@ sub maybe_get_filename {
 	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
 	&optioncheck();                  # redo to set a few variables over
 
-    } elsif ($file =~ m/\.(dump|afio|cpio|tar|star|pax|zip|a|shar|lha|filelist|dircopy)$/) {
+    } elsif ($file =~ m/\.(dump|afio|cpio|tar|star|pax|zip|a|shar|lha|filelist)$/) {
 	$cfg::type = $1;
 	$cfg::type =~ s/^a$/ar/;
+	$cfg::compress = "false";
+	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
+	&optioncheck();                  # redo to set a few variables over
+
+    } elsif (-d "$file") {
+	$cfg::type = 'copy';
 	$cfg::compress = "false";
 	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
 	&optioncheck();                  # redo to set a few variables over
