@@ -4,7 +4,7 @@ $Name$
 Version 1.0.1 (20030202)
 
 Bug fixes:
- - quote the directory when doing initial "cd"
+ - quote the directory when doing initial "cd" (logfiles, stamps too)
  - afio + null fix in pre6 didn't work in FreeBSD due to a problem with its
      printf(1).  Switch back to newline-separated for afio types for now.
      Linux, HPUX, Solaris, AIX printf(1) utilities did do nulls.

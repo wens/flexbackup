@@ -504,16 +504,16 @@ sub backup_routine {
     if ($cfg::comp_log ne 'false') {
 	if ($cfg::comp_log eq "gzip") {
 	    $logext = ".gz";
-	    $comp_cmd = "$main::path{gzip} -f $main::log";
+	    $comp_cmd = "$main::path{gzip} -f \"$main::log\"";
 	} elsif ($cfg::comp_log eq "bzip2") {
 	    $logext = ".bz2";
-	    $comp_cmd = "$main::path{bzip2} -f $main::log";
+	    $comp_cmd = "$main::path{bzip2} -f \"$main::log\"";
 	} elsif ($cfg::comp_log eq "zip") {
 	    $logext = ".zip";
-	    $comp_cmd = "$main::path{cat} $main::log | $main::path{zip} -q - - > $main::log" . $logext . "; $main::path{rm} -f $main::log";
+	    $comp_cmd = "$main::path{cat} \"$main::log\" | $main::path{zip} -q - - > \"$main::log" . $logext . "\"; $main::path{rm} -f \"$main::log\"";
 	} elsif ($cfg::comp_log eq "compress") {
 	    $logext = ".Z";
-	    $comp_cmd = "$main::path{compress} -f $main::log";
+	    $comp_cmd = "$main::path{compress} -f \"$main::log\"";
 	}
 	undef $main::log;
 	&log("| Compressing log ($logfile" . "$logext)", 'screen');
@@ -817,7 +817,7 @@ sub backup {
     &log("| Backup start: $main::date_at_start");
     &log("| Backup end:   $_");
     if (!defined($main::opt{'n'})) {
-	system("$main::path{touch} -t \"$main::stamp_at_start\" $cfg::stampdir/$cfg::sprefix$label.$level");
+	system("$main::path{touch} -t \"$main::stamp_at_start\" \"$cfg::stampdir/$cfg::sprefix$label.$level\"");
     }
 
     &line();
@@ -3802,10 +3802,10 @@ sub file_list_cmd {
 	    $cmd .= '\( ';
 	}
 
-	$cmd .= "-newer $timestampfile ";
+	$cmd .= "-newer \"$timestampfile\" ";
 
 	if (($cfg::atime_preserve eq 'false') and !defined($remote)) {
-	    $cmd .= "-or -cnewer $timestampfile " . '\) ';
+	    $cmd .= "-or -cnewer \"$timestampfile\" " . '\) ';
 	}
     }
 
