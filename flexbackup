@@ -218,31 +218,20 @@ if (defined($main::opt{'restore'})) {
     &toc_routine();
 
 } elsif (defined($main::opt{'rmindex'})) {
-
     &line();
     &rmindex($main::opt{'rmindex'}, $main::opt{'f'});
 
 } elsif (defined($main::opt{'newtape'})) {
-
     &line();
     &mt("generic-blocksize $main::mt_blksize");
-    if (defined($main::tapedevice)) {
-	&log('| Rewinding & erasing tape...');
-    }
-    &mt('rewind');
-    &maybe_delete_old_index();
-    &mt('rewind');
-    &mt('generic-erase');
-    &new_tape_key();
-    &line();
+    &newtape();
 
 } elsif (defined($main::opt{'rmfile'})) {
-
     &line();
     &rmfile();
 
 } elsif (defined($main::opt{'test-tape-drive'})) {
-
+    &line();
     &test_tape_drive();
 
 }
@@ -363,14 +352,7 @@ sub backup_routine {
 
 	    # Maybe rewind/erase
 	    if ($main::do_erase == 1) {
-		if(defined($main::tapedevice)) {
-		    &log('| Rewinding & erasing tape...');
-		}
-		&mt('rewind');
-		&maybe_delete_old_index();
-		&mt('rewind');
-		&mt('generic-erase');
-		$tape_key = &new_tape_key();
+		$tape_key = &newtape();
 	    } else {
 		&mt('rewind');
 		$tape_key = &get_tape_key();
@@ -460,14 +442,7 @@ sub backup_routine {
 
 	# Maybe rewind/erase
 	if ($main::do_erase == 1) {
-	    if (defined($main::tapedevice)) {
-		&log('| Rewinding & erasing tape...');
-	    }
-	    &mt('rewind');
-	    &maybe_delete_old_index();
-	    &mt('rewind');
-	    &mt('generic-erase');
-	    $tape_key = &new_tape_key();
+	    $tape_key = &newtape();
 	} else {
 	    &mt('rewind');
 	    $tape_key = &get_tape_key();
@@ -3031,7 +3006,7 @@ sub optioncheck {
 	(defined($main::opt{'incremental'}) or
 	 defined($main::opt{'differential'}) or
 	 defined($main::opt{'full'}))) {
-	push(@main::errors,"Can't use -level with -incremental/-differential/-full");
+	push(@main::errors,"Can't use -level AND -incremental/-differential/-full");
     }
 
     if (!defined($main::opt{'level'})) {
@@ -3132,11 +3107,11 @@ sub optioncheck {
 
     # Requirements for testing
     if (defined($main::opt{'test-tape-drive'})) {
-        if (defined($main::use_file)) {
-            push(@main::errors,"No use trying tape drive tests on directories!");
-        }
-        $main::path{'diff'} = &checkinpath('diff');
-        $main::path{'tr'} = &checkinpath('tr');
+	if (defined($main::use_file)) {
+	    push(@main::errors,"No use trying tape drive tests on directories!");
+	}
+	$main::path{'diff'} = &checkinpath('diff');
+	$main::path{'tr'} = &checkinpath('tr');
     }
 
     if (@main::errors) {
@@ -4436,6 +4411,25 @@ sub check_shell {
 
 
 #############################################################################
+# Wipe a tape for use.
+#############################################################################
+sub newtape () {
+
+    my $retval;
+
+    if (defined($main::tapedevice)) {
+	&log('| Rewinding & erasing tape...');
+    }
+    &mt('rewind');
+    &maybe_delete_old_index();
+    &mt('rewind');
+    &mt('generic-erase');
+    $retval = &new_tape_key();
+
+    return($retval);
+}
+
+#############################################################################
 #
 #############################################################################
 sub test_tape_drive () {
@@ -4444,17 +4438,9 @@ sub test_tape_drive () {
     my $tmp1 = "$cfg::tmpdir/test1.$PROCESS_ID";
     my $tmp2 = "$cfg::tmpdir/test2.$PROCESS_ID";
 
-    # FIXME duplicated new tape routine
-    &line();
     &mt("generic-blocksize $main::mt_blksize");
-    if (defined($main::tapedevice)) {
-	&log('| Rewinding & erasing tape...');
-    }
-    &mt('rewind');
-    &maybe_delete_old_index();
-    &mt('rewind');
-    &mt('generic-erase');
-    &new_tape_key();
+
+    &newtape();
     &line();
 
     &mt('generic-query');
@@ -4480,7 +4466,7 @@ sub test_tape_drive () {
     &mt('rewind');
     &mt('generic-query');
     if ($cfg::indexes eq 'true') {
-        &mt('fsf 1');
+	&mt('fsf 1');
     }
     &log('');
 

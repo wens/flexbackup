@@ -17,9 +17,9 @@ Cleanup/fix:
    overwritten with ourselves if comp_log stayed the same. (cosmetic nit)
  - Try to refactor backup all/single, each fs, >1 tapes, etc.  Duplicated
      logic in some spots..
- - Don't tie to db when we don't have to (-list,-extract,-compare)
-     Don't check for writeable stampdir, logdir when we don't have to.
-     Others?
+ - Don't tie to db for list extract compare restore test-tape-drive
+ - Don't check for writeable stampdir for non-backup
+ - Don't check for writeable logdir for non-backup
  - Fix afio w/null (FreeBSD printf can't spit out null char)
 
 Misc:
