@@ -17,7 +17,7 @@ tar: tag
 	cd /tmp; echo yes | cvs release -d flexbackup-$(VER)
 
 rpm: tar
-	perl -p -e 's/%define version .*/%define version $(VER)/' flexbackup.spec
+	perl -pi -e 's/%define version .*/%define version $(VER)/' flexbackup.spec
 	cvs commit -m"version to $(VER)" flexbackup.spec
 	sudo cp $(SITE)/flexbackup-$(VER).tar.gz $(RPM)/SOURCES
 	sudo rpm -ba flexbackup.spec
