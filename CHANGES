@@ -6,11 +6,14 @@ Version 1.2.0 ()
 
 Changes:
   - devel -> stable
-  - Can configure buffer percent full and write sleep time options
   - Detect old config file
-  - Compare works for copy type (just diff -r -q) 
+  - Config file parsing not so rigid - if values not found, it now uses
+    defaults (w/ message printed so you know it)
+  - Can configure buffer percent full and write sleep time options
+  - Compare works for copy type (just diff -r -q)
 
 Bugfixes/cleanup:
+  - Relative links for $device get chased correctly
   - $pkgdelta_archive_changed = false didn't work.
   - README updated; example for filesystem setup & cron.
   - find -depth w/ -prune isn't supposed to work, no bug. (see single unix

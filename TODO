@@ -10,10 +10,6 @@ Cleanup/fix:
  - Check -regex with '\(a\|b\)' with freebsd find
  - Need to pad for reads?  test all types
  - Test mbuffer more ; possibly remove
- - Make some cfg options not *needed* 
-   use defaults if not defined?
-   print msg if using default
-   cross-reference &check with cfg var list
  - If on-disk backups, and you use -rmfile all, the index for the keyfile
    gets removed.
 
@@ -66,7 +62,7 @@ Features to add:
 
  - Stdout output?
 
- - Handle multi-volume backups (original idea w/ 'multibuf' never panned out)
+  - Handle multi-volume backups (original idea w/ 'multibuf' never panned out)
 
       Found "multivol" program.
       Ack.  still not workable.  need edits to multivol...
