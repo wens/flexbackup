@@ -16,10 +16,12 @@ Currently:
 
  - Check old release for use_file + -erase.  nukes db entry for keyfile
    (devel too as well)
- - -erase for use_file wipes files+index+key?
+   check -newtape
+ - Make "-erase" for use_file wipe files+index+key?
+   check -newtape
 
  - Finish up -set / -dir
-     test with tapes too
+     test with tapes
      how to spec dirs with spaces?
 
  - Exclude paths, not just expressions?  per-fs?
@@ -50,7 +52,8 @@ Misc:
      mt_blksize
      example for -wday use
  - add faq on max size
- - add faq on mt erase taking forever / erase_rewind_only
+ - add faq on -erase -newtape taking forever / erase_rewind_only
+     could be mt erase, could be dd index hang (-test-tape-drive)
  - Create mbuffer rpm. Add link/rpm for mbuffer
  - Do bfr again, maybe was blocking problem?
  - Make a manual page (AND other enchanced documentation, more than a README)
@@ -134,6 +137,13 @@ Features to add:
  - "rsync" type for when using on-disk?
 
  - Make file-based backups able to use split for smaller archives?
+
+ - Along the same lines of "-toc all" there should be facilities in
+   flexbackup to query when the last level N backup of a filesystem was done and
+   what tape it was on.
+     -showindex /u -level 0
+   would print you out when the last level 0 backup was done and what the key
+   index was.
 
 -------------------------------------------------------------
 
