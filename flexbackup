@@ -24,7 +24,7 @@
 #  flexbackup -list                : list files in archive
 #  flexbackup -extract             : extract all files from archive into your
 #                                    current working directory
-#  flexbackup -extract -files <f>  : restore the files listed in text file <f>
+#  flexbackup -extract -flist <f>  : restore the files listed in text file <f>
 #                                    into your current working directory
 #  flexbackup -extract -onefile <f>: restore the single file specified by <f>
 #                                    into your current working directory
@@ -37,7 +37,7 @@
 #                                    list/extract/compare/restore options take
 #                                    a filename argument
 # INDEX RELATED:
-#  flexbackup -toc                 : list this tape's table of contents
+#  flexbackup -toc                 : list current device's table of contents
 #  flexbackup -toc all             : list all known table of contents
 #  flexbackup -toc <key>           : list table of contents for specific key
 #  flexbackup -rmindex all         : force db delete of all index info
@@ -137,7 +137,7 @@ if (! &main::GetOptions(\%main::opt,
 			"erase!",
 			"extract:s",
 			"f=s",
-			"files=s",
+			"flist=s",
 			"full",
 			"help",
 			"incremental",
@@ -1745,9 +1745,9 @@ sub extract_routine {
 
     my $cmd = &setup_before_read('extract');
 
-    if (defined($main::opt{'files'})) {
+    if (defined($main::opt{'flist'})) {
 	# Have to get a list of the files for restore to use
-	open(LIST,"$main::opt{files}") or die ("Can't open $main::opt{files}: $OS_ERROR");
+	open(LIST,"$main::opt{flist}") or die ("Can't open $main::opt{flist}: $OS_ERROR");
 	open(NEWLIST,">$newlist") or die ("Can't open $newlist: $OS_ERROR");
 	while(<LIST>) {
 	    chomp;
@@ -1764,7 +1764,7 @@ sub extract_routine {
 	}
 	close(LIST);
 	close(NEWLIST);
-	&log("| Extracting files listed in $main::opt{files}");
+	&log("| Extracting files listed in $main::opt{flist}");
     }
 
     if (defined($main::opt{'onefile'})) {
@@ -1788,7 +1788,7 @@ sub extract_routine {
 	$cmd .= "$main::dump_verb_flag ";
 	$cmd .= "$main::dump_blk_flag ";
 	$cmd .= "-f -";
-        $cmd .= $restore_files;
+	$cmd .= $restore_files;
 
     } elsif ($cfg::type eq 'afio') {
 	$cmd .= "$main::path{afio} -i ";
@@ -1847,14 +1847,14 @@ sub extract_routine {
     } elsif ($cfg::type eq 'pax') {
 	$cmd .= "$main::path{pax} -r ";
 	$cmd .= "$main::pax_verb_flag ";
-        $cmd .= $restore_files;
+	$cmd .= $restore_files;
 
    } elsif ($cfg::type eq 'zip') {
 	my $tmpfile = "$cfg::tmpdir/zip.$PROCESS_ID";
 	$cmd .= "$main::path{cat} > $tmpfile ; ";
 	$cmd .= "$main::path{unzip} ";
 	$cmd .= "$tmpfile ";
-        $cmd .= $restore_files;
+	$cmd .= $restore_files;
 	$cmd .= "; ";
 	$cmd .= "$main::path{rm} -f $tmpfile";
 
@@ -1864,14 +1864,14 @@ sub extract_routine {
 	$cmd .= "$main::path{ar} xo";
 	$cmd .= "$main::ar_verb_flag ";
 	$cmd .= "$tmpfile ";
-        $cmd .= $restore_files;
+	$cmd .= $restore_files;
 	$cmd .= "; ";
 	$cmd .= "$main::path{rm} -f $tmpfile";
 
     } elsif ($cfg::type eq 'shar') {
 	$cmd .= "sh ";
 	if ($restore_files ne '') {
-	    &log("| NOTE: \"-files/-onefile\" ignored for shar");
+	    &log("| NOTE: \"-flist/-onefile\" ignored for shar");
 	}
 
     } elsif ($cfg::type eq 'filelist') {
@@ -1884,7 +1884,7 @@ sub extract_routine {
 	$cmd .= "$main::path{lha} x";
 	$cmd .= "$main::lha_verb_flag ";
 	$cmd .= "$tmpfile ";
-        $cmd .= $restore_files;
+	$cmd .= $restore_files;
 	$cmd .= "; ";
 	$cmd .= "$main::path{rm} -f $tmpfile";
 
@@ -1892,7 +1892,7 @@ sub extract_routine {
 
     &run_or_echo_then_query($cmd);
 
-    if (defined($main::opt{'files'})) {
+    if (defined($main::opt{'flist'})) {
 	unlink("$newlist") or die ("Can't remove $newlist: $OS_ERROR");
     }
 }
@@ -3199,13 +3199,13 @@ sub optioncheck {
     }
 
     # Check extract list
-    if (defined($main::opt{'files'})) {
+    if (defined($main::opt{'flist'})) {
 	if (defined($main::opt{'extract'})) {
-	    if (! -r $main::opt{'files'}) {
-		push(@main::errors,"list of files $main::opt{files} not readable: $OS_ERROR");
+	    if (! -r $main::opt{'flist'}) {
+		push(@main::errors,"list of files $main::opt{flist} not readable: $OS_ERROR");
 	    }
 	} else {
-	    push(@main::errors,"-files can only be used with -extract");
+	    push(@main::errors,"-flist can only be used with -extract");
 	}
     }
     if (defined($main::opt{'onefile'}) and !defined($main::opt{'extract'})) {
