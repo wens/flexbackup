@@ -4,9 +4,16 @@ $Name$
 IN CVS but not released
 
 Bug Fixes:
- - Tweaks to shell detection to detect remote vanilla csh
- - zsh has a pipestatus array variable similar to bash, use it
- 
+  - Try harder to catch pipeline errors in different environments:
+      o zsh has a pipestatus array variable similar to bash, use it
+      o Tweaks to shell detection to detect remote vanilla csh
+      o Add exit-status recording shell trick for local sh
+  - If we get an error, rm index & botched archive file if using files
+  - If we get an error, mark problem in the index if using tapes
+
+Cleanup:
+  - Replaced manual line-wrapper with Text::Wrap (other was buggy, missed
+     single-char "words")
 
 ----------------------------------------------------------------------
 Version 1.0pre3 (20030119)
