@@ -35,16 +35,14 @@ Features to add:
   o first verify behavior of dump using dumpdates
 
     A: Multiple same-number get everything more recent then last
-       higher-numbered.  '9' always get all since '[0-8]', no matter how many
+       higher-numbered.  '9' always gets all since '[0-8]', no matter how many
        '9's you do in a row
 
       see also  http://docs.sun.com/db/doc/805-7228/6j6q7uf18?a=view
 
   o also re-check they way my timestamps work make sure its the same
 
-    A:
-
-
+    A: Oops. we had <= when we needed <. Fixed for 0.9.9.4+.
 
   Check these links:
       http://www.arkeia.com/archives_indexed/2000/10/msg00006.html

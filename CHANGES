@@ -1,6 +1,14 @@
 $Id$
 $Name$
 
+
+Bug fixes:
+ - doh! we *were* doing levels slightly wrong.
+    use < rather than <= for comapring levels.
+    popped out of investigating incremental and differential requests
+    Now we act like dumplevels should
+
+----------------------------------------------------------------------
 Version 0.9.9.3 (20030109)
 
 Bug fixes:

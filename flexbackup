@@ -1148,7 +1148,7 @@ sub get_last_date {
     my @files = readdir(DIR);
     foreach $file (reverse sort @files) {
 	next if ($file !~ m/^$cfg::sprefix$label\.([0-9])$/);
-	if ($1 <= $main::level) {
+	if ($1 < $main::level) {
 	    $targetfile = "$cfg::stampdir/$file";
 	    $lastlevel = $1;
 	    last;
