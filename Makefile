@@ -28,12 +28,13 @@ tar: version tag lsm
 	cd /tmp/flexbackup-$(VER); mv Makefile.dist Makefile
 	cd /tmp/flexbackup-$(VER); mv flexbackup.spec.template flexbackup.spec
 	cd /tmp/flexbackup-$(VER); perl -pi -e 's/%define version.*/%define version $(VER)/' flexbackup.spec
+	cd $(SITE); makefaq.py -o faq.html
+	cd $(SITE); makefaq.py -c text -o /tmp/flexbackup-$(VER)/FAQ
 	tar -C /tmp -z -c -v -X tar.exclude -f $(SITE)/tarball/flexbackup-$(VER).tar.gz flexbackup-$(VER)
 	ln -snf flexbackup-$(VER).tar.gz $(SITE)/tarball/flexbackup-latest.tar.gz
 	cp /tmp/flexbackup-$(VER)/CHANGES /tmp/flexbackup-$(VER)/README /tmp/flexbackup-$(VER)/TODO $(SITE)
 	./flexbackup -h > $(SITE)/usage.txt
 	cp ./flexbackup.conf $(SITE)/flexbackup.conf.txt
-	cd $(SITE); makefaq.py
 	rm -rf /tmp/flexbackup-$(VER)
 
 rpm: version tar
