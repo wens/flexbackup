@@ -2295,8 +2295,10 @@ sub optioncheck {
 	    $main::num_tapes = -1;
 	    foreach my $list (@cfg::filesystems) {
 		$main::num_tapes++;
-		if ($list =~ /^(\S+):/) {
-		    $remotehosts{$1} = 1;
+		foreach my $fs (split(/\s+/,$list)) {
+		    if ($fs =~ /^(\S+):/g) {
+			$remotehosts{$1} = 1;
+		    }
 		}
 	    }
 	    if ($main::num_tapes == -1) {
