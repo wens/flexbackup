@@ -16,12 +16,6 @@ Requires: bzip2
 Requires: ncompress
 Requires: fileutils
 Requires: findutils
-Requires: cpio
-Requires: tar
-Requires: dump
-Requires: afio
-Requires: buffer
-
 
 %description
 Flexible backup script.
