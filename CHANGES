@@ -2,6 +2,7 @@ Version 0.9
   - initial release to the public
 
 Version 0.8 
+  - redone with "use strict"
   - incremental for non-dump types almost done
   - automated pacakging
   - clean some duplicated code
