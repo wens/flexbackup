@@ -96,6 +96,7 @@ use POSIX;
 use AnyDBM_File;
 use Getopt::Long;
 use Text::Wrap;
+use File::Basename;
 use English;
 use strict;
 
@@ -424,7 +425,7 @@ sub backup_routine {
 	    }
 
 	    # Print what this set contains
-	    &log("| Backup set $this_set ($cfg::set{$this_set})");
+	    &log("| Backup set \"$this_set\" ($cfg::set{$this_set})");
 
 	    # Show tape position
 	    if (defined($::tapedevice)) {
@@ -3509,13 +3510,22 @@ sub optioncheck {
 	    $::pkgdelta = 'rpm';
 	    $::path{'rpm'} = &checkinpath('rpm');
 
-	} elsif ($::opt{'pkgdelta'} eq 'freebsd') {
+	} elsif ($::opt{'pkgdelta'} =~ /freebsd/i) {
 	    #
-	    # JR: FIXME FIXME FIXME
-	    # pkg_info doesn't have the '-g' flag before 4.3-RELEASE so we need to look
+	    # pkg_info(1) doesn't have the '-g' flag before 4.3-RELEASE so we need to look
 	    # at the uname value and complain if pkgdelta is used on a FreeBSD box with a
 	    # release before that.
 	    #
+	    my ($os_version, $major, $minor);
+	    chomp($os_version = `uname -r`);
+
+	    if ($os_version =~ /(\d+)\.(\d+)/) {
+		$major = $1;
+		$minor = $2;
+		if (($major == 4 && $minor <= 2) || $major < 4) {
+		    push (@::errors, "Required support in pkg_info(1) for pkgdelta mode not found in FreeBSD $os_version");
+		}
+	    }
 	    $::pkgdelta = 'freebsd';
 	    $::path{'pkg_info'} = &checkinpath('pkg_info');
 
@@ -4942,10 +4952,10 @@ sub file_list_cmd {
 		next if ($file eq '.');
 
 		if ($dir eq '/') {
-		    $key = "/$file"
-		    } else {
-			$key = "$dir/$file"
-			}
+		    $key = "/$file";
+		} else {
+		    $key = "$dir/$file";
+		}
 
 		if (($cfg::pkgdelta_archive_unowned eq 'true') and
 		    !defined($::packaged{$host}{$key})) {
@@ -5017,10 +5027,10 @@ sub list_packages {
 	my $cmd = "$::path{pkg_info}";
 
 	if ($host ne 'localhost') {
-	    &log("| Listing all FreeBSD packages on host $host...");
+	    &log("| Identifying all FreeBSD packages on host $host...");
 	    $cmd = &maybe_remote_cmd($cmd, $host);
 	} else {
-	    &log("| Listing all FreeBSD packages...");
+	    &log("| Identifying all FreeBSD packages...");
 	}
 	if (defined($::debug)) {
 	    &log("(debug) $cmd");
@@ -5078,7 +5088,11 @@ sub find_packaged_files {
 
     } elsif ($::pkgdelta eq 'freebsd') {
 
-	my $cmd = "$::path{pkg_info} -q -a -L";
+	my $cmd = "$::path{pkg_info} -f -q -a";
+	my ($fullpath, $localbase, $alt_localbase);
+	$localbase = '/usr/local';
+	$alt_localbase = '';
+	$fullpath = '';
 
 	if ($host ne 'localhost') {
 	    &log("| Finding all files owned by FreeBSD packages on host $host...");
@@ -5089,19 +5103,63 @@ sub find_packaged_files {
 	if (defined($::debug)) {
 	    &log("(debug) $cmd");
 	} else {
-	    open(LIST,"$cmd |") || die;
+	    open(LIST,"$cmd 2> /dev/null |") || die;
 	    while(<LIST>) {
-		if (&POSIX::isatty($::msg)) {
-		    print $::msg &spinner(++$cnt) . "\r";
+		# If it starts with '@' then it's a pkg directive, 
+		# else it's a (relative) path
+		#
+		if (/^\@/) {
+		    if (/\@cwd\s+(\S+)/) {
+			my ($name, $path, $suffix);
+
+			$localbase = $1;
+			$alt_localbase = '';
+			($name,$path,$suffix) = fileparse($localbase,'\.\S+');
+			$path =~ s/\/$//;
+			# In some (default) situations there are some packages which are 
+			# installed relative to a PREFIX which is actually a link in the /
+			# filesystem. The following hack gets around that and creates an
+			# entry in $packaged twice--once for the full path that would be seen via
+			# pkg_info -L and one for the "unlinked" version. In this manner
+			# no matter which FS is being dumped, the code to filter out
+			# packaged files will always work.
+			#
+			if (-l $path) {
+			    my $link;
+			    $link = readlink ($path);
+			    $link = '/' . $link . '/' . $name;
+			    $alt_localbase = $link;
+			}
+		    }
+		    if (/\@dirrm\s+(\S+)/) {
+			$fullpath = $localbase . '/' . $1;
+			$::packaged{$host}{$fullpath} = 1;
+			if ($alt_localbase ne '') {
+			    $fullpath = $alt_localbase . '/' . $1;
+			    $::packaged{$host}{$fullpath} = 1;
+			}
+			if (&POSIX::isatty($::msg)) {
+			    print $::msg &spinner(++$cnt) . "\r";
+			}
+		    }
 		}
-		if (m:^(/.*)$:) {
-		    $::packaged{$host}{$1} = 1;
+		else {
+		    $fullpath = $localbase . '/' . $_;
+		    chomp ($fullpath);
+		    $::packaged{$host}{$fullpath} = 1;
+		    if ($alt_localbase ne '') {
+			$fullpath = $alt_localbase . '/' . $_;
+			chomp ($fullpath);
+			$::packaged{$host}{$fullpath} = 1;
+		    }
+		    if (&POSIX::isatty($::msg)) {
+			print $::msg &spinner(++$cnt) . "\r";
+		    }
 		}
 	    }
 	    close(LIST);
 	}
     }
-
 }
 
 
@@ -5119,6 +5177,7 @@ sub find_changed_files {
     if ($::pkgdelta eq 'rpm') {
 
 	my $cmd = "$::path{rpm} -V -a";
+	my ($num);
 
 	if ($host ne 'localhost') {
 	    &log("| Finding changed package files on host $host...");
@@ -5126,7 +5185,10 @@ sub find_changed_files {
 	} else {
 	    &log("| Finding changed package files...");
 	}
-	&log("| May take quite a while, please be patient");
+
+	$num = scalar (keys %{$::package_list{$host}});
+
+	&log("| Analyzing $num packages may take quite a while, please be patient");
 	if (defined($::debug)) {
 	    &log("(debug) $cmd");
 	} else {
@@ -5147,6 +5209,7 @@ sub find_changed_files {
     } elsif ($::pkgdelta eq 'freebsd') {
 
 	my $cmd = "$::path{pkg_info} -g -a -q";
+	my ($num);
 
 	if ($host ne 'localhost') {
 	    &log("| Finding changed package files on host $host...");
@@ -5154,12 +5217,15 @@ sub find_changed_files {
 	} else {
 	    &log("| Finding changed package files...");
 	}
-	&log("| May take quite a while, please be patient");
+
+	$num = scalar (keys %{$::package_list{$host}});
+
+	&log("| Analyzing $num packages may take quite a while, please be patient");
 	if (defined($::debug)) {
 	    &log("(debug) $cmd");
 	} else {
-	    open(LIST,"$cmd |") || die;
-	    while(<LIST>) {
+	    open(LIST,"$cmd 2> /dev/null |") || die;
+	    while (<LIST>) {
 		if (&POSIX::isatty($::msg)) {
 		    print $::msg &spinner(++$cnt) . "\r";
 		}
@@ -5171,7 +5237,6 @@ sub find_changed_files {
 	}
 
     }
-
 }
 
 #############################################################################
