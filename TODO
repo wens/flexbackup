@@ -6,10 +6,12 @@ Some of these might not happen
 
 Cleanup/fix:
 
- - -regex with (|) with freebsd find
+ - test %full, sleep additions
+ - Check -regex with (|) with freebsd find
  - Look into find -prune and -depth w/ gnu findutils problem
- - need to pad for reads?  test
- - If on-disk backups, and yous use -rmfile all, the index for the keyfile
+ - Need to pad for reads?  test alltypes
+ - Test mbuffer more ; possibly remove
+ - If on-disk backups, and you use -rmfile all, the index for the keyfile
    gets removed.
 
  - Better cleanup after error in backup
@@ -26,25 +28,26 @@ Cleanup/fix:
     - How to handle (use lowest common denominator flags?  sorta what's tried now)
 
 Misc:
- - Add faq on files changing underneath tar
- - Add faq on sql db dump
+ - Add faq on files changing underneath tar?
+ - Add faq on sql db dump?
  - re-word faq re trying by hand.
  - Add faq on max size
  - Add faq on -erase -newtape taking forever / erase_rewind_only
      could be mt erase, could be dd index hang (-test-tape-drive)
  - Add faq on extract filelist
      also .z at end if afio
- - Sample setup conf/cron
+ - Add sample setup conf/crontrab page
  - Update README/faq/spec/lsm for new items changes since 1.0.3
-     set/dir
+     -fs -> set/dir
      pruning
      pkgdelta
      filelist
      copy
-     mt_blksize
+     mt_blksize change
      example for -wday use
-     onefile
      -files -> -flist
+               -onefile
+
      spaces in dirs/prune
      updating your conf file
  - Create mbuffer rpm
@@ -62,7 +65,6 @@ Misc:
 
 
 Features to add:
- - Configure buffer delay time?
 
  - Stdout output?
 

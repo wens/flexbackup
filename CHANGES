@@ -2,6 +2,16 @@ $Id$
 $Name$
 
 ----------------------------------------------------------------------
+Version 1.1.8 ()  
+
+Changes:
+  - devel -> stable
+  - Can configure % full and sleep time options for buffer
+
+Bugfixes/cleanup:  
+
+
+----------------------------------------------------------------------
 Version 1.1.7 (20030618)
 
 Changes:
