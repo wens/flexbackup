@@ -549,12 +549,12 @@ sub backup {
     &log("| Backup start: $main::date_at_start");
     &log("| Backup end:   $_");
     system("touch $main::touch_flag \"$main::date_at_start\" $cfg::stampdir/$cfg::sprefix$label.$main::level");
+    &line();
 
     # Got errors unless I paused before trying to access the tape right way...
     if ((!defined($main::opt{'n'})) and (!defined($main::use_file))) {
         sleep 10;
     }
-    &line();
 
     # Show where we are on the tape
     &mt('generic-query');
@@ -1382,6 +1382,13 @@ sub mt {
                 &log("| Reading from file; \"mt $operation\" skipped");
             }
 
+        } elsif (defined($main::blockdevice)) {
+            if (defined($main::opt{'fs'})) {
+                &log("| Archiving to block device; \"mt $operation\" skipped");
+            } else {
+                &log("| Reading from block device; \"mt $operation\" skipped");
+            }
+
         } elsif (defined($main::opt{'n'})) {
             &log("| (debug) $main::mt -f $main::device $operation");
 
@@ -1496,6 +1503,13 @@ sub optioncheck {
         if ($realdev =~ /n?z?[qr]ft(\d+)/) {
             $main::ftape = 1;
         }
+
+    } elsif (-b $realdev) {
+
+        # In case of floppy or similar.
+        # Can't do multiple files this way; turn indexing off
+        $main::blockdevice = 1;
+        $cfg::indexes = 'false';
 
     } elsif (-d $cfg::device) {
         if ($cfg::device !~ m:^/:) {
@@ -2238,7 +2252,7 @@ sub setup_before_read {
         &log("| Positioning tape at file number $main::opt{num}");
         &mt("rewind","fsf $main::opt{num}");
     } else {
-        if ($main::use_file == 1) {
+        if (defined($main::use_file)) {
             &log("| Reading from on-disk file $main::device");
         } else {
             &log("| Reading from current tape position");
