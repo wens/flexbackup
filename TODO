@@ -5,9 +5,12 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
+ - Fix problem with sh exit collector & initial cd (can't be in subshell)
+ - Fix sh exit collector to deal with && as well
  - Detect pipeline errors for remote shell = sh; use exit-code collecting
      trick to the local sh one I added
- - Better cleanup after error in backup
+
+- Better cleanup after error in backup
  - Clean up more $main:: vars, split into types or refactor code
  - Whole class of problems like:
     - Use dump combined flags (for older dumps that want abc not -a -b -c)
