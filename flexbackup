@@ -1126,7 +1126,7 @@ sub get_label {
 
 ######################################################################
 # Return a date string of the timestamp file
-# from the last dump of this level or lower
+# from the last dump of lower level
 #   in ctime format normally
 #   in YYYYMMDDhhmm.ss format if touch_flag is set to -t
 #   or unconditionally in ctime format if 2nd argument is given
