@@ -5,14 +5,14 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
- - Fix buffer test to handle bfr as well
- - if staticfiles or staticlogs true, don't timestamp list/extract/compare
-    (make part of setup function as well)
- - Fix stdout/err flow when listing (maybe just "buffer" problem?)
  - Don't tie to db for list extract compare restore test-tape-drive
  - Don't check for writeable stampdir for non-backup
  - Don't check for writeable logdir for non-backup
+
+ - Fix stdout/err flow when listing (maybe just "buffer" problem?)
+
  - Better cleanup after error in backup
+
  - Clean up more $main:: vars, split into types or refactor code
  - Whole class of problems like:
     - Use dump combined flags (for older dumps that want abc not -a -b -c)
@@ -50,7 +50,7 @@ Features to add:
       labelling, but the idea was sort of the same as mine, with small key at
       the start of the tape.
 
-      Will do this post 1.0
+      Ack.  still not workable.
 
  - Better way to spec fs,
      be able to have spaces in dirs in the conf file

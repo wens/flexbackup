@@ -28,6 +28,9 @@ Changes:
 
   - Added support for lha, shar, and ar archives just to be stupid
 
+  - If staticfiles or staticlogs true, don't timestamp list/extract/compare
+    log
+
 ----------------------------------------------------------------------
 Version 1.0.2 (20030219)
 
