@@ -1616,18 +1616,7 @@ sub backup_filelist {
 ######################################################################
 sub list_routine {
 
-    my $cmd;
-
-    $main::log = "flexbackup.list." . &current_time('numeric') . ".log";
-    if (! open(LOG,">$main::log")) {
-	$main::log = "$cfg::tmpdir/$main::log";
-	if (! open(LOG,">$main::log")) {
-	    die "Can't write to $main::log: $OS_ERROR";
-	}
-    }
-    close(LOG);
-
-    $cmd = &setup_before_read();
+    my $cmd = &setup_before_read('list');
 
     if ($cfg::type eq 'dump') {
 	$cmd .= "$main::path{restore} -t ";
@@ -1720,18 +1709,8 @@ sub extract_routine {
 
     my $restore_files = '';
     my $newlist = "$cfg::tmpdir/extract.$PROCESS_ID";
-    my $cmd;
 
-    $main::log = "flexbackup.extract." . &current_time('numeric') . ".log";
-    if (! open(LOG,">$main::log")) {
-	$main::log = "$cfg::tmpdir/$main::log";
-	if (! open(LOG,">$main::log")) {
-	    die "Can't write to $main::log: $OS_ERROR";
-	}
-    }
-    close(LOG);
-
-    $cmd = &setup_before_read();
+    my $cmd = &setup_before_read('extract');
 
     if (defined($main::opt{'files'})) {
 	# Have to get a list of the files for restore to use
@@ -1885,18 +1864,8 @@ sub extract_routine {
 ######################################################################
 sub compare_routine {
 
-    my $cmd;
+    my $cmd = &setup_before_read('compare');
 
-    $main::log = "flexbackup.compare." . &current_time('numeric') . ".log";
-    if (! open(LOG,">$main::log")) {
-	$main::log = "$cfg::tmpdir/$main::log";
-	if (! open(LOG,">$main::log")) {
-	    die "Can't write to $main::log: $OS_ERROR";
-	}
-    }
-    close(LOG);
-
-    $cmd = &setup_before_read();
     if ($cfg::type eq 'dump') {
 	$cmd .= "$main::path{restore} -C ";
 	$cmd .= "$main::dump_blk_flag ";
@@ -1945,16 +1914,7 @@ sub compare_routine {
 ######################################################################
 sub restore_routine {
 
-    $main::log = "flexbackup.restore." . &current_time('numeric') . ".log";
-    if (! open(LOG,">$main::log")) {
-	$main::log = "$cfg::tmpdir/$main::log";
-	if (! open(LOG,">$main::log")) {
-	    die "Can't write to $main::log: $OS_ERROR";
-	}
-    }
-    close(LOG);
-
-    my $cmd = &setup_before_read();
+    my $cmd = &setup_before_read('restore');
 
     if ($cfg::type eq 'dump') {
 	$cmd .= "$main::path{restore} -i ";
@@ -2702,8 +2662,7 @@ sub optioncheck {
 	    $read_flags = "-t -p 75 $buffer_pad_flag -i ";
 	}
 	$main::buffer_cmd = " | $main::path{buffer} -m $megs $buffer_blk_flag";
-	$main::write_catchpipe_cmd = "$main::path{buffer} -m $megs $buffer_blk_flag $write_flags";
-	$main::write_cmd = " | " . $main::write_catchpipe_cmd;
+	$main::write_cmd = "$main::path{buffer} -m $megs $buffer_blk_flag $write_flags";
 	$main::read_cmd = "$main::path{buffer} -m $megs $buffer_blk_flag $read_flags";
 
     } elsif ($cfg::buffer eq "bfr") {
@@ -2714,24 +2673,25 @@ sub optioncheck {
 	my $megs = $cfg::buffer_megs . "m";
 
 	$main::buffer_cmd = " | $main::path{bfr} -b $megs";
-	$main::write_catchpipe_cmd = "$main::path{bfr} -b $megs | $main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=";
-
-	$main::write_cmd = " | " . $main::write_catchpipe_cmd;
+	$main::write_cmd = "$main::path{bfr} -b $megs | $main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=";
 	$main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag if=";
 
     } else {
 
 	# If buffer is disabled, use dd/cat (depending on if blocking turned off)
+
 	if ($cfg::blksize eq '0') {
+
 	    $main::buffer_cmd = "";
-	    $main::write_catchpipe_cmd = "$main::path{cat} > ";
-	    $main::write_cmd = " > ";
+	    $main::write_cmd = "$main::path{cat} > ";
 	    $main::read_cmd = "$main::path{cat} ";
+
 	} else {
+
 	    $main::buffer_cmd = "";
-	    $main::write_catchpipe_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=";
-	    $main::write_cmd = " | " . $main::write_catchpipe_cmd;
+	    $main::write_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=";
 	    $main::read_cmd = "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag if=";
+
 	}
 
     }
@@ -3210,8 +3170,8 @@ sub optioncheck {
 ######################################################################
 sub test_before_run {
 
-    if ($cfg::buffer eq 'buffer') {
-	&test_bufferprog($main::path{'buffer'}, $cfg::buffer_megs, 'localhost');
+    if ($cfg::buffer ne 'false') {
+	&test_bufferprog($main::buffer_cmd, 'localhost');
     }
 
     &check_shell('localhost');
@@ -3604,12 +3564,12 @@ sub append_writer_cmd {
 
     if (!defined($main::remotetapehost)) {
 
-	$cmd .= $main::write_cmd . '"' . $main::device . '"' ;
+	$cmd .= " | " . $main::write_cmd . '"' . $main::device . '"' ;
 
     } else {
 
 	$cmd .= "$main::buffer_cmd | ";
-	$cmd .= &maybe_remote_cmd($main::write_catchpipe_cmd . $main::device, $main::remotetapehost);
+	$cmd .= &maybe_remote_cmd($main::write_cmd . '"' . $main::device . '"', $main::remotetapehost);
     }
 
     return($cmd);
@@ -3621,9 +3581,24 @@ sub append_writer_cmd {
 ######################################################################
 sub setup_before_read {
 
+    my $op = shift(@_);
     my $cmd;
 
     &line();
+
+    if (($cfg::staticlogs eq 'false') and ($cfg::staticfiles eq 'false')) {
+	$main::log = "flexbackup.$op." . &current_time('numeric') . ".log";
+    } else {
+	$main::log = "flexbackup.$op.log";
+    }
+
+    if (! open(LOG,">$main::log")) {
+	$main::log = "$cfg::tmpdir/$main::log";
+	if (! open(LOG,">$main::log")) {
+	    die "Can't write to $main::log: $OS_ERROR";
+	}
+    }
+    close(LOG);
 
     &log("| Logging output to \"$main::log\"");
 
@@ -3689,6 +3664,7 @@ sub read_function {
     my $file = shift(@_);
     my $cmd;
 
+    # bfr needs a blocking dd read ahead of it
     if ($cfg::buffer eq 'bfr') {
 	$cmd = $main::read_cmd . '"' . $file . '"' . $main::buffer_cmd;
     } else {
@@ -4475,41 +4451,39 @@ sub find_changed_files {
 # Actually test to see if we can run buffer. In situations where SysV shared
 # memory is low, or buffer can't run, buffer can fail
 #############################################################################
-
-#
-# FIXME do bfr too
-#
-
 sub test_bufferprog {
 
-    my $buffer_prog = shift(@_);
-    my $mem = shift(@_);
+    my $buffer_cmd = shift(@_);
     my $host = shift(@_);
-    my $tmp_data = "$cfg::tmpdir/buftest.$PROCESS_ID.txt";
     my $tmp_script = "$cfg::tmpdir/buftest.$host.$PROCESS_ID.sh";
     my $retval = 0;
     my $pipecmd;
+
+    $buffer_cmd =~ s:^\s*\|\s*::;
+    $buffer_cmd =~ s:\s*\|\s*$::;
 
     # Create a script which tests the buffer program
     open(SCR,"> $tmp_script") || die;
     print SCR "#!/bin/sh\n";
     print SCR "tmp_data=/tmp/bufftest\$\$.txt\n";
+    print SCR "tmp_err=/tmp/bufftest\$\$.err\n";
     print SCR "echo testme > \$tmp_data\n";
-    print SCR "out=\`$buffer_prog -m ${mem}m -o /dev/null < \$tmp_data 2>&1\`\n";
+    print SCR "$buffer_cmd > /dev/null 2> \$tmp_err < \$tmp_data\n";
     print SCR "res=\$?\n";
+    print SCR "out=\`cat \$tmp_err\`\n";
     print SCR "if [ \$res -eq 0 ]; then\n";
     print SCR "   echo successful\n";
     print SCR "else\n";
     print SCR "   echo \"unsuccessful: exit code \$res: \$out\" \n";
     print SCR "fi\n";
-    print SCR "rm -f \$tmp_data\n";
+    print SCR "rm -f \$tmp_data \$tmp_err\n";
     close(SCR);
 
     if ($host eq 'localhost') {
-	print "| Checking '$buffer_prog' on this machine... ";
-	$pipecmd = "sh $tmp_script";
+	print "| Checking '$cfg::buffer' on this machine... ";
+	$pipecmd = "sh $tmp_script ";
     } else {
-	print "| Checking '$buffer_prog' on host $host... ";
+	print "| Checking '$cfg::buffer' on host $host... ";
 	$pipecmd =  "cat $tmp_script | ($main::remoteshell $host 'cat > $tmp_script; sh $tmp_script; rm -f $tmp_script')";
     }
 
@@ -4521,15 +4495,20 @@ sub test_bufferprog {
 		$retval = $1;
 		my $out = $2;
 		if ($retval != 0) {
-		    push(@main::errors, "Problems encountered testing 'buffer' command on host '$host':");
-		    push(@main::errors, "  --> " . $out);
-		    if ($retval == 255) {
-			push(@main::errors, "  You don't have enough shared memory to run 'buffer' on $host, or");
+		    push(@main::errors, "Problems encountered testing '$cfg::buffer' on host '$host':");
+
+		    if ($out ne '') {
+			push(@main::errors, "  --> " . $out);
+		    }
+
+		    if (($cfg:buffer eq 'buffer') and ($retval == 255)) {
+			push(@main::errors, "  You don't have enough shared memory to run '$cfg::buffer' on $host, or");
 			push(@main::errors, "  have exceeded buffering limits. Try lowering the amount specified in");
 			push(@main::errors, "  \$buffer_megs in your flexbackup.conf file, or reconfigure your");
 			push(@main::errors, "  kernel to include more SysV shared memory pages if using *BSD.");
 		    } else {
-			push(@main::errors, "  Unknown problem trying to run 'buffer' (exit code $retval). Try disabling it.");
+			push(@main::errors, "  Unknown problem trying to run '$cfg::buffer' (exit code $retval). Try disabling it");
+			push(@main::errors, "  or lowering \$buffer_megs.");
 		    }
 		}
 	    }
@@ -4604,9 +4583,9 @@ sub check_remote_progs {
 
     }
 
-    if ($cfg::buffer eq 'buffer') {
+    if ($cfg::buffer ne 'false') {
 	foreach my $host (keys %$remotehost_ref) {
-	    &test_bufferprog($main::path{'buffer'} ,$cfg::buffer_megs, $host);
+	    &test_bufferprog($main::buffer_cmd, $host);
 	}
     }
 
