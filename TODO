@@ -7,16 +7,16 @@ Some of these might not happen
 Cleanup/fix:
  - Better cleanup after error in backup
  - Clean up more $main:: vars, split into types or refactor code
- - Whole class of problems like:
-    - Use dump combined flags (for older dumps that want abc not -a -b -c)
-    - Not all finds have the -fstype flag (from $traverse_fs)
-    - How to handle (use lowest common denominator flags?  sorta what's tried now)
  - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
  - If comp_log is changed, we don't nuke old logs that normally would be
    overwritten with ourselves if comp_log stayed the same. (cosmetic nit)
  - Try to refactor backup all/single, each fs, >1 tapes, etc.  Duplicated
      logic in some spots..
  - Fix afio w/null (FreeBSD printf can't spit out null char)
+ - Whole class of problems like:
+    - Use dump combined flags (for older dumps that want abc not -a -b -c)
+    - Not all finds have the -fstype flag (from $traverse_fs)
+    - How to handle (use lowest common denominator flags?  sorta what's tried now)
 
 Misc:
  - put faq in devel/stable trees so I can have two versions
@@ -52,15 +52,19 @@ Misc:
 
 
 Features to add:
+ - "rsync" type for when using on-disk?
+
  - Handle multi-volume backups (original idea w/ 'multibuf' never panned out)
 
       Found "multivol" program.
       Ack.  still not workable.  need edits to multivol...
 
       mbuffer can do this?  Bah.  Does not cooperate with nullpadding.
-      won't work over remote, needs temrminal attached.
+      won't work over remote, needs terminal attached.
 
-      I might just give up on this
+      I might just give up on this as backups-to-disk don't have this
+      problem.  Tapes just haven't kept capacity with using spare disks in
+      other machines, for example.
 
  - Make package delta work with debian pkgs
 
@@ -83,8 +87,6 @@ Features to add:
 
  - Interactive restore-like shell for types besides dump
       see notes below
-
- - "rsync" type for when using on-disk?
 
  - Destdir option for compare /extract
 
