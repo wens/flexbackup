@@ -10,7 +10,7 @@ Changes:
  - Recognize .deb files as ar archives
 
 Bug fixes/cleanup:
- - Fix quoting in check_remote_progs
+ - Fix quoting in check_remote_progs if your remote shell is csh
 
 ----------------------------------------------------------------------
 Version 1.2.0 (20030707)
