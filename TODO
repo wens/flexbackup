@@ -24,12 +24,11 @@ Misc:
 
 Features to add:
  - static filenames when using disk (same fs, same level overwrite)?
-      Michael Matsumura <michael@limit.org> [ depends on behavior of
-      multiple same-level, see below ]
+      Michael Matsumura <michael@limit.org>
 
  - Several suggestions of incremental/differntial type, need to sort out:
 
-o first verify behavior of dump using dumpdates
+  o first verify behavior of dump using dumpdates
 
     A: Multiple same-number get everything more recent then last
        higher-numbered.  '9' always get all since '[0-8]', no matter how many
