@@ -1,7 +1,7 @@
 $Id$
 $Name$
 
-NOT YET RELEASED but in CVS
+Version 1.0pre2 (20030118)
 
 Bug fixes:
   - atime preserve option to tar/star/afio modifies the ctime of the
@@ -10,6 +10,9 @@ Bug fixes:
       false; if true turn off ctime checks
   - When reading from given filename, set device to dir so that we don't
       pad blocks by accident if default device is tape
+  - Detect shell type for local and any remote hosts
+      Only use bash PIPEEXIT trick if we find bash 2.x
+
 
 ----------------------------------------------------------------------
 Version 1.0pre1 (20030118)

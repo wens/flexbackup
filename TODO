@@ -6,8 +6,6 @@ Some of these might not happen
 
 Cleanup/fix:
  - Clean up more $main:: vars, split into types or refactor code
- - bash PIPESTATUS trick fails if remote filesystem and shell there!=bash
-     and shell local==bash. bah.
  - Whole class of problems like:
     - Use dump combined flags (for older dumps that want abc not -a -b -c)
     - Not all finds have the -fstype flag (from $traverse_fs)
@@ -83,8 +81,9 @@ Features to add:
      for the 'find' for instance and make things more standardized. although
      keeping it simply built out of standard commandline utils is a big plus
      as well...
+ - Just to be stupid: add shar, ar, lha for read/write. [ patch ready ]
  - Just to be stupid: add arj, cab, rar reading (I don't think unix
-     utils for creating those exist).  Add shar, ar, lha for read/write.
+     utils for creating those exist).
  - Make remote machine path overrides possible, that supercede others?
  - Make -extract -files for afio/cpio/zip recurse dirs
       dump/tar already to this. Actually just check that all act the same.
