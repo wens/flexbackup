@@ -54,11 +54,22 @@
 use Getopt::Long;
 use English;
 use strict;
+require 'ctime.pl';
+use diagnostics;
 
 # No output buffering
 $OUTPUT_AUTOFLUSH = 1;
 
 package main;
+
+# See if afio is calling us as a control script
+# if so just echo our stdin
+if ($ARGV[0] =~ /flexbackup.volume_header_info/) {
+    while(<STDIN>) {
+        print;
+    }
+    exit(0);
+}
 
 # This is changed during "make install"
 $main::CONFFILE="/etc/flexbackup.conf";
@@ -526,13 +537,15 @@ sub backup {
     # Create timestamp file, but use date from before the backup started
     # so next time we will catch files that might have been toucehd during the run
     $_ = &current_time();
-    &log("| Timestamp $cfg::sprefix$label.$main::level: $main::date_at_start");
+    &log("| Backup start: $main::date_at_start $cfg::sprefix$label.$main::level");
     &log("| Current time: $_");
-    system("touch -t $main::date_at_start $cfg::stampdir/$cfg::sprefix$label.$main::level");
-    &line();
+    system("touch $main::touch_flag \"$main::date_at_start\" $cfg::stampdir/$cfg::sprefix$label.$main::level");
 
-    # Got errors unless I paesed before trying to access the tape right way...
-    sleep 10;
+    # Got errors unless I paused before trying to access the tape right way...
+    if ((!defined($main::opt{'n'})) and (!defined($main::use_file))) {
+        sleep 10;
+    }
+    &line();
 
     # Show where we are on the tape
     &mt('generic-query');
@@ -552,7 +565,7 @@ sub backup_dump {
     my $len_flag = $cfg::dump_length;
 
     $_ = &get_last_date($label);
-    push(@cmds,&maybe_remote_cmd("touch -t $_ $tmpstamp"));
+    push(@cmds,&maybe_remote_cmd("touch $main::touch_flag \"$_\" $tmpstamp"));
 
     if ($cfg::exclude_expr ne '') {
         &log("| Note: \$exclude_expr is ignored for dump");
@@ -586,13 +599,16 @@ sub backup_afio {
     my @cmds;
     my $archive_cmd = '';
     my $tmpstamp = "$cfg::tmpdir/refdate.$$";
+    my $tmplabel = "$cfg::tmpdir/label.$$";
     my $tmpnocompress = "$cfg::tmpdir/nocompress.$$";
 
     $_ = &get_last_date($label);
-    push(@cmds,&maybe_remote_cmd("touch -t $_ $tmpstamp"));
+    push(@cmds,&maybe_remote_cmd("touch $main::touch_flag \"$_\" $tmpstamp"));
+
+    push(@cmds,&maybe_remote_cmd("printf \"\\nVolume Label:\\n $title\\n\\n\" > $tmplabel"));
 
     $archive_cmd .= "cd $dir && ";
-    $archive_cmd .= "(echo //--$tmpstamp $title && ";
+    $archive_cmd .= "(echo //--$tmplabel flexbackup.volume_header_info && ";
     $archive_cmd .= "find . -xdev -newer $tmpstamp ";
     $archive_cmd .= $main::exclude_flag;
     $archive_cmd .= "-print0) | ";
@@ -616,6 +632,7 @@ sub backup_afio {
 
     push(@cmds,&maybe_remote_cmd($archive_cmd));
     push(@cmds,&maybe_remote_cmd("rm -f $tmpstamp"));
+    push(@cmds,&maybe_remote_cmd("rm -f $tmplabel"));
 
     if (($cfg::compress ne "false") and ($cfg::afio_nocompress_types ne "")) {
         push(@cmds,&maybe_remote_cmd("rm -f $tmpnocompress"));
@@ -638,7 +655,7 @@ sub backup_cpio {
     my $tmpstamp = "$cfg::tmpdir/refdate.$$";
 
     $_ = &get_last_date($label);
-    push(@cmds,&maybe_remote_cmd("touch -t $_ $tmpstamp"));
+    push(@cmds,&maybe_remote_cmd("touch $main::touch_flag \"$_\" $tmpstamp"));
 
     # Kludge a title for cpio by replacing / with - in the title
     # then touch a file in the dir we are going to back up.
@@ -738,7 +755,7 @@ sub list_routine {
 	$cmd .= "restore -t -b $cfg::blksize -f -";
 
     } elsif ($cfg::type eq 'afio') {
-        $cmd .= "afio -t -s 0 -z -D $main::path_to_echo $main::afio_verb_flag -b $main::afio_blksize $main::afio_bnum_flag -";
+        $cmd .= "afio -t -s 0 -z -D $0 $main::afio_unz_flag $main::afio_verb_flag -b $main::afio_blksize $main::afio_bnum_flag -";
 
     } elsif ($cfg::type eq 'tar') {
         $cmd .= "tar -t -M --totals $main::tar_verb_flag -b $main::tar_blksize -f -";
@@ -763,7 +780,7 @@ sub extract_routine {
 	$cmd .= "restore -r -v -b $cfg::blksize -f -";
 
     } elsif ($cfg::type eq 'afio') {
-        $cmd .= "afio -i -s 0 -z -x -D $main::path_to_echo $main::afio_unz_flag $main::afio_verb_flag $main::afio_bnum_flag -b $main::afio_blksize - ";
+        $cmd .= "afio -i -s 0 -z -x -D $0 $main::afio_unz_flag $main::afio_verb_flag $main::afio_bnum_flag -b $main::afio_blksize - ";
 
     } elsif ($cfg::type eq 'tar') {
         $cmd .= "tar -x -M --totals -p -s $main::tar_verb_flag -b $main::tar_blksize -f -";
@@ -787,7 +804,7 @@ sub compare_routine {
 	$cmd .= "restore -C -b $cfg::blksize -f -";
 
     } elsif ($cfg::type eq 'afio') {
-        $cmd .= "afio -r -s 0 -z -D $main::path_to_echo $main::afio_unz_flag -b $main::afio_blksize -";
+        $cmd .= "afio -r -s 0 -z -D $0 $main::afio_unz_flag -b $main::afio_blksize -";
 
     } elsif ($cfg::type eq 'tar') {
         $cmd .= "tar -d -M --totals -b $main::tar_blksize -f -";
@@ -846,15 +863,18 @@ sub get_label {
 ######################################################################
 # Return a date string of the timestamp file
 # from the last dump of this level or lower
+#   in ctime format normally
+#   in YYYYMMDDhhmm.ss format if touch_flag is set to -t
+#   or unconditionally in ctime format if 2nd argument is given
 ######################################################################
 sub get_last_date {
 
     my $label = shift(@_);
     my $readable = shift(@_);
     my $file;
-    my $val;
-    my $val_readable;
-    my $print_val;
+    my $numeric_val;
+    my $string_val;
+    my $return_val;
     my $lastlevel = 0;
     my $targetfile = '';
 
@@ -874,29 +894,38 @@ sub get_last_date {
     # get date from targetfile
     # or complain if level > 0 and no timestamp
     # or use the epoch for level 0
-    if ($main::level eq "0") {
-        $val = '197001010000.00';
-        $print_val = "the epoch";
+    if ($main::level == 0) {
+        $numeric_val = '197001010000.00';
+        $string_val = "Thu Jan  1 00:00:00 MST 1970";
 
     } elsif ($targetfile ne '') {
-        chomp($val_readable = `date -r $targetfile`);
-        chomp($_ = `date -r $targetfile +%Y%m%d%H%M.%S`);
-        $val = $_;
-        $print_val = $_;
+        chomp($string_val = `date -r $targetfile`);
+        chomp($numeric_val = `date -r $targetfile +%Y%m%d%H%M.%S`);
 
     } else {
         die("Can't do a level $main::level backup - no level 0 timestamp found");
 
     }
 
-    &log("| Date of last level $lastlevel backup: $print_val");
+    # what kind of touch flag we are using determines the return type
+    if ($main::touch_flag eq "-t") {
+        $return_val = $numeric_val;
+    } else {
+        $return_val = $string_val;
+    }
+
+    if ($main::level == 0) {
+        &log("| Date of last level $lastlevel backup: the epoch");
+    } else {
+        &log("| Date of last level $lastlevel backup: $return_val");
+    }
     &log("| Date of this level $main::level backup: $main::date_at_start");
     &line();
 
     if (defined($readable)) {
-        return($val_readable);
+        return($string_val);
     } else {
-        return($val);
+        return($return_val);
     }
 }
 
@@ -924,11 +953,11 @@ sub line {
     my $logonly = shift(@_);
 
     if (!defined($logonly)) {
-        print "|-------------------------------------------\n";
+        print "|------------------------------------------------\n";
     }
     if (defined($main::log)) {
         open(LOG,">>$main::log");
-        print LOG "|-------------------------------------------\n";
+        print LOG "|------------------------------------------------\n";
         close(LOG);
     }
 
@@ -991,6 +1020,7 @@ sub mt {
     }
 
     foreach $operation (@operations) {
+
         # mt & ftmt slightly different
         if ($operation eq 'generic-query') {
             if ($cfg::ftape eq 'true') {
@@ -1009,43 +1039,44 @@ sub mt {
             }
         }
 
+        # BSD mt is slightly different
+        if ($main::uname =~ /BSD/) {
+            $operation =~ s/generic-blksize/blocksize/;
+        } else {
+            $operation =~ s/generic-blksize/setblk/;
+        }
+
+
         if (defined($main::use_file)) {
             if (defined($main::opt{'fs'})) {
                 &log("| Archiving to file; \"mt $operation\" skipped");
             } else {
                 &log("| Reading from file; \"mt $operation\" skipped");
             }
+
         } elsif (defined($main::opt{'n'})) {
             &log("| (debug) $main::mt -f $main::device $operation");
 
         } else {
 
-            if ($operation =~ m/(generic-blksize)/) {
-
-                # BSD mt is slightly different
-                if ($main::uname =~ /BSD/) {
-                    $operation =~ s/generic-blksize/blocksize/;
-                } else {
-                    $operation =~ s/generic-blksize/setblk/;
-                    # Try and see which of setblk/defblksize will work
-                    # This is kludgy, but doable
+            if ($operation =~ /setblk/) {
+                # Try and see which of setblk/defblksize will work
+                # This is kludgy, but doable
+                chomp($out = `$main::mt -f $main::device $operation 2>&1`);
+                if ($CHILD_ERROR) {
+                    &log("| Trying \"mt defblksize\" instead of \"mt setblk\"");
+                    $oldoperation = $operation;
+                    $operation =~ s/setblk/defblksize/;
                     chomp($out = `$main::mt -f $main::device $operation 2>&1`);
                     if ($CHILD_ERROR) {
-                        &log("| Trying \"mt defblksize\" instead of \"mt setblk\"");
-                        $oldoperation = $operation;
-                        $operation =~ s/setblk/defblksize/;
-                        chomp($out = `$main::mt -f $main::device $operation 2>&1`);
-                        if ($CHILD_ERROR) {
-                            &log("Error setting block size");
-                            &log("Neither of these commands worked:");
-                            &log("  $main::mt -f $main::device $oldoperation");
-                            &log("  $main::mt -f $main::device $operation");
-                            exit(1);
-
-                        } # error on second guess
-                    } # error on first guess
-                } # not BSD
-            } # if generic-blksize
+                        &log("Error setting block size");
+                        &log("Neither of these commands worked:");
+                        &log("  $main::mt -f $main::device $oldoperation");
+                        &log("  $main::mt -f $main::device $operation");
+                        exit(1);
+                    } # error on second guess
+                } # error on first guess
+            } # operation = setblk
 
             if (defined($main::log)) {
                 system("$main::mt -f $main::device $operation 2>&1 | tee -a $main::log");
@@ -1158,6 +1189,13 @@ sub optioncheck {
         push(@main::errors,"\$buffer_megs must be set to integer number of megabytes");
     }
 
+    # check for type of touch flag
+    if ($main::uname =~ /BSD/) {
+        $main::touch_flag = "-t";
+    } else {
+        $main::touch_flag = "-d";
+    }
+
     # check we can find rsh or ssh
     &checkinpath($cfg::remoteshell);
 
@@ -1168,9 +1206,6 @@ sub optioncheck {
     &checkinpath('tee');
     &checkinpath('rm');
     &checkinpath('find');
-
-    # Use this to "cheat" afio control scripts into being volume labels
-    $main::path_to_echo = &checkinpath('echo');
 
     # ftape support
     if ($cfg::ftape eq 'true') {
@@ -1207,6 +1242,7 @@ sub optioncheck {
     if ($cfg::type eq 'afio') {
 
         &checkinpath('afio');
+        &checkinpath('printf');
 
         # Compress flag
         if ($cfg::compress =~ m/^(gzip|bzip2)$/) {
@@ -1410,24 +1446,35 @@ sub versionstring {
 }
 
 ######################################################################
-# Return current time in YYYYMMDDHHMM.SS format
+# Return current time in ctime format if normal
+# in YYYYMMDDHHMM.SS format if on BSD (have to use touch -t)
+# just YYYYMMMDD if argument is given
 ######################################################################
 sub current_time {
 
     my $short = shift(@_);
     my $string;
-    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+    my $textdate;
+    my $time = time;
+    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($time);
 
     $year += 1900;              # year from localtime has 1900 subtracted
     $mon += 1;                  # month from localtime starts at 0
 
     $string = sprintf("%04d",$year) . sprintf("%02d",$mon) . sprintf("%02d",$mday);
 
-    if (!defined($short)) {
-        $string .= sprintf("%02d",$hour) . sprintf("%02d",$min) . "." . sprintf("%02d",$sec);
+    if (defined($short)) {
+        return($string);
     }
 
-    return($string);
+    $string .= sprintf("%02d",$hour) . sprintf("%02d",$min) . "." . sprintf("%02d",$sec);
+
+    if ($main::touch_flag eq "-t") {
+        return($string);
+    } else {
+        chomp($_ = ctime($time));
+        return($_);
+    }
 
 }
 
@@ -1648,12 +1695,12 @@ sub setup_before_read {
     $main::device = &maybe_get_filename();
     my $cmd;
 
-    &line();
     &mt("generic-blksize $main::mt_blksize");
     if (defined($main::opt{'reten'})) {
         &mt("retension");
-        &line();
     }
+
+    &line();
     &mt('generic-query');
     &line();
 
