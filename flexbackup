@@ -37,7 +37,10 @@
 #  flexbackup [opt] -type <x>      : override $type from config file
 #
 #  flexbackup -fs <x> -erase       : force a rewind/erase before backup
-#  flexbackup -fs <x> -noreten     : don't retension for level 0 "all" backups
+#  flexbackup -fs all -noreten     : don't retension for level 0 "all" backups
+#  flexbackup -fs all -noerase     : don't rewind/erase for level 0 "all" backups
+#
+#  flexbackup -version             : show version
 #
 ######################################################################
 
@@ -48,26 +51,24 @@ use strict;
 # No output buffering
 $OUTPUT_AUTOFLUSH = 1;
 
-# There are only referenced once; this makes warnings go away
-package cfg;
-use vars qw($dump_length $afio_buffer);
-
 package global;
 
 %global::opt = ();
 if (! &main::GetOptions(\%global::opt,
-		  "help",
-		  "c=s",
-		  "level=i",
-		  "fs=s",
-                  "extract",
-                  "restore",
-                  "list",
-                  "compare",
-                  "toc",
-                  "type=s",
-                  "noreten",
-                  "erase"
+                        "help",
+                        "c=s",
+                        "level=i",
+                        "fs=s",
+                        "extract",
+                        "restore",
+                        "list",
+                        "compare",
+                        "toc",
+                        "type=s",
+                        "noreten",
+                        "noerase",
+                        "erase",
+                        "version"
 		  )) {
     &usage();
     exit(0);
@@ -76,6 +77,13 @@ if (! &main::GetOptions(\%global::opt,
 # Give usage message
 if (defined($global::opt{'help'})) {
     &usage();
+    exit(0);
+}
+
+# Version
+if (defined($global::opt{'version'})) {
+    print ('$Id$ ');
+    print "\nflexbackup version " . &versionstring();
     exit(0);
 }
 
@@ -92,7 +100,7 @@ chomp($global::date=`date +%Y%m%d`);
 $_ = $cfg::blksize * 1024;
 system("$global::mt -f $cfg::device setblk $_");
 if ($?) {
-    die("Error from $global::mt setblk $_, exiting...\n");
+    die("Error from $global::mt setblk $_\n");
 }
 
 
@@ -145,10 +153,6 @@ sub backup_routine {
         exit(0);
     }
 
-    &log('$Id$ ');
-    &log('$Name$ ');
-    &log("Doing level $global::level backup of $global::opt{fs} using $cfg::type");
-
     # Figure out log file name & empty log file
     my $label = &get_label($global::opt{'fs'});
     $global::log = "$cfg::logdir/$cfg::prefix$label.$global::level.$global::date";
@@ -157,12 +161,17 @@ sub backup_routine {
     }
     close(LOG);
 
+    # Spew some info
+    &log("flexbackup version " . &versionstring());
+    &log('$Id$ ');
+    &log("Doing level $global::level backup of $global::opt{fs} using $cfg::type");
+
     # Remove old incremental log files
     # ("old" = any higher-numbered logs for this label)
     opendir(DIR,"$cfg::logdir") or die("Can't open cfg::logdir: $!\n");
     @files = readdir(DIR);
     foreach (reverse sort @files) {
-        next if (! m/^$cfg::prefix$label\.([0-9])\.([0-9]+)$/);
+        next if (! m/^$cfg::prefix$label\.([0-9])\.([0-9]+)(.gz)?$/);
         my $olddate = $2;
         if ($1 > $global::level) {
             print "Removing old level $1 log of $global::opt{fs} ($olddate)\n";
@@ -176,7 +185,7 @@ sub backup_routine {
     opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $!\n");
     @files = readdir(DIR);
     foreach (reverse sort @files) {
-        next if (! m/^$cfg::sprefix\.$label\.([0-9])$/);
+        next if (! m/^$cfg::sprefix$label\.([0-9])$/);
         if ($1 > $global::level) {
             print "Removing old level $1 timestamp of $global::opt{fs}\n";
             unlink("$cfg::stampdir/$_") or warn("Can't remove $_: $!\n");
@@ -190,11 +199,11 @@ sub backup_routine {
     # Main backup routine
     #
     ##########################
-    &line();
-
     if ($global::opt{'fs'} eq 'all') {
 
         &log("(all = $cfg::filesystems)");
+	&line();
+
 
         # All filesystems
         if ($global::level eq "0") {
@@ -205,9 +214,12 @@ sub backup_routine {
                 &log('Retensioning tape...');
                 &mt('retension');
             }
-            &log('Erasing tape...');
-            &mt('erase');
-            $global::nextfile = 0;
+            if (!defined($global::opt{'noerase'})) {
+                &log('Rewinding & erasing tape...');
+                &mt('rewind');
+                &mt('erase');
+                $global::nextfile = 0;
+	    }
 
         } else {
 
@@ -252,6 +264,7 @@ sub backup_routine {
     } else {
 
         # Just one filesystem
+	&line();
         if (!defined($global::opt{'erase'})) {
             $global::nextfile = &contents();
             &log('Making sure tape is at end of data...');
@@ -276,6 +289,15 @@ sub backup_routine {
 
     # Print out new contents
     &contents();
+
+    # gzip log file
+    if ($cfg::gzip_log eq 'true') {
+        print "Compressing log file...\n";
+        system("gzip $global::log");
+        if ($?) {
+            warn("Error when compressing log file\n");
+        }
+    }
 
     exit(0);
 }
@@ -385,10 +407,12 @@ sub backup {
 
     # Create timestamp file, but use date from before the backup started
     # so next time we will catch files that might have been toucehd during the run
-    my $stamp = &get_label($dir);
     &line();
-    &log("Timestamp $cfg::stampdir/$cfg::sprefix.$stamp.$global::level ($date_at_start)");
-    system("touch -d \"$date_at_start\" $cfg::stampdir/$cfg::sprefix.$stamp.$global::level");
+    chomp($_=`date`);
+    &log("Current time is $_\n");
+    my $stamp = &get_label($dir);
+    &log("Timestamp $cfg::stampdir/$cfg::sprefix$stamp.$global::level ($date_at_start)");
+    system("touch -d \"$date_at_start\" $cfg::stampdir/$cfg::sprefix$stamp.$global::level");
 
     # Show where we are on the tape
     &line();
@@ -702,7 +726,7 @@ sub get_last_date {
     opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $!\n");
     my @files = readdir(DIR);
     foreach $file (reverse sort @files) {
-        next if ($file !~ m/^$cfg::sprefix\.$label\.([0-9])$/);
+        next if ($file !~ m/^$cfg::sprefix$label\.([0-9])$/);
         if ($1 <= $global::level) {
             $targetfile = "$cfg::stampdir/$file";
             last;
@@ -758,11 +782,11 @@ sub readconfigfile {
         $configfile = "/etc/flexbackup.conf";
     }
     if (! -r $configfile) {
-        die("config file $configfile: $!");
+        die("config file $configfile: $!\n");
     }
     system("perl -c $configfile 2>&1");
     if ($?) {
-        die("syntax error in config file $configfile");
+        die("syntax error in config file $configfile\n");
     }
     require "$configfile";
 
@@ -813,31 +837,26 @@ sub optioncheck {
 	} elsif ($cfg::ftape eq 'false') {
 	    $global::mt = 'mt';
 	} else {
-	    die("\$ftape must be defined as true or false\n");
+	    die("config file error: \$ftape must be defined as true or false\n");
 	}
     } else {
-	die("\$ftape must be defined as true or false\n");
-    }
-
-    # log/stamp files
-    if (defined($cfg::logdir)) {
-	if (! -d $cfg::logdir) {
-            mkdir("$cfg::logdir",0755) or die("Can't mkdir $cfg::logdir: $!");
-	}
-    } else {
-	die("\$logdir must be defined\n");
-    }
-    if (defined($cfg::stampdir)) {
-        if (! -d $cfg::stampdir) {
-            mkdir("$cfg::stampdir",0755) or die("Can't mkdir $cfg::stampdir: $!");
-        }
-    } else {
-        die("\$stampdir must be defined\n");
+	die("config file error: \$ftape must be defined as true or false\n");
     }
 
     # archive type
     if (defined($global::opt{'type'})) {
         $cfg::type = $global::opt{'type'};
+    }
+
+    # blksize
+    if (defined($cfg::blksize)) {
+        if ($cfg::blksize !~ m/^\d+$/) {
+            die("config file error: \$blksize must be set to integer\n");
+        } else {
+            if ($cfg::blksize < 10) {
+                die("config file error: \$blksize minimum is 10k\n");
+            }
+        }
     }
 
     # Type-specific setup
@@ -862,7 +881,31 @@ sub optioncheck {
             # For afio, blocksize needs k appended
             $cfg::afio_blksize = $cfg::blksize . "k";
 
+            # Really need buffer in units of blksize not k
+            if (defined($cfg::afio_buffer)) {
+                if ($cfg::afio_buffer =~ m/^\d+$/) {
+                    if (($cfg::afio_buffer % $cfg::blksize) != 0) {
+                        die("config file error: \$afio_buffer must be multiple of \$blksize\n");
+                    }
+                    $cfg::afio_buffer = $cfg::afio_buffer / $cfg::blksize;
+                } else {
+                    die("config file error: \$afio_buffer must be set to integer number of kilobytes\n");
+                }
+            }
+
+
 	} elsif ($cfg::type eq 'dump') {
+
+            # Really need buffer in units of blksize not k
+            if (defined($cfg::dump_length)) {
+                if ($cfg::dump_length =~ m/^\d+$/) {
+                    if (($cfg::dump_length % $cfg::blksize) != 0) {
+                        die("config file error: \$dump_length must be multiple of \$blksize\n");
+                    }
+                    $cfg::dump_length = $cfg::dump_length / $cfg::blksize;
+                } else {
+                    die("config file error: \$dump_length must be set to integer number of kilobytes\n");
+                }
 
 	} elsif ($cfg::type eq 'tar') {
 
@@ -898,10 +941,26 @@ sub optioncheck {
             $cfg::cpio_blksize = $cfg::blksize * 1024;
 
 	} else {
-	    die("\$type must be defined as afio, dump, tar, or cpio\n");
+	    die("config file error: \$type must be defined as afio, dump, tar, or cpio\n");
 	}
     } else {
-	die("\$type must be defined as afio, dump, tar, or cpio\n");
+	die("config file error: \$type must be defined as afio, dump, tar, or cpio\n");
+    }
+
+    # log/stamp files
+    if (defined($cfg::logdir)) {
+	if (! -d $cfg::logdir) {
+            mkdir("$cfg::logdir",0755) or die("Can't mkdir $cfg::logdir: $!");
+	}
+    } else {
+	die("config file error: \$logdir must be defined\n");
+    }
+    if (defined($cfg::stampdir)) {
+        if (! -d $cfg::stampdir) {
+            mkdir("$cfg::stampdir",0755) or die("Can't mkdir $cfg::stampdir: $!");
+        }
+    } else {
+        die("config file error: \$stampdir must be defined\n");
     }
 
     # levels
@@ -929,6 +988,12 @@ sub optioncheck {
         die("Nothing to do!\n");
     }
 
+    # gzip
+    if (defined($cfg::gzip_log)) {
+        if ($cfg::gzip_log !~ /^(true|false)$/) {
+            die("config file error: \$gzip_log must be defined as true or false\n");
+        }
+    }
 }
 
 ######################################################################
@@ -945,4 +1010,20 @@ sub usage {
 	print;
     }
     close(FILE);
+}
+
+######################################################################
+# Return version string form CVS tag
+######################################################################
+sub versionstring {
+    my $ver = ' $Name$ ';
+    $ver =~ s/Name//g;
+    $ver =~ s/[:\$]//g;
+    $ver =~ s/\s+//g;
+    $ver =~ s/^v//g;
+    $ver =~ s/_/\./g;
+    if ($ver eq '') {
+        $ver = "devel";
+    }
+    return($ver);
 }

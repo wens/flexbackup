@@ -3,18 +3,23 @@ Flexbackup todo list as of version $Name$
 Some of these might not happen, but I write them down anyway
 
  - FreeBSD checks out ok (hi john)
+ - list sites to get software on web page
  - announce
      freshmeat, linux-tape, comp.os.linux.announce
      submit to metalab & redhat-contrib
 
+
  - resurrect my old drive and test ftape stuff again
  - why is tar mode hosed?  backups seem to go ok.
      compare,extract etc not right.
+ - config option for dump to use timestamps or /etc/dumpdates
  - what if you try to do incrementals and no level 0 exists?
+ - nocompress list for afio
+ - add reten switch
  - log files for extract?
  - does restore compare subdirectories of mountpoints correctly?
- - configuratbel exclude regexp's
-     can dump do this?
+ - configurable exclude regexp's
+     dump can't do this
  - interactive restore-like shell for types besides dump
      maybe also a "list of files" restore
  - extract of remote volumes

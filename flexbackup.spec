@@ -6,10 +6,11 @@ Release: 1
 Source: http://members.home.net/edwinh/flexbackup/flexbackup-%{version}.tar.gz
 Url: http://members.home.net/edwinh/flexbackup/
 Copyright: GPL
-Group: Applications/System
+Group: Applications/Archiving
 BuildRoot: /var/tmp/flexbackup-root
 BuildArch: noarch
 Requires: mt-st
+Requires: gzip
 
 %description
 Flexible backup script.
