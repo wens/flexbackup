@@ -976,7 +976,6 @@ sub backup_tar {
     $cmd .= "--no-recursion ";
     $cmd .= "--totals ";
     $cmd .= "--label \"$title\" ";
-    $cmd .= "$main::tar_atime_flag ";
     $cmd .= "$main::tar_verb_flag ";
     $cmd .= "$main::tar_sparse_flag ";
     $cmd .= "$main::tar_recnum_flag ";
@@ -1042,7 +1041,6 @@ sub backup_star {
     $cmd .= "H=$cfg::star_format ";
     $cmd .= "$main::star_fifo_flag ";
     $cmd .= "$main::star_acl_flag ";
-    $cmd .= "$main::star_atime_flag ";
     $cmd .= "$main::star_verb_flag ";
     $cmd .= "$main::star_sparse_flag ";
     $cmd .= "$main::star_blocknum_flag ";
@@ -1986,12 +1984,10 @@ sub optioncheck {
     &check(\$cfg::cpio_format,'cpio_format','bin odc newc crc tar ustar hpbin hpodc');
 
     &check(\$cfg::tar_echo_record_num,'tar_echo_record_num');
-    &check(\$cfg::tar_atime_preserve,'tar_atime_preserve');
 
     &check(\$cfg::star_acl,'star_acl');
     &check(\$cfg::star_fifo,'star_fifo');
     &check(\$cfg::star_format,'star_format','tar star gnutar ustar pax xstar xustar exustar suntar');
-    &check(\$cfg::star_atime_preserve,'star_atime_preserve');
     &check(\$cfg::star_echo_block_num,'star_echo_block_num');
 
     &check(\$cfg::pax_format,'pax_format','cpio bcpio sv4cpio sv4crc tar ustar');
@@ -2079,7 +2075,7 @@ sub optioncheck {
 	$main::path{'mt'} = &checkinpath('mt');
     }
     if (defined($main::remotetapehost)) {
-        push(@remoteprogs,$main::path{'mt'}); 
+	push(@remoteprogs,$main::path{'mt'});
     }
 
     # Exclude regexp for find
@@ -2434,13 +2430,6 @@ sub optioncheck {
 	    }
 	}
 
-	# Set atime preserve
-	if ($cfg::tar_atime_preserve eq "true") {
-	    $main::tar_atime_flag = "--atime-preserve";
-	} else {
-	    $main::tar_atime_flag = "";
-	}
-
     } elsif ($cfg::type eq 'star') {
 
 	$main::path{'star'} = &checkinpath('star');
@@ -2452,13 +2441,6 @@ sub optioncheck {
 	    if ($cfg::star_echo_block_num eq "true") {
 		$main::star_blocknum_flag = "-block-number";
 	    }
-	}
-
-	# Set atime preserve
-	if ($cfg::star_atime_preserve eq "true") {
-	    $main::star_atime_flag = "-atime";
-	} else {
-	    $main::star_atime_flag = "";
 	}
 
 	# ACL flag
@@ -3755,10 +3737,10 @@ sub test_bufferprog {
     close(SCR);
 
     if ($host eq 'localhost') {
-        print "| Checking '$buffer_prog' on this machine... ";
+	print "| Checking '$buffer_prog' on this machine... ";
 	$pipecmd = "sh $tmp_script";
     } else {
-        print "| Checking '$buffer_prog' on host $host... ";
+	print "| Checking '$buffer_prog' on host $host... ";
 	$pipecmd =  "cat $tmp_script | ($main::remoteshell $host 'cat > $tmp_script; sh $tmp_script; rm -f $tmp_script')";
     }
 

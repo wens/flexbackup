@@ -1,6 +1,12 @@
 $Id$
 $Name$
 
+
+Bug fixes:
+ - Take out atime preserve options for tar/star.  Turning that on messes 
+   up the -cnewer tests, and >0 levels get all files again...
+
+----------------------------------------------------------------------
 Version 1.0pre1 (20030118)
 
 Changes:
