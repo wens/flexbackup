@@ -117,6 +117,9 @@ NOTES
  Remote: rsh or ssh is used for remote backups.  Backups of remote machines
  are to be run from the machine with the tape drive!
 
+ If you set device to "host:/dev/tapedevice", you can use remote tape
+ drives as well (via rsh/ssh as well)
+
  When comparing "dump" archives, and if you only backed up a
  subdirectory of a filesystem, you will get errors for the "other"
  parts of the filesystem.  Similarly, if you extract a dump archive,

@@ -28,11 +28,7 @@ Misc:
 
 
 Features to add:
- - Remote tape drive support
-     0.9.8 patch from Caleb Crome <caleb@crome.org>
-     use ssh not rmt
-     could do remote dirs too...
- - non-root use (remote too)
+ - Non-root use (remote too)
     document sudo workaround from Alex
     maybe works using the path overrides I put in?
     sudoers:

@@ -1,6 +1,22 @@
 $Id$
 $Name$
 
+Version 0.9.9.6 (TBD)
+
+Bug fixes:
+ - Some commands still weren't using path overrides (dd,mt)
+
+Changes:
+ - Can now backup to / read from remote tape drives.
+     Set $device = "host:/dev/tape"
+     Uses ssh pipelines like our remote fs backups - not rmt.
+     Old mail idea from Caleb Crome <caleb@crome.org>, reworked.
+
+Cleanup:
+ - Refactored some code due to the above.
+
+
+----------------------------------------------------------------------
 Version 0.9.9.5 (20030111)
 
 Bug fixes:
