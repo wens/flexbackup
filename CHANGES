@@ -2,6 +2,99 @@ $Id$
 $Name$
 
 ----------------------------------------------------------------------
+Version 1.1.7 (20030618)
+
+Changes:
+  - Added "copy" type that just mirrors the files into a directory tree
+    if archiving to disk
+  - Initial support of "-pkgdelta" with FreeBSD packages
+  - On FreeBSD, use mt to set 1-filemark behavior globally
+  - Globally ignore sockets
+  - Use "find -prune" for subtree pruning.  (When this happens, we have to
+    turn off "-depth" switch, as with GNU find 4.1.7 they don't work
+    together. Need to check into findutils more.)
+
+Bugfixes/cleanup:
+  - Don't use --same-order for tar. -extract -flist would fail if you had
+    more than one file and they weren't in the expected order
+  - Use --ignore-failed-read for tar
+  - Remote tape drive device didn't create index key correctly
+  - Typo/update star flags setup
+  - Tweak quiet flags
+
+----------------------------------------------------------------------
+Version 1.1.6 (20030313)
+
+Changes beyond stable 1.0.3 release:
+
+  - Different way to spec the filesystems. This lets us have arbitrarily
+    named backup "sets".
+
+    Config file:
+      $set{'tag1'} = "/dir1 /dir2 ...";
+      $set{'tag2'} = "/dir3 host:/dir4 ...";
+
+    Flags:
+      "-dir <dir>" backs up one directory tree (old "-fs <dir>")
+      "-set <tag>" backs up a named set.  Useful new feature.
+      "-set all" acts like old "-fs all".  If using tapes & level 0, each
+      set is a different tape (acts like the old numeric index to @filesystems)
+
+  - Per-filesystem subtree pruning
+       $prune{'/'} = "tmp proc mnt";
+       $prune{'host:/'} = "disk.?";
+
+  - Added packaging system delta capability.
+
+    If you give "-pkgdelta rpm", after the level/timestamp checks, we
+    further cut down the backup file list by only archiving files that are
+    either (a) not owned by a package, or (b) owned by a package but
+    modified from the distributed version.
+
+    New config variables to tweak behavior:
+      $pkgdelta_archive_list $pkgdelta_archive_unowned $pkgdelta_archive_changed
+
+  - Added 'mbuffer' program as alternative to 'buffer'
+
+  - Added 'filelist' type that doesn't back up anything, but prints/saves
+    the list of files that would have been archived.  Good for debugging
+    timestamps, levels, and file exclusion.
+
+  - Added "-extract -onefile <file>" option; if you are extracting a single
+    file just spec it on the command line, no list file needed
+
+  - Changed boolean mt_var_blksize into mt_blocksize integer (in bytes).
+    Set to 0 for variable blocksize (old "true" value), comment out or
+    set to "$blksize * 1024" for old "false" value.
+
+  - If staticfiles or staticlogs true, don't timestamp list/extract/compare
+    log
+
+  - Added -wday option (helps with once-a-month, on a certain day of the
+    week only cron setups)
+
+  - test-tape-drive now diffs 3 files, one in the middle is different
+    (will catch people using rewind-on-close device)
+
+  - "-extract -files" -> "-extract -flist" to hopefully be more clear
+
+  - db/file rm flags tweaked:
+       Redid rmindex semantics again, see help 
+       -rmfile can be specified multiple times
+       -rmindex can be specified multiple times
+
+  - Added support for lha, shar, and ar archives just to be stupid
+
+Cleanup:
+  - Allow dirs/prune paths with spaces in them - to use, enclose all 
+    items in  the lists in quotes.
+  - When level > 9 and using files, -toc sorts better now
+  - Config file with spaces in path works
+  - Don't check for writeable stampdir for non-backup
+  - Don't check for writeable logdir for non-backup
+  - Don't tie to db for non-backup
+
+----------------------------------------------------------------------
 Version 1.0.4 (20030618)
 
 Bug fixes:
