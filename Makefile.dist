@@ -29,7 +29,7 @@ fb.install:
 	rm -f fb.tmp
 
 multibuf: multibuf.c getopt.h
-        $(CC) $(CFLAGS) -Wall -D_XOPEN_SOURCE -DNDEBUG multibuf.c -o multibuf
+	$(CC) $(CFLAGS) -Wall -DNDEBUG multibuf.c -o multibuf
 
 clean:
 	rm -f fb.install
