@@ -2867,9 +2867,9 @@ sub optioncheck {
     # Traverse mountpoints?
     &checkvar(\$cfg::traverse_fs,'traverse_fs','false local all','false');
     if ($cfg::traverse_fs eq "local") {
-	$::mountpoint_flag = "! -fstype nfs ! -fstype smbfs ! -fstype bind";
+	$::mountpoint_flag = "! -fstype nfs ! -fstype smbfs ! -fstype bind ! -fstype proc ! -fstype devpts ! -fstype devfs ! -fstype tmpfs";
     } elsif ($cfg::traverse_fs eq "all") {
-	$::mountpoint_flag = "";
+	$::mountpoint_flag = "! -fstype proc ! -fstype devpts ! -fstype devfs ! -fstype tmpfs";
     } else {
 	$::mountpoint_flag = "-xdev";
     }
