@@ -29,18 +29,29 @@ Features to add:
 
  - Several suggestions of this type, need to sort out:
   o first verify behavior of dump using dumpdates
+
+    A: Multiple same-number get everything more recent then last
+       higher-numbered.  '9' always get all since '[0-8]', no matter how many
+       '9's you do in a row
+
   o also re-check they way my timestamps work
+
+    A:
+
   o then sort out the below
    - incremental?
-      incremental makes get all since the backup, whatverver it is
-      (isn't this just like 9's in a row?)
-     something like this may help those confused by dump "levels" as well.
+      incremental makes get all since the backup, whatever it is
+
      OR You'd only have two choices - full & incremental.
+     something like this may help those confused by dump "levels" as well.
+
    - differential mode (all since previous higher level)
      interaction w/ logs
      interaction w/ files
      (how is this different from now?)
-   - maybe simple alias full = 0, incremental = 9
+     
+   - maybe simple alias full = 0, incremental = 9.  
+      A: NO! doesn't work with dump level semantics
 
  - remote tape drive (rmt) support
      Caleb Crome <caleb@crome.org>
