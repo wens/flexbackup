@@ -17,6 +17,7 @@ Changes:
  - Skip proc/devpts/devfs/tmpfs for traverse_fs=local or all
 
 Bug fixes/cleanup:
+ - Clean up after things a bit better if error detected
  - Fix quoting in check_remote_progs if your remote shell is csh
  - Make sure we don't generate conflicting index keys (as long as -newtape 
    is not run in parallel)

@@ -6,9 +6,9 @@ Some of these might not happen
 
 Pending:
  - Scrub manpage, mention in readme, etc.
+ Freebsd pkg changes
 
 Cleanup/fix:
- - Better cleanup after error in backup
  - Clean up more $main:: vars, split into types or refactor code
  - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
  - If comp_log is changed, we don't nuke old logs that normally would be
@@ -21,6 +21,7 @@ Cleanup/fix:
     - Use dump combined flags (for older dumps that want abc not -a -b -c)
     - Not all finds have the -fstype flag (from $traverse_fs)
     - Use lowest common denominator flags? Sort of what's tried now w/ cpio
+    (This is why pax exists...)
 
 Misc:
  - Do .debs?
@@ -33,6 +34,8 @@ Misc:
    being totally un-automatable.
 
 Features to add:
+
+  - Remote directores for to-disk backups
 
   - A Shorter summary status that's better than doing
          egrep "(error|of set|Backup of|written)"
