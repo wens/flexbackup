@@ -1061,8 +1061,8 @@ sub backup_tar {
     $cmd .= "$main::path{tar} --create ";
     $cmd .= "--null ";
     $cmd .= "--files-from=- ";
+    $cmd .= "--ignore-failed-read ";
     $cmd .= "--same-permissions ";
-    $cmd .= "--same-order ";
     $cmd .= "--no-recursion ";
     $cmd .= "--totals ";
     $cmd .= "--label \"$title\" ";
@@ -1457,7 +1457,6 @@ sub extract_routine {
 	}
 	$cmd .= "--totals ";
 	$cmd .= "--same-permissions ";
-	$cmd .= "--same-order ";
 	$cmd .= "$main::tar_verb_flag ";
 	$cmd .= "$main::tar_sparse_flag ";
 	$cmd .= "$main::tar_recnum_flag ";
@@ -2562,12 +2561,12 @@ sub optioncheck {
 
 	# fifo
 	if ($cfg::star_fifo eq "true") {
-	    $main::star_fifo_flag = "--fifo";
+	    $main::star_fifo_flag = "-fifo";
 	    if ($cfg::verbose eq "true") {
-		$main::star_fifo_flag .= " --fifostats";
+		$main::star_fifo_flag .= " -fifostats";
 	    }
 	} else {
-	    $main::star_acl_flag = "";
+	    $main::star_fifo_flag = "";
 	}
 
     } elsif ($cfg::type eq 'pax') {
@@ -3399,9 +3398,8 @@ sub new_tape_key {
     }
 
     &log("| Creating index key $key");
-    $string = "$main::path{printf} \'$key\\nThis is a flexbackup index key\\n\' | ";
-    $string .=  "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=$dev";
-
+    $string = "$main::path{printf} \'$key\\nThis is a flexbackup index key\\n\' ";
+    $string = &append_writer_cmd($string);
     if (defined($main::opt{'n'})) {
 	&log("(debug) $string");
     } else {

@@ -2,6 +2,16 @@ $Id$
 $Name$
 
 ----------------------------------------------------------------------
+Version 1.0.4 (20030618)
+
+Bug fixes:
+  - Don't use --same-order for tar. -extract -files would fail if you had
+    more than one file and they weren't in the expected order
+  - Use --ignore-failed-read for tar
+  - Remote tape drive device didn't create index key correctly
+  - Typo/update star flags setup
+
+----------------------------------------------------------------------
 Version 1.0.3 (20030313)
 
 Bug fixes:
