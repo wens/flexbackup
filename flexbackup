@@ -1055,15 +1055,20 @@ sub backup_afio {
     }
 
     if ($cfg::label ne 'false') {
-        $cmd = "$main::path{printf} \"Volume Label:\\n$title\\n\\n\" > $tmplabel";
-        push(@cmds, &maybe_remote_cmd($cmd, $remote));
-        $remove .= " $tmplabel";
+	$cmd = "$main::path{printf} \"Volume Label:\\n$title\\n\\n\" > $tmplabel";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= " $tmplabel";
     }
-    
+
     $cmd = "cd \"$dir\" && ";
-    $cmd .= "($main::path{printf} \"//--$tmplabel flexbackup.volume_header_info\\n\" && ";
+    if ($cfg::label ne 'false') {
+	$cmd .= "($main::path{printf} \"//--$tmplabel flexbackup.volume_header_info\\n\" && ";
+    }
     $cmd .= &file_list_cmd($dir, $stamp, 'newline', $level, $remote);
-    $cmd .= ") | ";
+    if ($cfg::label ne 'false') {
+	$cmd .= ")";
+    }
+    $cmd .= " | ";
 
     $cmd .= "$main::path{afio} -o ";
     $cmd .= "$no_compress ";
@@ -1118,12 +1123,12 @@ sub backup_cpio {
     }
 
     if ($cfg::label ne 'false') {
-        # Kludge a title by replacing / with - in the title
-        # then touch a file in the dir we are going to back up.
-        $title =~ s%/%-%g;
-        $cmd = "$main::path{touch} \"$dir/$title\"";
-        push(@cmds, &maybe_remote_cmd($cmd, $remote));
-        $remove .= " \"$dir/$title\"";
+	# Kludge a title by replacing / with - in the title
+	# then touch a file in the dir we are going to back up.
+	$title =~ s%/%-%g;
+	$cmd = "$main::path{touch} \"$dir/$title\"";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= " \"$dir/$title\"";
     }
 
     $cmd = "cd \"$dir\" && ";
@@ -1190,7 +1195,7 @@ sub backup_tar {
     $cmd .= "--no-recursion ";
     $cmd .= "--totals ";
     if ($cfg::label ne 'false') {
-        $cmd .= "--label \"$title\" ";
+	$cmd .= "--label \"$title\" ";
     }
     $cmd .= "$main::tar_verb_flag ";
     $cmd .= "$main::tar_sparse_flag ";
@@ -1252,7 +1257,7 @@ sub backup_star {
     $cmd .= "-B ";
     $cmd .= "-dirmode ";
     if ($cfg::label ne 'false') {
-        $cmd .= "VOLHDR=\"$title\" ";
+	$cmd .= "VOLHDR=\"$title\" ";
     }
     $cmd .= "H=$cfg::star_format ";
     $cmd .= "$main::star_fifo_flag ";
@@ -1307,12 +1312,12 @@ sub backup_pax {
     }
 
     if ($cfg::label ne 'false') {
-        # Kludge a title by replacing / with - in the title
-        # then touch a file in the dir we are going to back up.
-        $title =~ s%/%-%g;
-        $cmd = "$main::path{touch} \"$dir/$title\"";
-        push(@cmds, &maybe_remote_cmd($cmd, $remote));
-        $remove .= " \"$dir/$title\"";
+	# Kludge a title by replacing / with - in the title
+	# then touch a file in the dir we are going to back up.
+	$title =~ s%/%-%g;
+	$cmd = "$main::path{touch} \"$dir/$title\"";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= " \"$dir/$title\"";
     }
 
     $cmd = "cd \"$dir\" && ";
@@ -1370,12 +1375,12 @@ sub backup_zip {
     }
 
     if ($cfg::label ne 'false') {
-        # Kludge a title by replacing / with - in the title
-        # then touch a file in the dir we are going to back up.
-        $title =~ s%/%-%g;
-        $cmd = "$main::path{touch} \"$dir/$title\"";
-        push(@cmds, &maybe_remote_cmd($cmd, $remote));
-        $remove .= " \"$dir/$title\"";
+	# Kludge a title by replacing / with - in the title
+	# then touch a file in the dir we are going to back up.
+	$title =~ s%/%-%g;
+	$cmd = "$main::path{touch} \"$dir/$title\"";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= " \"$dir/$title\"";
     }
 
     $cmd = "cd \"$dir\" && ";
@@ -1441,13 +1446,13 @@ sub backup_ar {
     }
 
     if ($cfg::label ne 'false') {
-        # Kludge a title by replacing / with - in the title
-        # then touch a file in the dir we are going to back up.
-        $title =~ s%/%-%g;
-        $title =~ s% %_%g;
-        $cmd = "$main::path{touch} \"$dir/$title\"";
-        push(@cmds, &maybe_remote_cmd($cmd, $remote));
-        $remove .= " \"$dir/$title\"";
+	# Kludge a title by replacing / with - in the title
+	# then touch a file in the dir we are going to back up.
+	$title =~ s%/%-%g;
+	$title =~ s% %_%g;
+	$cmd = "$main::path{touch} \"$dir/$title\"";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= " \"$dir/$title\"";
     }
 
     $cmd = "cd \"$dir\" && ";
@@ -1510,7 +1515,7 @@ sub backup_shar {
     $cmd .= "$main::path{shar} ";
     $cmd .= "$main::shar_verb_flag ";
     if ($cfg::label ne 'false') {
-        $cmd .= "-n \"$title\" ";
+	$cmd .= "-n \"$title\" ";
     }
     $cmd .= "-S ";
     $cmd .= "$main::z";
@@ -1560,13 +1565,13 @@ sub backup_lha {
     }
 
     if ($cfg::label ne 'false') {
-        # Kludge a title by replacing / with - in the title
-        # then touch a file in the dir we are going to back up.
-        $title =~ s%/%-%g;
-        $title =~ s% %_%g;
-        $cmd = "echo \"$title\" > \"$dir/$title\"";
-        push(@cmds, &maybe_remote_cmd($cmd, $remote));
-        $remove .= " \"$dir/$title\"";
+	# Kludge a title by replacing / with - in the title
+	# then touch a file in the dir we are going to back up.
+	$title =~ s%/%-%g;
+	$title =~ s% %_%g;
+	$cmd = "echo \"$title\" > \"$dir/$title\"";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= " \"$dir/$title\"";
     }
 
     $cmd = "cd \"$dir\" && ";
@@ -2417,7 +2422,7 @@ sub optioncheck {
     &check(\$cfg::compr_level,'compr_level','exist');
     &check(\$cfg::verbose,'verbose');
     &check(\$cfg::sparse,'sparse');
-    &check(\$cfg::label,'label');
+    #&check(\$cfg::label,'label');
     &check(\$cfg::atime_preserve,'atime_preserve');
     &check(\$cfg::indexes,'indexes');
     &check(\$cfg::staticfiles,'staticfiles');
