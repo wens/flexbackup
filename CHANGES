@@ -1,5 +1,6 @@
 Version 0.9
   - initial release to the public
+  - incrementals w/ afio cpio tar done (remote fs too!)
 
 Version 0.8 
   - redone with "use strict"

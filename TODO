@@ -4,8 +4,6 @@ Some of these might not happen, but I write them down anyway
 
  - rm timestamp for failed dump
  - optionscheck for only one mode
- - test timestamps w remote files
- - finish testing list, extract, compare for non-dump types
  - FreeBSD checks out ok (hi john)
  - announce
      freshmeat, linux-tape, comp.os.linux.announce
