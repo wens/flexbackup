@@ -54,19 +54,19 @@ Some examples below.
 
 To do a full backup of /home:
 
-   flexbackup -fs /home
+   flexbackup -dir /home
 
-For nightly incremental backups, run this via cron:
+For nightly incremental backups, run something like this via cron:
 
-   flexbackup -fs all -level 9
+   flexbackup -set all -level 9
 
 To do a full backup of /usr from machine "otherhost", forcing cpio type:
 
-   flexbackup -fs otherhost:/usr -type cpio
+   flexbackup -dir otherhost:/usr -type cpio
 
-To do an level 5 incremental backup of all filesystems:
+To do an level 5 incremental backup of a named backup set:
 
-   flexbackup -fs all -level 5
+   flexbackup -set backupset2 -level 5
 
 Extract all files from file number 1 on the tape into current directory:
 

@@ -9,6 +9,7 @@ Currently:
  - other FIXMEs in code
 
  - mbuffer testing w/ device (need mt_blksize not to be 0?)
+ - try 2+ gig as well
  - mbuffer testing w/ remote
  - mbuffer testing w/ end of media
 
@@ -21,7 +22,6 @@ Currently:
    check -newtape
 
  - Finish up -set / -dir
-     check for defined set name = all and bail
      test with tapes
      how to spec dirs with spaces?
 
