@@ -11,7 +11,7 @@
 #  flexbackup -help                : this message
 #
 # BACKUP:
-#  flexbackup -dir <x>             : backup directory tree, level 0
+#  flexbackup -dir <dir>           : backup directory tree, level 0
 #  flexbackup -set <tag>           : backup set "tag" (def. in config file), level 0
 #  flexbackup -set all             : backup all sets, level 0
 #  flexbackup [...] -level <n>     : backup level, can be integer or
@@ -368,8 +368,12 @@ sub backup_routine {
 	my @do_sets;
 	if ($main::opt{'set'} eq 'all') {
 	    @do_sets = keys(%cfg::set);
-	    $_ = length(@do_sets) + 1;
-	    $_ = join(" ", @do_sets) . " ($_ tapes)";
+	    if (defined($main::tapedevice)) {
+		$_ = length(@do_sets) + 1;
+		$_ = join(" ", @do_sets) . " ($_ tapes)";
+	    } else {
+		$_ = join(" ", @do_sets);
+	    }
 	    &log("| All sets = $_");
 	} else {
 	    @do_sets = ($main::opt{'set'});
@@ -397,7 +401,7 @@ sub backup_routine {
 	    }
 
 	    # Print what this set contains
-	    &log("| Set = $this_set ($cfg::set{$this_set})");
+	    &log("| Backup set $this_set ($cfg::set{$this_set})");
 
 	    # Show tape position
 	    if (defined($main::tapedevice)) {
@@ -515,9 +519,9 @@ sub backup_routine {
 	$rmlogs++;
 	my ($lev,$d) = split(/\|/,$oldlogs{$lf});
 	if (defined($d)) {
-	    &log("| Removing old level $lev log of $main::opt{fs} (dated $d)");
+	    &log("| Removing old level $lev log of $label (dated $d)");
 	} else{
-	    &log("| Removing old level $lev log of $main::opt{fs}");
+	    &log("| Removing old level $lev log of $label");
 	}
 	if (!defined($main::opt{'n'})) {
 	    unlink("$lf") or warn("Can't remove $lf: $OS_ERROR\n");
@@ -690,14 +694,14 @@ sub backup {
 	    $_ = pop(@_);
 	    $indexkey = "$tape_key|$_";
 	    if (defined($main::opt{'n'})) {
-		&log("DEBUG \$main::index{$indexkey} = $title_without_type");
+		&log("(debug) \$main::index{$indexkey} = $title_without_type");
 	    } else {
 		$main::index{$indexkey} = "$title_without_type";
 	    }
 	} else {
 	    $indexkey = "$tape_key|$main::nextfile";
 	    if (defined($main::opt{'n'})) {
-		&log("DEBUG \$main::index{$indexkey} = $title");
+		&log("(debug) \$main::index{$indexkey} = $title");
 	    } else {
 		$main::index{$indexkey} = $title;
 	    }
@@ -891,7 +895,7 @@ sub backup {
 
 	}
     } else {
-	&log("DEBUG command output would be here");
+	&log("(debug) command output would be here");
     }
     &line();
 
@@ -2353,7 +2357,7 @@ sub mt {
 		if (defined($main::log)) { close(LOG); }
 
 	    } else {
-		&log("DEBUG $command");
+		&log("(debug) $command");
 	    }
 
 	} # not a file
@@ -2690,11 +2694,11 @@ sub optioncheck {
 	my $megs = $cfg::buffer_megs . "M";
 
 	if (defined($main::tapedevice)) {
-	    $write_flags = "-t -q -f -u 100 -p 75 -o ";
-	    $read_flags = "-t -u 100 -p 75 -i ";
+	    $write_flags = "-q -f -u 100 -p 75 -o ";
+	    $read_flags = "-u 100 -p 75 -i ";
 	} else {
-	    $write_flags = "-t -q -f -p 75 -o ";
-	    $read_flags = "-t -p 75 -i ";
+	    $write_flags = "-q -f -p 75 -o ";
+	    $read_flags = "-p 75 -i ";
 	}
 	$main::buffer_cmd = " | $main::path{mbuffer} -t -q -m $megs $buffer_blk_flag";
 	$main::write_cmd = "$main::path{mbuffer} -m $megs $buffer_blk_flag $write_flags";
@@ -3165,8 +3169,8 @@ sub optioncheck {
 
     # Test
     if (defined($main::opt{'n'})) {
-	&log('DEBUG no backup or mt commands will be executed');
-	&log('DEBUG no old stamps or old log files will be removed');
+	&log('(debug) no backup or mt commands will be executed');
+	&log('(debug) no old stamps or old log files will be removed');
     }
 
     # Check extract list
@@ -3534,7 +3538,7 @@ sub run_or_echo_then_query {
     if (!defined($main::opt{'n'})) {
 	system("($cmd) 2>&1 | $main::path{tee} -a $main::log");
     } else {
-	&log("DEBUG command output would be here");
+	&log("(debug) command output would be here");
     }
 
     if (!defined($main::use_file)) {
@@ -3749,8 +3753,10 @@ sub set_tape_operation_defaults {
 
     # Assume stuff based on how we are called first
     if (defined($main::opt{'set'})) {
-	if (!defined($main::set_incremental) and ($main::level == 0)) {
-	    # Set level zero - retension, and erase a new tape
+	if (!defined($main::set_incremental) and
+	    ($main::level == 0) and
+	    !defined($main::use_file)) {
+	    # Set level zero, using device. Retension & erase a new tape
 	    # (config file may tell us not to erase)
 	    if ($cfg::erase_tape_all_level_zero eq "true") {
 		$main::do_reten = 1;
@@ -3761,7 +3767,8 @@ sub set_tape_operation_defaults {
 	    }
 	    $main::do_rewind_after = 1;
 	} else {
-	    # Set incremental backup or set non-zero - go to end of tape
+	    # Using files, set incremental backup, or set non-zero
+	    # don't erase + go to end of tape
 	    $main::do_reten = 0;
 	    $main::do_erase = 0;
 	    $main::do_rewind_after = 1;
@@ -3829,7 +3836,7 @@ sub split_and_echo {
 sub new_tape_key {
 
     my $key;
-    my $dev = $main::device;
+    my $dev = $cfg::device;
     my $old;
     my $string;
 
@@ -3865,7 +3872,7 @@ sub new_tape_key {
     $string .=  "$main::path{dd} $main::dd_blk_flag $main::dd_pad_flag of=$dev";
 
     if (defined($main::opt{'n'})) {
-	&log("DEBUG $string");
+	&log("(debug) $string");
     } else {
 	`$string 2> /dev/null`;
     }
@@ -3875,14 +3882,14 @@ sub new_tape_key {
     if (defined($main::use_file)) {
 	my $label = "<index keyfile, dir=$cfg::device>";
 	if (defined($main::opt{'n'})) {
-	    &log("DEBUG \$main::index{$key|$cfg::keyfile} = $label");
+	    &log("(debug) \$main::index{$key|$cfg::keyfile} = $label");
 	} else {
 	    $main::index{"$key|$cfg::keyfile"} = $label;
 	}
     } else {
 	my $label = "<tape index key>";
 	if (defined($main::opt{'n'})) {
-	    &log("DEBUG \$main::index{$key|0} = $label");
+	    &log("(debug) \$main::index{$key|0} = $label");
 	} else {
 	    $main::index{"$key|0"} = $label;
 	}
@@ -3905,7 +3912,7 @@ sub get_tape_key {
 
     # If writing to a file see if there is already an index key and use it
     if (defined($main::use_file)) {
-	my $dev = "$main::device/$cfg::keyfile";
+	my $dev = "$cfg::device/$cfg::keyfile";
 	if (-r $dev) {
 	    open(KEY,$dev) or die("Can't open existing key $dev: $OS_ERROR");
 	    chomp($key = <KEY>);
@@ -3922,7 +3929,7 @@ sub get_tape_key {
 	}
 
 	if (defined($main::opt{'n'})) {
-	    &log("DEBUG $string");
+	    &log("(debug) $string");
 	    $key = '';
 	} else {
 	    $key = `$string 2> /dev/null`;
@@ -4109,7 +4116,7 @@ sub rmindex {
 		    ($filenum eq $file)) {
 		    &log("| Deleting record for tape $tape file $filenum");
 		    if (defined($main::opt{'n'})) {
-			&log("DEBUG delete \$main::index{$tape|$filenum}");
+			&log("(debug) delete \$main::index{$tape|$filenum}");
 		    } else {
 			delete $main::index{"$tape|$filenum"};
 		    }
@@ -4121,7 +4128,7 @@ sub rmindex {
 		if ($tape eq $key) {
 		    &log("| Deleting record for tape $tape file $filenum");
 		    if (defined($main::opt{'n'})) {
-			&log("DEBUG delete \$main::index{$tape|$filenum}");
+			&log("(debug) delete \$main::index{$tape|$filenum}");
 		    } else {
 			delete $main::index{"$tape|$filenum"};
 		    }
@@ -4389,7 +4396,7 @@ sub list_packages {
 	    &log("| Listing all RPM packages...");
 	}
 	if (defined($main::opt{'n'})) {
-	    &log("DEBUG $cmd");
+	    &log("(debug) $cmd");
 	} else {
 	    open(LIST,"$cmd |") || die;
 	    while(<LIST>) {
@@ -4422,7 +4429,7 @@ sub find_packaged_files {
 	    &log("| Finding all files owned by RPM packages...");
 	}
 	if (defined($main::opt{'n'})) {
-	    &log("DEBUG $cmd");
+	    &log("(debug) $cmd");
 	} else {
 	    open(LIST,"$cmd |") || die;
 	    while(<LIST>) {
@@ -4458,7 +4465,7 @@ sub find_changed_files {
 	}
 	&log("| May take quite a while, please be patient");
 	if (defined($main::opt{'n'})) {
-	    &log("DEBUG $cmd");
+	    &log("(debug) $cmd");
 	} else {
 	    open(LIST,"$cmd |") || die;
 	    while(<LIST>) {
@@ -4542,7 +4549,7 @@ sub test_bufferprog {
 	close (PIPE);
 
     } else {
-	print "\nDEBUG $pipecmd\n";
+	print "\n(debug) $pipecmd\n";
     }
 
     if ($retval == 0) {
@@ -4584,7 +4591,7 @@ sub check_remote_progs {
 	print "| Checking for required programs on host $host... ";
 	my $cmd = "$main::remoteshell $host sh -c '$string'";
 	if (defined($main::opt{'n'})) {
-	    print "\nDEBUG $cmd\n";
+	    print "\n(debug) $cmd\n";
 	    next;
 	}
 	if (!(open(PIPE,"$cmd |"))) {
@@ -4638,7 +4645,7 @@ sub check_shell {
     $main::shelltype{$host} = 'unknown';
 
     if (defined($main::opt{'n'})) {
-	print "DEBUG $pipecmd\n";
+	print "(debug) $pipecmd\n";
     }
 
     if (!(open(PIPE,"$pipecmd 2>&1 |"))) {
@@ -4793,7 +4800,7 @@ sub test_tape_drive {
 	    $fail++;
 	}
     } else {
-	&log("DEBUG $cmd");
+	&log("(debug) $cmd");
     }
 
     &mt('generic-query');
@@ -4816,7 +4823,7 @@ sub test_tape_drive {
 	    $fail++;
 	}
     } else {
-	&log("DEBUG $cmd");
+	&log("(debug) $cmd");
     }
 
     &mt('generic-query');
@@ -4839,7 +4846,7 @@ sub test_tape_drive {
 	    $fail++;
 	}
     } else {
-	&log("DEBUG $cmd");
+	&log("(debug) $cmd");
     }
 
     &mt('generic-query');
@@ -4860,9 +4867,9 @@ sub test_tape_drive {
 	    $fail++;
 	}
     } else {
-	&log("DEBUG $main::path{diff} -q $0 $tmp1");
-	&log("DEBUG $main::path{diff} -q $configfile $tmp2");
-	&log("DEBUG $main::path{diff} -q $0 $tmp3");
+	&log("(debug) $main::path{diff} -q $0 $tmp1");
+	&log("(debug) $main::path{diff} -q $configfile $tmp2");
+	&log("(debug) $main::path{diff} -q $0 $tmp3");
     }
 
     unlink $tmp1;
