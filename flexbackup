@@ -107,15 +107,11 @@ chomp($main::uname = `uname -s`);
 # Sanity check things
 &optioncheck();
 
-# Get current date string (YYYYMMDD only)
-@_ = localtime(time);
-$_[5] += 1900;
-$_[4] += 1;
-$main::date = $_[5] . sprintf("%02d",$_[4]) . sprintf("%02d",$_[3]);
+# Get current date string
+$main::date = &current_time("short");
 
-# Set blocksize (mt blocksize is in bytes, config file is in k
-$_ = $cfg::blksize * 1024;
-&mt("generic-blksize $_");
+# Set tape blocksize
+&mt("generic-blksize $main::mt_blksize");
 
 # Decide what to do
 if (defined($main::opt{'restore'})) {
@@ -1050,12 +1046,12 @@ sub optioncheck {
         $main::use_file = 1;
         $cfg::device =~ s:/$::; # nuke trailing slash
     } else {
-        push(@main::errors,"\$device must be set to a directory or a device\n");
+        push(@main::errors,"\$device must be set to a directory or a device");
     }
 
     # can we write to it?
     if (! -w $cfg::device) {
-        push(@main::errors,"Can't write to $cfg::device\n");
+        push(@main::errors,"Can't write to $cfg::device");
     }
 
     # ftape support
@@ -1067,12 +1063,15 @@ sub optioncheck {
 
     # blksize
     if ($cfg::blksize !~ m/^\d+$/) {
-        push(@main::errors,"\$blksize must be set to integer\n");
+        push(@main::errors,"\$blksize must be set to integer");
     } else {
         if ($cfg::blksize < 10) {
-            push(@main::errors,"\$blksize minimum is 10k\n");
+            push(@main::errors,"\$blksize minimum is 10k");
         }
     }
+
+    # mt uses blocksize of bytes not k
+    $main::mt_blksize = $cfg::blksize * 1024;
 
     # For when we use dd for remote stuff
     $main::dd_blksize = $cfg::blksize . "k";
@@ -1114,14 +1113,14 @@ sub optioncheck {
         if ($cfg::afio_length =~ m/^\d+$/) {
             $main::afio_length .= "k";
         } else {
-            push(@main::errors,"\$afio_length must be set to integer number of megabytes\n");
+            push(@main::errors,"\$afio_length must be set to integer number of kilobytes");
         }
 
         # Double buffer flag
         if ($cfg::afio_doublebuffer eq "true") {
             $main::afio_dbl_flag = "-f";
             if ($main::afio_length eq "0k") {
-                push(@main::errors,"\$afio_length must be nonzero if doublebuffer is on\n");
+                push(@main::errors,"\$afio_length must be nonzero if doublebuffer is on");
             }
         } else {
             $main::afio_dbl_flag = "";
@@ -1133,11 +1132,11 @@ sub optioncheck {
         # Really need buffer in units of blksize not k
         if ($cfg::afio_buffer =~ m/^\d+$/) {
             if (($cfg::afio_buffer % $cfg::blksize) != 0) {
-                push(@main::errors,"\$afio_buffer must be multiple of \$blksize\n");
+                push(@main::errors,"\$afio_buffer must be a multiple of \$blksize");
             }
             $main::afio_buffer = $cfg::afio_buffer / $cfg::blksize;
         } else {
-            push(@main::errors,"\$afio_buffer must be set to integer number of kilobytes\n");
+            push(@main::errors,"\$afio_buffer must be set to integer number of kilobytes");
         }
 
 
@@ -1154,7 +1153,7 @@ sub optioncheck {
             #}
             #$cfg::dump_length = $cfg::dump_length / $cfg::blksize;
         } else {
-            push(@main::errors,"\$dump_length must be set to integer number of kilobytes\n");
+            push(@main::errors,"\$dump_length must be set to integer number of kilobytes");
         }
 
     } elsif ($cfg::type eq 'tar') {
@@ -1210,7 +1209,7 @@ sub optioncheck {
     # levels
     if (defined($main::opt{'level'})) {
         if ($main::opt{'level'} !~ m/^\d$/) {
-            push(@main::errors,"-level must be 0 through 9 only\n");
+            push(@main::errors,"-level must be 0 through 9 only");
         }
     }
 
@@ -1226,7 +1225,7 @@ sub optioncheck {
     }
     if ($modecount > 1) {
         $_ = join(" -",@modes);
-        push(@main::errors,"Can't specify more than one mode (given \"-$_\")\n");
+        push(@main::errors,"Can't specify more than one mode (given \"-$_\")");
     }
     if ($modecount == 0) {
         push(@main::errors,"Nothing to do!");
@@ -1289,6 +1288,7 @@ sub versionstring {
 ######################################################################
 sub current_time {
 
+    my $short = shift(@_);
     my $string;
     my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
 
@@ -1296,9 +1296,13 @@ sub current_time {
     $mon += 1; # month from localtime starts at 0
 
     $string = sprintf("%04d",$year) . sprintf("%02d",$mon) . sprintf("%02d",$mday);
-    $string .= sprintf("%02d",$hour) . sprintf("%02d",$min) . "." . sprintf("%02d",$sec);
+
+    if (!defined($short)) {
+        $string .= sprintf("%02d",$hour) . sprintf("%02d",$min) . "." . sprintf("%02d",$sec);
+    }
 
     return($string);
+
 }
 
 ######################################################################
