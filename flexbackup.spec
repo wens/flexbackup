@@ -26,7 +26,7 @@ Features:
    o Backup, extract, compare, list modes
    o Compression and buffering for all backup types
    o Full (0) and 1-9 levels of incremental backup
-   o Filesystem-oriented (will not traverse devices)
+   o Keeps a table of contents so you know what's on each tape
    o Does remote filesystems (over rsh/ssh; no special service)
    o Works with IDE/SCSI tapes on Linux/FreeBSD, Linux ftape, or disk files
    o Nice log files
