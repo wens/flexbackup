@@ -5,10 +5,9 @@ Flexbackup to-do list
 Some of these might not happen, but figured I should jot them down
 
 Before next release:
- - get john's -regex fix...
  - auto-testing script for all archive types and compression
    during changes
- - test incremntal tar
+ - test incremntal tar, move tar to regular find
  - resurrect my old drive and test ftape stuff again
 
  - update web pages (move stuff into subdirs, etc)
