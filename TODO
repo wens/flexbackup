@@ -14,6 +14,7 @@ Cleanup/fix:
  - fix the stamp find loop (See FIXME)
  - revisit -cnewer problem.  Make sure it works with touch -t/-d of
    timestamp refs (ctime isn't set backward like the mtime)
+ - logs/stamps of "equal" level are old as well?
 
 Misc:
  - make a manual page (or other enchanced doc)! too many options now :)
