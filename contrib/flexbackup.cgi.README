@@ -1,0 +1,6 @@
+Sent in by Andrew McRory <amacc@iron-bridge.net>
+
+flexbackup.cgi is in a "mostly finished" state
+It will run backups manually, and will schedule backups in cron but I wouldn't
+reccommend using it to change flexbackup's configuration. I don't think that
+functionality is fully functional.
