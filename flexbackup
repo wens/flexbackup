@@ -2184,7 +2184,7 @@ sub versionstring {
     if ($ver eq '') {
 	$ver = "devel";
     }
-    return($ver . " (http://flexbackup.org)");
+    return($ver . " (http://flexbackup.sourceforge.net)");
 
 }
 

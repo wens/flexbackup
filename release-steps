@@ -8,7 +8,7 @@ make all VER=x.x.x
 upload files/web to edwinh.org
 upload files/web to sourceforge.net
 
-get flexbackup.org synced
+get flexbackup.sourceforge.net synced
 
 upload files to sunsite
   ncftpput flexbackup.lsm ftp://ibiblio.org/incoming/Linux

@@ -4,7 +4,7 @@
   |  _| | |  __/>  <| |_) | (_| | (__|   <| |_| | |_) |
   |_|   |_|\___/_/\_\_.__/ \__,_|\___|_|\_\\__,_| .__/
                                                 |_|
- http://flexbackup.org
+ http://flexbackup.sourceforge.net
 
 ----------------------------------------------------------------------
 Flexible backup script.
@@ -138,7 +138,7 @@ MISCELLANEOUS
 
  Send problems/suggestions to:
    flexbackup-help@lists.sourceforge.net
- or see http://flexbackup.org for contact information.
+ or see http://flexbackup.sourceforge.net for contact information.
 
  Thanks,
    Edwin Huffstutler <edwinh@computer.org>
