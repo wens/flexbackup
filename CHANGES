@@ -2,10 +2,17 @@ $Id$
 $Name$
 
 ----------------------------------------------------------------------
-Version 
+Version TBD
 
+  - added "dircopy" type that just mirrors the files if archiving to disk
   - inital support of "-pkgdelta" with FreeBSD packages
-  - on FreeBSD, set use mt to 1-filemark behavior globally
+  - on FreeBSD, use mt to set 1-filemark behavior globally
+  - ignore sockets
+
+Bugfixes/cleanup:
+  - use --ignore-failed-read for tar
+  - typo in star flags
+  - tweak quiet flags
 
 ----------------------------------------------------------------------
 Version 1.1.6 (20030313)

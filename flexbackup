@@ -763,8 +763,8 @@ sub backup {
 	($remove, @cmds) = &backup_shar($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'lha') {
 	($remove, @cmds) = &backup_lha($label, $localdir, $title, $level, $remote);
-    } elsif ($cfg::type eq 'rsync') {
-	($remove, @cmds) = &backup_rsync($label, $localdir, $title, $level, $remote);
+    } elsif ($cfg::type eq 'dircopy') {
+	($remove, @cmds) = &backup_dircopy($label, $localdir, $title, $level, $remote);
     } elsif ($cfg::type eq 'filelist') {
 	($remove, @cmds) = &backup_filelist($label, $localdir, $title, $level, $remote);
     }
@@ -1076,6 +1076,7 @@ sub backup_afio {
     $cmd .= "$main::path{afio} -o ";
     $cmd .= "$no_compress ";
     $cmd .= "-z ";
+    $cmd .= "-1 m ";
     $cmd .= "$main::afio_z_flag ";
     $cmd .= "$main::afio_verb_flag ";
     $cmd .= "$main::afio_sparse_flag ";
@@ -1163,6 +1164,79 @@ sub backup_cpio {
 }
 
 ######################################################################
+# Return command to copy directory tree, over cpio
+######################################################################
+sub backup_dircopy {
+
+    my $label = shift(@_);
+    my $dir = shift(@_);
+    my $title = shift(@_);
+    my $level = shift(@_);
+    my $remote = shift(@_);
+    my $cmd = '';
+    my @cmds;
+    my $stamp = "$cfg::tmpdir/refdate.$PROCESS_ID";
+    my $remove = '';
+
+    if (defined($remote) and ($level != 0)) {
+	my $time = &get_last_date($label, $level, 'numeric');
+	$cmd = "$main::path{touch} -t \"$time\" $stamp";
+	push(@cmds, &maybe_remote_cmd($cmd, $remote));
+	$remove .= " $stamp";
+    } else {
+	$stamp = &get_last_date($label, $level, 'filename');
+    }
+
+    $cmd = "cd \"$dir\" && ";
+    $cmd .= &file_list_cmd($dir, $stamp, 'null', $level, $remote);
+    $cmd .= "| ";
+
+    $cmd .= "$main::path{cpio} -o ";
+    $cmd .= "-0 ";
+    $cmd .= "-H $cfg::cpio_format ";
+    $cmd .= "$main::cpio_verb_flag ";
+    $cmd .= "$main::cpio_blk_flag ";
+
+    # Buffer both sides / compress if remote
+    if (defined($remote)) {
+	$cmd .= "$main::z";
+	$cmd .= $main::buffer_cmd;
+    }
+
+    # Wrap all that together
+    $cmd = &maybe_remote_cmd($cmd, $remote);
+
+    # Yell if destination exists
+    if (-d "$main::device") {
+	&log("| Existing destination directory $main::device found!");
+	&log("| It will be *deleted*, unless you hit CTRL-C");
+	&log("| and abort within 10 seconds...");
+	&line();
+	sleep(10);
+	system("rm -rf $main::device");
+    }
+
+    # Expand cpio archive on other side of pipe
+    $cmd .= " | ";
+    if (defined($remote)) {
+	$cmd .= "$main::unz";
+    }
+    $cmd .= "(";
+    $cmd .= "mkdir -p $main::device ; ";
+    $cmd .= "cd $main::device ; ";
+    $cmd .= "$main::path{cpio} -i ";
+    $cmd .= "-m ";
+    $cmd .= "-d ";
+    $cmd .= "$main::cpio_blk_flag";
+    $cmd .= ")";
+
+    push(@cmds, $cmd);
+
+    return($remove, @cmds);
+
+}
+
+######################################################################
 # Return command to backup a directory using tar
 ######################################################################
 sub backup_tar {
@@ -1193,6 +1267,7 @@ sub backup_tar {
     $cmd .= "$main::path{tar} --create ";
     $cmd .= "--null ";
     $cmd .= "--files-from=- ";
+    $cmd .= "--ignore-failed-read ";
     $cmd .= "--same-permissions ";
     $cmd .= "--same-order ";
     $cmd .= "--no-recursion ";
@@ -1256,6 +1331,7 @@ sub backup_star {
     $cmd .= "$main::path{star} -c ";
     $cmd .= "list=- ";
     $cmd .= "-p ";
+    $cmd .= "-l ";
     $cmd .= "-D ";
     $cmd .= "-B ";
     $cmd .= "-dirmode ";
@@ -1419,6 +1495,8 @@ sub backup_zip {
     return($remove, @cmds);
 
 }
+
+
 
 ######################################################################
 # Return command to backup a directory using ar
@@ -1730,9 +1808,13 @@ sub list_routine {
 
 	$cmd .= "perl -pe 'last if (! m/^#/)'";
 
-    } elsif ($cfg::type eq 'rsync') {
+    } elsif ($cfg::type eq 'dircopy') {
 
-	### FIXME
+	if ($cfg::verbose eq "true") {
+	    $cmd = "ls -laR $main::device";
+	} else {
+	    $cmd = "ls -aR $main::device";
+	}
 
     } elsif ($cfg::type eq 'lha') {
 	my $tmpfile = "$cfg::tmpdir/lha.$PROCESS_ID";
@@ -1891,9 +1973,9 @@ sub extract_routine {
 	    &log("| NOTE: \"-flist/-onefile\" ignored for shar");
 	}
 
-    } elsif ($cfg::type eq 'rsync') {
+    } elsif ($cfg::type eq 'dircopy') {
 
-	### FIXME
+	die("Ummm... just copy your files, you have the whole tree...");
 
     } elsif ($cfg::type eq 'filelist') {
 
@@ -2438,7 +2520,7 @@ sub optioncheck {
 
     # First check if things are defined in the config file
     # Checks exist, true/false, or one of options
-    &check(\$cfg::type,'type','dump afio cpio tar star pax zip ar shar lha rsync filelist');
+    &check(\$cfg::type,'type','dump afio cpio tar star pax zip ar shar lha dircopy filelist');
     &check(\$cfg::compress,'compress','gzip bzip2 compress zip false hardware');
     &check(\$cfg::compr_level,'compr_level','exist');
     &check(\$cfg::verbose,'verbose');
@@ -2522,7 +2604,7 @@ sub optioncheck {
 	$main::blockdevice = 1;
 	$cfg::indexes = 'false';
 
-    } elsif (-d $cfg::device) {
+    } elsif (-d "$cfg::device") {
 	if ($cfg::device !~ m:^/:) {
 	    push(@main::errors,"Please give full path, not relative (\$device=$cfg::device)");
 	} else {
@@ -2847,7 +2929,7 @@ sub optioncheck {
 	$main::afio_verb_flag = "";
 	$main::cpio_verb_flag = "";
 	$main::tar_verb_flag = "";
-	$main::star_verb_flag = "";
+	$main::star_verb_flag = "-silent";
 	$main::pax_verb_flag = "";
 	$main::zip_verb_flag = "-q";
 	$main::ar_verb_flag = "";
@@ -2965,12 +3047,18 @@ sub optioncheck {
 	    }
 	}
 
-    } elsif ($cfg::type eq 'cpio') {
+    } elsif (($cfg::type eq 'cpio') or ($cfg::type eq 'dircopy')) {
 
 	&check(\$cfg::cpio_format,'cpio_format','bin odc newc crc tar ustar hpbin hpodc');
 
 	$main::path{'cpio'} = &checkinpath('cpio');
 	push(@main::remoteprogs, $main::path{'cpio'});
+
+	if ($cfg::type eq 'dircopy') {
+	    if (!defined($main::use_file)) {
+		push(@main::errors,"Can't use dircopy unless archiving to disk!");
+	    }
+	}
 
     } elsif ($cfg::type eq 'tar') {
 
@@ -3014,12 +3102,12 @@ sub optioncheck {
 
 	# fifo
 	if ($cfg::star_fifo eq "true") {
-	    $main::star_fifo_flag = "--fifo";
+	    $main::star_fifo_flag = "-fifo";
 	    if ($cfg::verbose eq "true") {
-		$main::star_fifo_flag .= " --fifostats";
+		$main::star_fifo_flag .= " -fifostats";
 	    }
 	} else {
-	    $main::star_acl_flag = "";
+	    $main::star_fifo_flag = "";
 	}
 
     } elsif ($cfg::type eq 'pax') {
@@ -3096,10 +3184,10 @@ sub optioncheck {
     if ($cfg::tmpdir !~ m:^/:) {
 	push(@main::errors,"\$tmpdir must be absolute path: $cfg::tmpdir");
     }
-    if (! -d $cfg::tmpdir) {
+    if (! -d "$cfg::tmpdir") {
 	push(@main::errors,"\$tmpdir $cfg::tmpdir is not a directory");
     }
-    if (! -w $cfg::tmpdir) {
+    if (! -w "$cfg::tmpdir") {
 	push(@main::errors,"\$tmpdir $cfg::tmpdir is not writable");
     }
 
@@ -3226,16 +3314,16 @@ sub optioncheck {
 	if ($cfg::stampdir !~ m:^/:) {
 	    push(@main::errors,"\$stampdir must be absolute path: $cfg::stampdir");
 	}
-	if (! -d $cfg::logdir) {
+	if (! -d "$cfg::logdir") {
 	    mkdir("$cfg::logdir",0755) or push(@main::errors,"Can't mkdir $cfg::logdir: $OS_ERROR");
 	}
-	if (! -w $cfg::logdir) {
+	if (! -w "$cfg::logdir") {
 	    push(@main::errors,"Can't write to $cfg::logdir");
 	}
-	if (! -d $cfg::stampdir) {
+	if (! -d "$cfg::stampdir") {
 	    mkdir("$cfg::stampdir",0755) or push(@main::errors,"Can't mkdir $cfg::stampdir: $OS_ERROR");
 	}
-	if (! -w $cfg::stampdir) {
+	if (! -w "$cfg::stampdir") {
 	    push(@main::errors,"Can't write to $cfg::stampdir: $OS_ERROR");
 	}
     }
@@ -3413,6 +3501,19 @@ sub maybe_get_filename {
 	undef $main::tapedevice;
 	undef $main::remotetapehost;
 
+    } elsif ((-d "$arg") and ($arg =~ m/dircopy/)) {
+	$file = $arg;
+	$main::use_file = 1;
+	$cfg::device = $cfg::tmpdir; # Just so optioncheck doesn't assume tape
+	undef $main::tapedevice;
+	undef $main::remotetapehost;
+
+    } elsif (defined($main::use_file) and (-d "$cfg::device/$arg") and ($arg =~ m/dircopy/)) {
+	$file = $cfg::device . "/" . $arg;
+	$cfg::device = $cfg::tmpdir; # Just so optioncheck doesn't assume tape
+	undef $main::tapedevice;
+	undef $main::remotetapehost;
+
     } else {
 	if (defined($main::use_file)) {
 	    print STDERR "Error: file \"$arg\" or \"$cfg::device/$arg\" not found\n";
@@ -3444,7 +3545,7 @@ sub maybe_get_filename {
 	&log("| Auto-set to type=$cfg::type compress=$cfg::compress");
 	&optioncheck();                  # redo to set a few variables over
 
-    } elsif ($file =~ m/\.(dump|afio|cpio|tar|star|pax|zip|a|shar|lha|filelist)$/) {
+    } elsif ($file =~ m/\.(dump|afio|cpio|tar|star|pax|zip|a|shar|lha|filelist|dircopy)$/) {
 	$cfg::type = $1;
 	$cfg::type =~ s/^a$/ar/;
 	$cfg::compress = "false";
@@ -4300,17 +4401,30 @@ sub rmfile {
 	    foreach my $f (readdir(DIR)) {
 		next if ($f =~ m:^\.\.?$:);
 		next if ($f =~ m%^$cfg::keyfile$%);
-		&log("| Erasing archive $f");
-		unlink("$cfg::device/$f") or die ("Can't rm $cfg::device/$f: $OS_ERROR");
+		if ( -f "$cfg::device/$f") {
+		    &log("| Erasing archive $f");
+		    unlink("$cfg::device/$f") or die ("Can't rm $cfg::device/$f: $OS_ERROR");
+		}
+		if ( -d "$cfg::device/$f") {
+		    &log("| Erasing directory $f");
+		    system("rm -rf $cfg::device/$f") and die ("Can't rm $cfg::device/$f: $OS_ERROR");
+		}
 	    }
 	    closedir(DIR);
 	    # Nuke all db entries for this key
 	    if ($key ne '') {
 		&rmindex("$key:all");
 	    }
-	} elsif (-e $file) {
+	} elsif (-f $file) {
 	    &log("| Deleting file $file");
 	    unlink($file) or die ("Can't rm $file: $OS_ERROR");
+	    if ($key ne '') {
+		# Nuke db entry for this file
+		&rmindex("$key:$arg");
+	    }
+	} elsif (-d $file) {
+	    &log("| Deleting directory $file");
+	    system("rm -rf $file") and die ("Can't rm $file: $OS_ERROR");
 	    if ($key ne '') {
 		# Nuke db entry for this file
 		&rmindex("$key:$arg");
@@ -4420,8 +4534,7 @@ sub file_list_cmd {
     }
 
     my $cmd = '';
-    $cmd .= "$main::path{find} . $main::mountpoint_flag ";
-    $cmd .= "-depth ";
+    $cmd .= "$main::path{find} . ";
 
     my $prunekey;
     if (defined($remote)) {
@@ -4431,10 +4544,14 @@ sub file_list_cmd {
     }
 
     if (defined(%{$main::prune{$prunekey}})) {
-	$cmd .= '! -regex "\./\(';
+	$cmd .= '-regex "\./\(';
 	$cmd .= join('\|', keys %{$main::prune{$prunekey}});
-	$cmd .= '\)/.*" ';
+	$cmd .= '\)/.*" -prune -o ';
     }
+
+    $cmd .= "$main::mountpoint_flag ";
+    $cmd .= "-depth ";
+    $cmd .= "! -type s ";
 
     if (defined($otherarg)) {
 	$cmd .= $otherarg . " ";

@@ -5,6 +5,9 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
+
+ - use -prune for subtree exclusion
+
  - Better cleanup after error in backup
  - Clean up more $main:: vars, split into types or refactor code
  - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
@@ -28,11 +31,12 @@ Misc:
  - Add faq on extract filelist
      also .z at end if afio
  - Sample setup conf/cron
- - Update README/faq/spec/lsm for new items changes since 1.0.2
+ - Update README/faq/spec/lsm for new items changes since 1.0.3
      set/dir
      pruning
      pkgdelta
      filelist
+     dircopy
      mt_blksize
      example for -wday use
      onefile
@@ -52,7 +56,9 @@ Misc:
 
 
 Features to add:
- - "rsync" type for when using on-disk?
+ - configure buffer delay time
+
+ - stdout output?
 
  - Handle multi-volume backups (original idea w/ 'multibuf' never panned out)
 
@@ -73,6 +79,8 @@ Features to add:
      and avoid the maybe-error in the index & what 'nextfile' is on the tape
 
  - Log tape sizes (output of buffer or dd or mt tell can be used?)
+
+ - ftpbackup?
 
  - smbtar?
      doable - overload type 'tar'. smbtar triggers with a fs spec of something like
@@ -130,10 +138,6 @@ Features to add:
      -showindex /u -level 0
    would print you out when the last level 0 backup was done and what the key
    index was.
-
- - Exclude subtrees that have a ".nobackup" file in them?  Users can control
-   themselves that way.  Suggestion from someone based on dobackup.pl
-   probably.
 
  - Multiple devices at once?  (tape +disk).
 
