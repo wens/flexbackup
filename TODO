@@ -4,11 +4,6 @@ $Name$
 Flexbackup to-do list
 Some of these might not happen, but figured I should jot them down
 
- - option to not erase, rewind only in config file?
- - faq fix-up, redo doc files for index stuff
- - indexes
- - remove ftape stuff when indexes work
- - deal with tape index for files
 
 Features to add:
  - multiple tapes for level that aren't 0
@@ -41,10 +36,10 @@ Features to add:
 
 
 Cleanup/fix:
+ - zip/unzip backend, use fifos rather than temp files
  - do a debian package
  - make -extract -files for afio/cpio/zip recurse dirs
       dump/tar already to this.
- - zip/unzip backend, use fifos rather than temp files
  - try restore -D for comparing subdirs w/ restore
  - check that dir we are backing up exists
  - config file in just text?  Wondering if anyone is bothered by the

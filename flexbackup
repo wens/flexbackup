@@ -28,7 +28,11 @@
 #  flexbackup [operation] file     : if archiving to files rather than a device,
 #                                    list/extract/compare/restore options take
 #                                    a filename argument
-#  flexbackup -toc                 : list tape table of contents
+#  flexbackup -toc                 : list this tape's table of contents
+#  flexbackup -toc all             : list all known table of contents
+#  flexbackup -toc <key>           : list table of contents for tape key
+#  flexbackup -toc <key> -delete   : force deletion of entire specified tape index
+#  flexbackup -toc <key> -dfile n  : force deletion of specified tape/filenumber
 #  flexbackup [opt] -c <file>      : use <file> instead of /etc/flexbackup.conf
 #                                    for configuration
 #  flexbackup [opt] -type <x>      : override $type from config file
@@ -60,7 +64,8 @@
 #
 ######################################################################
 
-use POSIX qw(strftime);
+use POSIX;
+use AnyDBM_File;
 use Getopt::Long;
 use English;
 use strict;
@@ -90,7 +95,9 @@ if (! &main::GetOptions(\%main::opt,
                         "restore:s",
                         "list:s",
                         "compare:s",
-                        "toc",
+                        "toc:s",
+                        "delete",
+                        "dfile=i",
                         "type=s",
                         "compress=s",
                         "erase!",
@@ -121,6 +128,7 @@ if (defined($main::opt{'version'})) {
 # Get/read config file
 print "\nflexbackup version " . &versionstring() . "\n";
 &readconfigfile();
+print "\n";
 
 # Set OS type
 chomp($main::uname = `uname -s`);
@@ -152,16 +160,20 @@ if (defined($main::opt{'restore'})) {
 
 } elsif (defined($main::opt{'toc'})) {
 
-    if ($main::ftape == 1) {
-        &mt("generic-blksize $main::mt_blksize");
-	&mt('rewind');
-	exec("vtblc -p -f $main::ftape_rawdevice");
-	die("Failed exec of vtblc");
-    } else {
-	die("-toc only implemented for ftape under Linux");
+    &line();
+    &mt("generic-blksize $main::mt_blksize");
+
+    # Maybe retension
+    if ($main::do_reten == 1) {
+        &log('| Retensioning tape...');
+        &mt('retension');
     }
 
+    &toc_routine();
+
 }
+
+untie(%main::index);
 
 exit(0);
 
@@ -182,13 +194,6 @@ sub backup_routine {
     my $logext = '';
     my $comp_cmd;
     my $tape_key;
-
-    # Get backup level...
-    if (defined($main::opt{'level'})) {
-        $main::level = $main::opt{'level'};
-    } else {
-        $main::level = 0;
-    }
 
     # Get rid of trailing /
     $main::opt{'fs'} = &nuke_trailing_slash($main::opt{'fs'});
@@ -252,10 +257,13 @@ sub backup_routine {
             # Maybe rewind/erase
             if ($main::do_erase == 1) {
                 &log('| Rewinding & erasing tape...');
-                &mt('rewind','erase');
+                &mt('rewind');
+                &maybe_delete_old_index();
+                &mt('erase');
                 $tape_key = &new_tape_key();
             } else {
-                $main::nextfile = &print_contents();
+                &mt('rewind');
+                $tape_key = &get_tape_key();
                 &log('| Making sure tape is at end of data...');
                 &mt('generic-eod');
             }
@@ -278,7 +286,7 @@ sub backup_routine {
                 # Get rid of trailing /
                 $fs = &nuke_trailing_slash($fs);
 
-                &backup($fs);
+                &backup($fs,$tape_key);
                 $main::nextfile++;
             }
 
@@ -293,8 +301,7 @@ sub backup_routine {
                         &line();
                     }
 
-                    &update_toc();
-                    &print_contents();
+                    &toc_routine($tape_key) if (!defined($main::use_file));
 
                     $tapecounter++;
                     if (!defined($main::use_file)) {
@@ -324,10 +331,13 @@ sub backup_routine {
         # Maybe rewind/erase
         if ($main::do_erase == 1) {
             &log('| Rewinding & erasing tape...');
-            &mt('rewind','erase');
+            &mt('rewind');
+            &maybe_delete_old_index();
+            &mt('erase');
             $tape_key = &new_tape_key();
         } else {
-            $main::nextfile = &print_contents();
+            &mt('rewind');
+            $tape_key = &get_tape_key();
             &log('| Making sure tape is at end of data...');
             &mt('generic-eod');
         }
@@ -335,19 +345,17 @@ sub backup_routine {
         &line();
         &mt('generic-query');
 
-        &backup($main::opt{'fs'});
+        &backup($main::opt{'fs'},$tape_key);
 
     } # end all or single fs
+
+    &line();
 
     # Maybe rewind (usually true)
     if ($main::do_rewind_after == 1) {
         &log("| Rewinding...");
         &mt('rewind');
-        &line();
     }
-
-    &update_toc();
-    &print_contents();
 
     # Actually remove the old log and stamp files now that we are done
     foreach (sort keys %oldstamps) {
@@ -388,55 +396,9 @@ sub backup_routine {
 
     &line();
 
+    &toc_routine($tape_key);
+
     exit(0);
-
-}
-
-######################################################################
-# Rewind & print TOC using vtblc
-# returns an integer that is the next file number
-######################################################################
-sub print_contents {
-
-    my $output;
-    my $filenumber;
-
-    if ($main::ftape == 1) {
-        &mt('rewind');
-        &log('');
-        $output=`vtblc -p -f $main::ftape_rawdevice 2>&1`;
-        &log($output);
-        &log('');
-        $filenumber = -1;
-        foreach (split("\n",$output)) {
-            # Nr  Id          Label
-            #-------------------------------
-            #  0 VTBL "/var (level 9)
-            next if m/^\s+Nr\s+/;
-            next if m/^----------/;
-            if (m/^\s+(\d+)\s+\S+\s+\"/) {
-                $filenumber = $1;
-            }
-        }
-
-    } else {
-
-        $filenumber = 0;
-    }
-
-    $filenumber++;
-    return($filenumber);
-}
-
-######################################################################
-# Modify a table of contents entry
-######################################################################
-sub tag {
-
-    my $filenum = shift(@_);
-    my $title = shift(@_);
-
-    system("vtblc -f $main::ftape_rawdevice -# $filenum -m date -m label=\'$title\'");
 
 }
 
@@ -446,7 +408,9 @@ sub tag {
 sub backup {
 
     my $dir = shift(@_);
+    my $tape_key = shift(@_);
     my $title;
+    my $notagtitle;
     my @cmds;
     my @echo_cmds;
     my $cmd;
@@ -499,22 +463,22 @@ sub backup {
 
     # Label for this archive
     chomp($host = `hostname`);
-    $_ = "+" . $cfg::compress;
+    $_ = $cfg::type . "+" . $cfg::compress;
     $_ =~ s/\+false//;
-    $title = "level $main::level $dir $main::date_at_start $cfg::type" . "$_ flexbackup on $host";
-    $title =~ s/\+flexbackup/ flexbackup /;
-#    $main::title{$main::nextfile} = $title;
+    $title = "level $main::level $dir $main::date_at_start $_ from $host";
+    $notagtitle = "level $main::level $dir $main::date_at_start from $host";
 
-    # If we started with level 0, and "all", and -noerase not given,
-    # we know the file number, since we erased the tape
-    # (or if using ftape/vtblc, since we can find the file number)
-    # (or if we had -erase on the commandline)
-    if ((($main::opt{'fs'} eq "all") and ($main::level == 0) and (!defined($main::opt{'noerase'})))
-        or
-        ($main::ftape == 1)
-        or
-        ($main::opt{'erase'})) {
-        &log("| File number: $main::nextfile");
+    # Modify table of contents
+    if ($tape_key ne '') {
+        # If writing to files, store the filename
+        if (defined($main::use_file)) {
+            @_ = split(/\//,$main::device);
+            $_ = pop(@_);
+            $main::index{"$tape_key|$main::nextfile"} = "$notagtitle ($_)";
+        } else {
+            $main::index{"$tape_key|$main::nextfile"} = $title;
+        }
+        &log("| File number $main::nextfile, index key $tape_key");
     }
 
     &log("| Backup of: $dir");
@@ -1293,7 +1257,7 @@ sub mt {
             } elsif ($main::ftape == 1) {
                 $operation = 'getsize';
             } else {
-                $operation = 'status';
+                $operation = 'tell';
             }
         }
 
@@ -1306,9 +1270,14 @@ sub mt {
             }
         }
 
-        # BSD mt is slightly different
         if ($main::uname =~ /BSD/) {
+            # BSD mt is slightly different
             $operation =~ s/generic-blksize/blocksize/;
+        } elsif ($main::uname =~ /OSF1/) {
+            # Skip blksize setting if on OSF1
+            if ($operation =~ /generic-blksize/) {
+                next;
+            }
         } else {
             $operation =~ s/generic-blksize/setblk/;
         }
@@ -1399,6 +1368,7 @@ sub optioncheck {
     &check(\$cfg::tmpdir,'tmpdir','exist');
     &check(\$cfg::comp_log,'comp_log','gzip bzip2 compress false');
     &check(\$cfg::stampdir,'stampdir','exist');
+    &check(\$cfg::index,'index','exist');
     &check(\$cfg::prefix,'prefix','exist');
     &check(\$cfg::sprefix,'sprefix','exist');
     &check(\$cfg::afio_echo_block,'afio_echo_block');
@@ -1429,7 +1399,6 @@ sub optioncheck {
 
         # Check for ftape driver
         if ($realdev =~ /n?z?[qr]ft(\d+)/) {
-            $main::ftape_rawdevice = "/dev/rawft" . $1;
             $main::ftape = 1;
         }
 
@@ -1453,7 +1422,6 @@ sub optioncheck {
     # Set mt type
     if ($main::ftape == 1) {
         &checkinpath('ftmt');
-        &checkinpath('vtblc');
         $main::mt = 'ftmt';
     } else {
         &checkinpath('mt');
@@ -1775,7 +1743,7 @@ sub optioncheck {
 
     }
 
-    # Paths: tmp, log/stamp files
+    # Paths: tmp, log/stamp files, open index
     &checkinpath($cfg::comp_log) if ($cfg::comp_log ne "false");
 
     $cfg::tmpdir = &nuke_trailing_slash($cfg::tmpdir);
@@ -1807,10 +1775,25 @@ sub optioncheck {
         push(@main::errors,"Can't write to $cfg::stampdir: $OS_ERROR");
     }
 
+    # Index database
+    tie(%main::index,"AnyDBM_File",$cfg::index,O_CREAT|O_RDWR,0640) or
+        push(@main::errors,"Can't tie DB $cfg::index: $OS_ERROR");
+
+
     # Levels
     if (defined($main::opt{'level'})) {
         if ($main::opt{'level'} !~ m/^\d$/) {
             push(@main::errors,"-level must be 0 through 9 only");
+        }
+    }
+
+    # Check delete flags
+    if (!defined($main::opt{'toc'})) {
+        if (defined($main::opt{'dfile'})) {
+            push(@main::errors,"-dfile useless without -toc <key>");
+        }
+        if (defined($main::opt{'delete'})) {
+            push(@main::errors,"-delete useless without -toc <key>");
         }
     }
 
@@ -2017,20 +2000,6 @@ sub maybe_get_filename {
 }
 
 ######################################################################
-# Update table of contents
-######################################################################
-sub update_toc {
-
-    # Only ftape has the toc capability
-    if ($main::ftape == 1) {
-        &log('| Updating table of contents...');
-        foreach (keys %main::title) {
-            &tag($_,$main::title{$_});
-        }
-    }
-}
-
-######################################################################
 # Check validity of a config option
 ######################################################################
 sub check {
@@ -2213,6 +2182,13 @@ sub print_afio_volume_header {
 ######################################################################
 sub set_tape_operation_defaults {
 
+    # Get backup level...
+    if (defined($main::opt{'level'})) {
+        $main::level = $main::opt{'level'};
+    } else {
+        $main::level = 0;
+    }
+
     # Assume stuff based on how we are called first
     if (defined($main::opt{'fs'})) {
         if ($main::opt{'fs'} eq 'all') {
@@ -2314,34 +2290,233 @@ sub split_and_echo {
 
 ######################################################################
 # Create new tape "key" and return it
+# Also sets main::nextfile
 ######################################################################
 sub new_tape_key {
 
     my $key;
     my $dev = $main::device;
+    my $old;
 
     $key = &current_time("numeric");
 
     # If writing to a file see if there is already an index key and use it
-    if ($main::use_file == 1) {
+    if (defined($main::use_file)) {
 	$dev .= "/index-key";
 	if (-r $dev) {
 	    open(KEY,$dev) or die("Can't open existing key $dev: $OS_ERROR");
 	    chomp($key = <KEY>);
 	    close(KEY);
+
+            &log("| Directory's existing key is $key");
+
+            # Figure out the existing files
+            foreach (sort keys %main::index) {
+                my ($tape,$filenum) = split(/\|/,$_);
+                if ($tape eq $key) {
+                    $main::nextfile = $filenum;
+                }
+            }
+            # Set for the next file
+            $main::nextfile++;
+            return($key);
 	}
     }
 
-    &log("| Creating tape index key $key");
+    &log("| Creating index key $key");
 
-    open(DEV,">$dev") or die("Can't open $dev: $OS_ERROR");
+    open(DEV,"| dd $main::dd_blk_flag conv=sync of=$dev 2> /dev/null") or die("Can't dd to $dev: $OS_ERROR");
     print DEV "$key\nThis is a flexbackup index key\n";
     close(DEV);
 
-    # change this to seek to the end.
     $main::nextfile = 1;
 
-    ${$main::index{$key}}[0] = "tape index key";
+    if (defined($main::use_file)) {
+        $main::index{"$key|0"} = "<tape index key, dir=$main::device>";
+    } else {
+        $main::index{"$key|0"} = "<tape index key>";
+    }
 
     return($key);
+}
+
+######################################################################
+# Get existing index key
+# Also sets main::nextfile
+######################################################################
+sub get_tape_key {
+
+    my $key;
+    my $dev = $main::device;
+
+    # If writing to a file see if there is already an index key and use it
+    if (defined($main::use_file)) {
+	$dev .= "/index-key";
+	if (-r $dev) {
+	    open(KEY,$dev) or die("Can't open existing key $dev: $OS_ERROR");
+	    chomp($key = <KEY>);
+	    close(KEY);
+        } else {
+            return(&new_tape_key());
+        }
+
+    } else {
+
+        open(KEY,"$main::read_cmd $main::device |") or die("Can't open tape device: $OS_ERROR");
+        chomp($key = <KEY>);
+        close(KEY);
+        if ($key !~ m/^\d+\.\d\d$/) {
+            warn("This tape doesn't have an index");
+            $main::nextfile = 0;
+            return('');
+        }
+
+    }
+
+    # Figure out the existing files
+    foreach (sort keys %main::index) {
+        my ($tape,$filenum) = split(/\|/,$_);
+        if ($tape eq $key) {
+            $main::nextfile = $filenum;
+        }
+    }
+
+    &log("| Found index key $key");
+
+    # Set for the next file
+    $main::nextfile++;
+    return($key);
+
+}
+
+######################################################################
+# Print table of contents
+# Can give a specific key as argument
+# Or uses command flag (specific key, current tape/dir, or "all")
+# Alss handles deletion of tape index records
+######################################################################
+sub toc_routine {
+
+    my $arg = shift(@_);
+    my $key;
+    my %keys;
+    my $file;
+    my $tape;
+    my $filenum;
+
+
+    if (defined($arg)) {
+
+        $keys{$arg} = 1;
+
+    } elsif ($main::opt{'toc'} =~ m/^\d+\.\d\d$/) {
+
+        if (!defined($main::opt{'delete'})) {
+
+            # Print toc for a specific tape
+            $keys{"$main::opt{toc}"} = 1;
+
+        } else {
+
+            # This section deletes a whole index record, or maybe just
+            # individual file records
+            foreach (sort keys %main::index) {
+                ($tape,$filenum) = split(/\|/,$_);
+                if (defined($main::opt{'dfile'})) {
+                    if (($tape eq $main::opt{'toc'})
+                        and
+                        ($filenum != 0)
+                        and
+                        ($filenum eq $main::opt{'dfile'})) {
+                        &log("| Deleting record for tape $tape file $filenum");
+                        delete $main::index{"$tape|$filenum"};
+                    }
+                } else {
+                    if ($tape eq $main::opt{'toc'}) {
+                        &log("| Deleting record for tape $tape file $filenum");
+                        delete $main::index{"$tape|$filenum"};
+                    }
+                }
+
+            }
+
+            return;
+
+        }
+        &line();
+
+    } elsif ($main::opt{'toc'} eq '') {
+
+        # Print toc for current tape/device
+        &mt('rewind');
+        $_ = &get_tape_key();
+        if ($_ ne '') {
+            $keys{$_} = 1;
+        }
+        &line();
+
+    } elsif ($main::opt{'toc'} eq "all") {
+
+        # Print everything we know about
+        foreach $file (sort keys %main::index) {
+            ($tape,$filenum) = split(/\|/,$file);
+            $keys{$tape} = 1;
+        }
+        &line();
+
+    } else {
+        die("Invalid key spec $main::opt{toc}");
+    }
+
+
+    # Print the toc of each tape in our list
+    foreach $key (sort keys %keys) {
+
+        my @contents = ();
+        my $found = 0;
+
+        foreach $file (sort keys %main::index) {
+            ($tape,$filenum) = split(/\|/,$file);
+            if ($tape eq $key) {
+                $filenum = sprintf("%-04d",$filenum);
+                push(@contents,"$filenum $main::index{$file}");
+                $found = 1;
+            }
+        }
+
+        &log('');
+        if ($found == 0) {
+            &log("Key $key not found in index");
+        } else {
+            &log("File  Contents    (tape index $key)");
+            &log("-----------------------------------------------");
+            foreach (@contents) {
+                &log("$_");
+            }
+        }
+        &log('');
+    }
+}
+
+######################################################################
+# Remove index records for a tape we are about to erase
+######################################################################
+sub maybe_delete_old_index {
+
+    my $key;
+    my $tape;
+    my $filenum;
+
+    $key = &get_tape_key();
+    if ($key ne '') {
+        foreach (sort keys %main::index) {
+            ($tape,$filenum) = split(/\|/,$_);
+            if ($tape eq $key) {
+                &log("| Deleting record for file $filenum");
+                delete $main::index{"$tape|$filenum"};
+            }
+        }
+
+    }
+
 }
