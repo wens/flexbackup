@@ -1,7 +1,7 @@
 edit CHANGES,TODO
 
 change version/date header in CHANGES
-edit index.html for verions/date
+edit index.html for versions/date
 
 make all VER=x.x.x
 
