@@ -100,13 +100,17 @@ if (defined($ARGV[0]) and ($ARGV[0] =~ /flexbackup.volume_header_info/)) {
 # This is changed during "make install"
 $main::CONFFILE="/etc/flexbackup.conf";
 
-# This took awhile to figure out.  if the shell is bash, we use this on the
-# end of any pipelines to see if any of the commands in the pipeline
-# failed.  In real 'sh', there is no way to do this, you only get the
-# status of the last command in the pipeline...
+# This took awhile to figure out.  if the shell is capable of it, we use
+# this on the end of any pipelines to see if any of the commands in the
+# pipeline failed, rathe rthan just the last one.
 #
-# Only to be used if /bin/sh is really bash2 locally,
-# or remote shell is bash2/zsh.
+# If /bin/sh is really bash2 in disguise, or remote shell is bash2/zsh,
+# we can use their status array veriables
+#
+# With plain sh, we don't know if the non-last command in the pipe fails
+#
+# With tcsh/csh as a remote shell, you don't know which command, but
+# $? is still set if anything in the pipeline failed
 #
 $main::bash_pipe_exit = '; x=(${PIPESTATUS[@]}); i=0; while [ $i -lt ${#x[@]} ]; do [ ${x[$i]} -eq 0 ] || exit ${x[$i]}; i=$(($i+1)); done';
 $main::zsh_pipe_exit = '; x=(${pipestatus[@]}); i=1; while [ $i -le ${#x[@]} ]; do [ ${x[$i]} -eq 0 ] || exit ${x[$i]}; i=$(($i+1)); done';
@@ -678,8 +682,10 @@ sub backup {
 	foreach $cmd (@cmds) {
 
 	    if ($main::shelltype{'localhost'} eq 'bash2') {
+		# /bin/sh is really bash2 on this system
 		open(CMD,"($cmd " . $main::bash_pipe_exit . ") 2>&1 |") || die;
 	    } elsif ($main::shelltype{'localhost'} eq 'zsh') {
+		# Does anybody make /bin/sh be zsh? probably not...
 		open(CMD,"($cmd " . $main::zsh_pipe_exit . ") 2>&1 |") || die;
 	    } else {
 		open(CMD,"($cmd) 2>&1 |") || die;
@@ -3867,7 +3873,11 @@ sub check_shell {
     my $host = shift(@_);
     my $pipecmd;
 
-    print "| Checking shell on $host... ";
+    if ($host eq 'localhost') {
+	print "| Checking /bin/sh on this machine... ";
+    } else {
+	print "| Checking shell on $host... ";
+    }
 
     $pipecmd = 'set x = 1 && test $x && echo csh:yes; echo tcsh:$tcsh; echo bash:$BASH_VERSION; echo zsh:$ZSH_VERSION; echo ksh:$KSH_VERSION';
     if ($host eq 'localhost') {
