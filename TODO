@@ -34,6 +34,10 @@ Misc:
 
 Features to add:
 
+  - A Shorter summary status that's better than doing
+         egrep "(error|of set|Backup of|written)"
+    of logfile.  Needs to handle all configurations....
+
   - Handle multi-volume backups (original idea w/ 'multibuf' never panned out)
 
       Found "multivol" program.
