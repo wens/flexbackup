@@ -11,7 +11,7 @@ Flexible backup script.
 
 Features:
    o Easy to configure
-   o Uses dump, afio, tar (gnu), or cpio archivers
+   o Uses dump, afio, tar (gnu), cpio, star, pax, or zip archivers
    o Backup, list, compare, extract, extract list of files modes
    o Compression and buffering options for all backup types
    o Full (0) and numbered levels of incremental backup (like "dump")
@@ -25,7 +25,7 @@ Software needed:
    o perl
    o fileutils, findutils
    o one or more of
-       dump/restore, afio, gnu tar, cpio
+       dump/restore, afio, gnu tar, star, pax, cpio
    o mt (if using tapes)
    o gzip, bzip2, or compress (optional)
    o buffer (optional) [needs patches for 2+GB file support]
@@ -141,7 +141,7 @@ MISCELLANEOUS
  or see http://flexbackup.sourceforge.net for contact information.
 
  Thanks,
-   Edwin Huffstutler <edwinh@computer.org>
+   Edwin Huffstutler <edwinh+flexbackup@edwinh.org>
 
 Local Variables:
 mode: flyspell

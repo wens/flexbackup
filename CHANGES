@@ -1,6 +1,25 @@
 $Id$
 $Name$
 
+Version TBD
+
+Changes: (just so we can say it supports *everything* for archive formats)
+ - Initial support for "star" archiver. Like tar but does acl's, has its own
+      fifo buffering mechanism, and more. see:
+      http://www.fokus.gmd.de/research/cc/glone/employees/joerg.schilling/private/star.html
+ - Initial support for "pax" archiver. Really just tar or cpio, but might
+      be good for portability across unices...
+ - Put .zip back in, same way as in old releases (kinda hokey with the tmpfiles, 
+      but there is no cleaner way to do it with info-zip utils like I wanted)
+
+Cleanup:
+ - '-rmindex all' says it will wait 5 seconds
+ - Fix warning with no args
+ - touch -t the same for everyone. buggy touch in pre-4.0 fileutils is old
+      by now..
+ - Clean up date routines
+
+----------------------------------------------------------------------
 Version 0.9.9.6 (20030112)
 
 Changes:

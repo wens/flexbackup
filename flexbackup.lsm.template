@@ -16,8 +16,8 @@ Features:
    o Works with IDE/SCSI tapes on Linux/FreeBSD, or on disk archives
    o Nice log files
 Keywords: backup dump restore afio tar cpio ftape
-Author: edwinh@computer.org (Edwin Huffstutler)
-Maintained-by: edwinh@computer.org (Edwin Huffstutler)
+Author: edwinh+flexbackup@edwinh.org (Edwin Huffstutler)
+Maintained-by: edwinh+flexbackup@edwinh.org (Edwin Huffstutler)
 Primary-site: http://flexbackup.sourceforge.net /tarball
               flexbackup-VERSION.tar.gz
 Alternate-site: http://flexbackup.org /tarball

@@ -5,7 +5,7 @@ Flexbackup to-do list
 Some of these might not happen
 
 Cleanup/fix:
- - Clean up more $main:: vars, split into types or refactor
+ - Clean up more $main:: vars, split into types or refactor code
  - bash PIPESTATUS trick fails if remote filesystem and shell there!=bash
      and shell local==bash. bah.
  - Check buffer avail mem thing from John
@@ -16,10 +16,11 @@ Cleanup/fix:
  - When level > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
  - Not all finds have the -fstype flag (from $traverse_fs)
  - Check for existence of remote executables (John had something)
-
+ - Use system with args list so it uses execve not shell.  or open |- & exec.
+     will get one layer of shell expansion outta the way
 
 Misc:
- - Make a manual page (or other enchanced doc)! too many options now :)
+ - Make a manual page (AND other enchanced documentation, more than a README)
    someone made a good start or two:
      http://myezserver.com/downloads/mitel/howto/flexbackup-howto.html
      http://www.cyber-euskadi.com/howtos/contrib/flexbackup-restore-from-disk-howto.html
@@ -38,8 +39,6 @@ Features to add:
      smbtar has "files newer than" option, test
      don't want password echoed
      no exclude from find
- - star? (tar but w/ acl support, built in fifo buffering)
- - pax (wraps tar/cpio)?  Might be good for portable command options though
  - Non-root use (remote too)
     document sudo workaround from Alex
     maybe works using the path overrides I put in?
@@ -49,7 +48,7 @@ Features to add:
       backup  ALL = NOPASSWD: BACKUP
  - Make remote machine path overrides possible, that supercede others?
  - Make -extract -files for afio/cpio/zip recurse dirs
-      dump/tar already to this.
+      dump/tar already to this. Actually just check that all act the same.
  - Try restore -D for comparing subdirs w/ restore
  - Interactive restore-like shell for types besides dump
       see notes below
@@ -62,8 +61,6 @@ Features to add:
  - Arbitrary "groups" that act sort of like "all"
  - Extract options to not overwrite existing files
  - CD-ROM burning (or just .iso type?) for full backups? any?
- - Put .zip back in if I can make it behave
- - Zip as compression not archive type at least?  (can't unzip stdin)
  - When using files
       Make lower numbered level nuke higher ones & rm index?
       Erase option to to nuke the archive files & records in dir?
