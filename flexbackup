@@ -231,10 +231,9 @@ sub backup_routine {
     my $list;
     my $tapecounter = 0;
     my %oldlogs;
-    my %oldstamps;
     my $fs;
     my $logfile;
-    my $symlink;
+    my $symlink = '';;
     my $logext = '';
     my $comp_cmd;
     my $tape_key;
@@ -245,7 +244,11 @@ sub backup_routine {
 
     # Figure out log file name & empty log file
     $label = &get_label($main::opt{'fs'});
-    $logfile = "$cfg::prefix$label.$main::level.$main::date";
+    if ($cfg::staticlogs eq 'true' ) {
+	$logfile = "$cfg::prefix$label.$main::level";
+    } else {
+	$logfile = "$cfg::prefix$label.$main::level.$main::date";
+    }
     $symlink = "$cfg::prefix$label.latest";
     $main::log = "$cfg::logdir/$logfile";
     if (! open(LOG,">$main::log")) {
@@ -256,28 +259,21 @@ sub backup_routine {
     &line();
     &mt("generic-blocksize $main::mt_blksize");
 
-    # Remember old stamp files (will remove at end of job)
-    # "old" = any higher-numbered stamps for this label
-    # (we will be touching the one of equal level, so don't mark for removal)
-    opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $OS_ERROR");
-    @files = readdir(DIR);
-    foreach (reverse sort @files) {
-	next if (! m/^$cfg::sprefix$label\.(\d+)$/);
-	if ($1 > $main::level) {
-	    $oldstamps{"$cfg::stampdir/$_"} = $1
-	}
-    }
-    close(DIR);
 
     # Remember old log files (will remove at end of job)
     # ("old" = any higher- or equal-numbered logs for this label)
     opendir(DIR,"$cfg::logdir") or die("Can't open cfg::logdir: $OS_ERROR");
     @files = readdir(DIR);
     foreach (reverse sort @files) {
-	next if (! m/^$cfg::prefix$label\.(\d+)\.(\d+)(\.gz|\.bz2|\.Z)?$/);
 	next if (m/^$logfile(\.gz|\.bz2|\.Z)?$/);
+	next if (! m/^$cfg::prefix$label\.(\d+)(\.(\d+))?(\.gz|\.bz2|\.Z)?$/);
 	if ($1 >= $main::level) {
-	    $oldlogs{"$cfg::logdir/$_"} = $1 . "|" . $2;
+            # Might be from $staticlogs=true or false
+            if (defined($3)) {
+                $oldlogs{"$cfg::logdir/$_"} = $1 . "|" . $3;
+            } else {
+                $oldlogs{"$cfg::logdir/$_"} = $1;
+            }
 	}
     }
     close(DIR);
@@ -428,14 +424,14 @@ sub backup_routine {
 	&mt('rewind');
     }
 
-    # Actually remove the old log and stamp files now that we are done
-    foreach (sort keys %oldstamps) {
-	print "| Removing out of date level $oldstamps{$_} timestamp of $main::opt{fs}\n";
-	unlink("$_") or warn("Can't remove $_: $OS_ERROR\n");
-    }
+    # Remove old log files now that we are done
     foreach (sort keys %oldlogs) {
 	my ($lev,$d) = split(/\|/,$oldlogs{$_});
-	print "| Removing old level $lev log of $main::opt{fs} (dated $d)\n";
+        if (defined($d)) {
+            print "| Removing old level $lev log of $main::opt{fs} (dated $d)\n";
+        } else{
+            print "| Removing old level $lev log of $main::opt{fs}\n";
+        }
 	unlink("$_") or warn("Can't remove $_: $OS_ERROR\n");
     }
 
@@ -461,9 +457,11 @@ sub backup_routine {
     }
 
     # Symlink the "latest" log file for this level
-    &log("| Linking $symlink" . "$logext -> $logfile" . $logext);
     unlink("$cfg::logdir/$symlink" . $logext);
-    symlink("$logfile" . $logext,"$cfg::logdir/$symlink" . $logext);
+    if ($cfg::staticlogs eq 'false') {
+	&log("| Linking $symlink" . "$logext -> $logfile" . $logext);
+	symlink("$logfile" . $logext,"$cfg::logdir/$symlink" . $logext);
+    }
 
     &line();
 
@@ -488,6 +486,8 @@ sub backup {
     my $localdir = $dir;
     my $label = &get_label($dir);
     my $host;
+    my @files;
+    my %oldstamps;
 
     &line();
 
@@ -505,30 +505,51 @@ sub backup {
 	$main::remote = '';
     }
 
+    # Remember old stamp files (will remove at end of job)
+    # "old" = any higher-numbered stamps for this label
+    # (we will be touching the one of equal level, so don't mark for removal)
+    opendir(DIR,"$cfg::stampdir") or die("Can't open $cfg::stampdir: $OS_ERROR");
+    @files = readdir(DIR);
+    foreach (reverse sort @files) {
+	next if (! m/^$cfg::sprefix$label\.(\d+)$/);
+	if ($1 > $main::level) {
+	    $oldstamps{"$cfg::stampdir/$_"} = $1
+	}
+    }
+    close(DIR);
+
     # Create file name if writing to a file
     # (config file's $device points to a dir in this case)
     if (defined($main::use_file)) {
-	$_ = $main::level . "." . $main::date . "." . $cfg::type;
+
+	my $filename;
+
+	if ($cfg::staticfiles eq 'true') {
+	    $filename = $main::level . "." . $cfg::type;
+	} else {
+	    $filename = $main::level . "." . $main::date . "." . $cfg::type;
+	}
+
 	if ($cfg::type =~ m/^(tar|dump|cpio)$/) {
 	    if ($cfg::compress eq "gzip") {
-		$_ .= ".gz";
+		$filename .= ".gz";
 	    } elsif ($cfg::compress eq "bzip2") {
-		$_ .= ".bz2";
+		$filename .= ".bz2";
 	    } elsif ($cfg::compress eq "compress") {
-		$_ .= ".Z";
+		$filename .= ".Z";
 	    }
 	} elsif ($cfg::type eq "afio") {
 	    # tag these a little different, the archive file itself isn't a
 	    # .gz or .bz2, but the files in it are....
 	    if ($cfg::compress eq "gzip") {
-		$_ .= "-gz";
+		$filename .= "-gz";
 	    } elsif ($cfg::compress eq "bzip2") {
-		$_ .= "-bz2";
+		$filename .= "-bz2";
 	    } elsif ($cfg::compress eq "compress") {
-		$_ .= "-Z";
+		$filename .= "-Z";
 	    }
 	}
-	$main::device = $cfg::device . "/" . $label . "." . $_;
+	$main::device = $cfg::device . "/" . $label . "." . $filename;
     }
 
     # Just get the date for now; don't write the timestamp
@@ -616,6 +637,12 @@ sub backup {
     }
     &line();
 
+    # Actually remove the old stamp files now that we are done
+    foreach (sort keys %oldstamps) {
+	print "| Removing out of date level $oldstamps{$_} timestamp for $dir\n";
+	unlink("$_") or warn("Can't remove $_: $OS_ERROR\n");
+    }
+
     # Create timestamp file, but use date from before the backup started
     # so next time we will catch files that might have been touched during the run
     $_ = &current_time();
@@ -624,6 +651,7 @@ sub backup {
     if (!defined($main::opt{'n'})) {
 	system("$main::path{touch} $main::touch_flag \"$main::date_at_start\" $cfg::stampdir/$cfg::sprefix$label.$main::level");
     }
+
     &line();
 
     # Got errors unless I paused before trying to access the tape right way...
@@ -716,8 +744,8 @@ sub backup_afio {
     push(@cmds, &maybe_remote_cmd($cmd));
 
     # list of file exenstions to not compress
-    if (($cfg::compress !~ /^(false|hardware)$/) and ($cfg::nocompress_types ne "")) {
-	$cmd = "echo \"$cfg::nocompress_types\" > $tmpnocompress";
+    if (($cfg::compress !~ /^(false|hardware)$/) and ($cfg::afio_nocompress_types ne "")) {
+	$cmd = "echo \"$cfg::afio_nocompress_types\" > $tmpnocompress";
 	push(@cmds, &maybe_remote_cmd($cmd));
 	$no_compress = "-E $tmpnocompress";
     }
@@ -878,6 +906,7 @@ sub backup_tar {
     return(@cmds);
 
 }
+
 
 ######################################################################
 # List the files in an archive
@@ -1488,6 +1517,7 @@ sub optioncheck {
     &check(\$cfg::verbose,'verbose');
     &check(\$cfg::sparse,'sparse');
     &check(\$cfg::indexes,'indexes');
+    &check(\$cfg::staticfiles,'staticfiles');
     &check(\$cfg::buffer,'buffer','false buffer');
     &check(\$cfg::buffer_megs,'buffer_megs','exist');
     &check(\$cfg::pad_blocks,'pad_blocks');
@@ -1495,7 +1525,6 @@ sub optioncheck {
     &check(\$cfg::blksize,'blksize','exist');
     &check(\$cfg::mt_var_blksize,'mt_var_blksize');
     &check(\$cfg::traverse_fs,'traverse_fs','false local all');
-    &check(\$cfg::nocompress_types,'nocompress_types','exist');
     &check(\$cfg::remoteshell,'remoteshell','ssh ssh2 ssh1 rsh');
     &check(\$cfg::erase_tape_all_level_zero,'erase_tape_all_level_zero');
     &check(\$cfg::erase_rewind_only,'erase_rewind_only');
@@ -1504,6 +1533,7 @@ sub optioncheck {
     &check(\$cfg::comp_log,'comp_log','gzip bzip2 compress false');
     &check(\$cfg::stampdir,'stampdir','exist');
     &check(\$cfg::index,'index','exist');
+    &check(\$cfg::staticlogs,'staticlogs');
     &check(\$cfg::prefix,'prefix','exist');
     &check(\$cfg::sprefix,'sprefix','exist');
     &check(\$cfg::afio_echo_block,'afio_echo_block');
@@ -1779,6 +1809,8 @@ sub optioncheck {
 
 	$main::path{'afio'} = &checkinpath('afio');
 	$main::path{'printf'} = &checkinpath('printf');
+
+	&check(\$cfg::afio_nocompress_types,'afio_nocompress_types','exist');
 
 	# Compress flag for afio must be handled differently
 	if ($cfg::compress =~ m/^(gzip|bzip2|compress)$/) {
