@@ -34,31 +34,34 @@ Features:
 %setup -q
 
 %build
-make all
+make all PREFIX=/usr CONFFILE=/etc/flexbackup.conf
 
 %install
 rm -rf $RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/etc
-mkdir -p $RPM_BUILD_ROOT/usr/bin
-mkdir -p $RPM_BUILD_ROOT/usr/share/man/man1
-mkdir -p $RPM_BUILD_ROOT/usr/share/man/man5
+mkdir -p $RPM_BUILD_ROOT%{_bindir}
+mkdir -p $RPM_BUILD_ROOT%{_mandir}/man1
+mkdir -p $RPM_BUILD_ROOT%{_mandir}/man5
 mkdir -p $RPM_BUILD_ROOT/var/lib/flexbackup
 mkdir -p $RPM_BUILD_ROOT/var/log/flexbackup
-make install PREFIX=$RPM_BUILD_ROOT/usr CONFFILE=$RPM_BUILD_ROOT/etc/fexbackup.conf
+make install PREFIX=$RPM_BUILD_ROOT/usr CONFFILE=$RPM_BUILD_ROOT/etc/flexbackup.conf
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
-/usr/bin/flexbackup
-/usr/share/man/*/*
-%doc CHANGES COPYING TODO README CREDITS INSTALL faq.html
+%{_bindir}/flexbackup
+%config(noreplace) /etc/flexbackup.conf
 %dir /var/lib/flexbackup
 %dir /var/log/flexbackup
-%config(noreplace) /etc/flexbackup.conf
+%{_mandir}/*/*
+%doc CHANGES COPYING TODO README CREDITS INSTALL faq.html
 
 %changelog
+* Tue Jul 29 2003 Edwin Huffstutler <edwinh@hercules.my-net> 
+- add manpages, tweak a bit
+
 * Thu Jul  3 2003 Edwin Huffstutler <edwinh@hercules.my-net> 
 - update description
 

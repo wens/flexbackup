@@ -7,9 +7,9 @@
 PREFIX=/usr
 
 # Where the script binary should go
-BINPATH = $PREFIX/bin
+BINPATH = $(PREFIX)/bin
 # Where the manpage should go
-MANPATH = $PREFIX/share/man
+MANPATH = $(PREFIX)/share/man
 
 # Where flexbackup.conf should be stored
 CONFFILE = /etc/flexbackup.conf
