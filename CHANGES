@@ -1,22 +1,38 @@
 $Id$
 $Name$
 
-Version 0.9.9.4 ()
+Version 0.9.9.4 (20030110)
 
 Changes:
- - implement support for full/differential/incremental
-   as dump levels (for people not as familiar with dump-style)
+ - Several requests were in old email for differential/incremental...
+   Just a misunderstanding I think. Check these links:
+      http://docs.sun.com/db/doc/805-7228/6j6q7uf18?a=view
+      http://www.arkeia.com/archives_indexed/2000/10/msg00006.html
+      http://www.sans.org/rr/backup/central.php
+
+   To sum up, no changes are *needed* if dump behavior mimiced (we had a
+   bug here BTW).
+
+   We can do what people call "incremental" as long as we increase the
+   backup level each day.
+
+   We can do what people call "differential" just by keeping the number the
+   same for consecutive backups
+
+ - Implemented support for -level [full|differential|incremental]
+   as aliased dump levels (for people not as familiar with dump-style levels)
       full = 0
       differential = 1
       incremental = <latest backup> + 1  [broken for fs=all at this stage]
- - support > 9 levels (for all types but 'dump')
+
+ - Support for > 9 levels (for all types but 'dump')
 
 Bug fixes:
- - doh! we *were* doing levels slightly wrong.
+ - DOH! we *were* doing levels slightly wrong.
     use < rather than <= for comparing levels.
     popped out of investigating incremental and differential requests
     Now we act like dumplevels should
- - also changes what we regard as "old" logs/stamps as a result
+ - This also changes what we regard as "old" logs/stamps as a result
 
 ----------------------------------------------------------------------
 Version 0.9.9.3 (20030109)

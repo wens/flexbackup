@@ -4,10 +4,14 @@ Mainly written by Edwin Huffstutler <edwinh@computer.org>
 Thanks to Paul Holcomb for trying to keep the project alive while I was
 ignoring it...
 
-Other people have helped me debug/fix things or report bugs:
+Other people who have helped me debug/fix things, send patches, or report
+bugs:
 
   John Reynolds <johnjen@reynoldsnet.org>
-  Paul Holcomb <pholcomb@cpoint.net>
+  Paul Holcomb <pholcomb@cpoint.net>
+  Alex Aminoff <alex@basespace.net>
+  Michael Matsumura <michael@limit.org>
+  Caleb Crome <caleb@crome.org>
   Perry Gilfillan <perrye@linuxmail.org>
   Ben Chapman <benjamin-chapman@utulsa.edu>
   Jochen Erwied <jochen@erwied.de>
@@ -15,7 +19,7 @@ Other people have helped me debug/fix things or report bugs:
 Many people in the long development time lapse, I'm sorry if your
 suggestions/fixes got dropped...
 
-older releases:  
+older releases:
 
   Clemmitt Sigler <siglercm@alphamb2.phys.vt.edu>
   George Young <gry@ll.mit.edu>

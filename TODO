@@ -2,18 +2,20 @@ $Id$
 $Name$
 
 Flexbackup to-do list
-Some of these might not happen, but figured I should jot them down
+Some of these might not happen
 
 Cleanup/fix:
- - clean up all the $main:: vars, split into types
  - make path overrides also search $PATH (say if we just changed the name
-     tar == gtar put still want to do normal path-seach)
+     tar == gtar put still want to do normal path-search)
+ - clean up all the $main:: vars, split into types
  - bash PIPESTATUS trick fails if remote filesystem and shell there!=bash
      and shell local==bash. bah.
  - check buffer avail mem thing from John
- - fix the stamp find loop (See FIXME)
  - revisit -cnewer problem.  Make sure it works with touch -t/-d of
    timestamp refs (ctime isn't set backward by touch like the mtime)
+ - when levels > 9 and using files, -toc sorts it wrong (cosmetic nit)
+ - when levels > 9 and rm old logs/stamps, order is printed wrong (cosmetic nit)
+ - fix 'incremental' with fs=all.  non-trivial (see FIXME in code)
 
 
 Misc:
@@ -23,51 +25,20 @@ Misc:
      http://www.cyber-euskadi.com/howtos/contrib/flexbackup-restore-from-disk-howto.html
  - someone needs to put a bunch of stuff in a faq
  - Check lsm template/ibiblio.org stuff. automate
- - Try bfr or dbuffer (buffer seems unmaintained; no O_LARGEFILE)
+ - Try bfr or dbuffer? (buffer seems unmaintained; no O_LARGEFILE)
  - Try against torture-test list:
      http://ftp.berlios.de/pub/star/testscripts/zwicky/testdump.doc.html
 
 
 Features to add:
  - static filenames when using disk (same fs, same level overwrite)?
-      Michael Matsumura <michael@limit.org>
-
- - Several suggestions of incremental/differential type, need to sort out:
-
-  Q: first verify behavior of dump using /etc/dumpdates
-    A: Multiple same-number get everything more recent then last
-       higher-numbered.  '9' always gets all since '[0-8]', no matter how many
-       '9's you do in a row. see also http://docs.sun.com/db/doc/805-7228/6j6q7uf18?a=view
-  Q: also re-check they way my timestamps work make sure its the same
-    A: Oops. we had <= when we needed <. Fixed for 0.9.9.4+.
-
-  Check these links:
-      http://www.arkeia.com/archives_indexed/2000/10/msg00006.html
-      http://www.sans.org/rr/backup/central.php
-   To sum up, no changes are *needed* if dump behavior mimiced.
-
-   We can do what people call "incremental" as long as we increase the
-   backup level each day.  (Well, can do up to 8 of them right now.)
-
-   We can do what people call "differential" just by keeping the number the
-   same for consecutive backups
-
-   --> RESULT: make a mode where people coming from the DOS/win world
-   can use 'full' 'differential' 'incremental'
-   Alias 0 == full, alias 1 == 'differential', and implement 'incremental'.
-           - make incremental = 1 + the levelr from last time
-	   - remove the limit of 9.
-
-   (WIP in hacked version, will have checked in for 0.9.9.4+)
-        fix "-level incremental" and fs=all problem
-        fix sorting of timestamps for level > 1 digit
-
-
+     0.9.8 patch from Michael Matsumura <michael@limit.org>
  - remote tape drive (rmt) support
-     Caleb Crome <caleb@crome.org>
+     0.9.8 patch from Caleb Crome <caleb@crome.org>
  - non-root use (remote too)
     document sudo workaround from Alex
-    should work using the path overrides I put in?
+    maybe works using the path overrides I put in?
+    sudoers:
       Defaults:backup !authenticate
       Cmnd_Alias BACKUP = /usr/bin/afio, /usr/bin/find
       backup  ALL = NOPASSWD: BACKUP
